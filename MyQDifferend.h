@@ -8,7 +8,7 @@
 #include <QFileInfo>
 #include <QWidget>
 //---------------------------------------------------------------------------
-struct mqd
+struct MyQDifferent
 {
     static QString GetPathToExe() { return QFileInfo(QCoreApplication::applicationFilePath()).path(); }
 

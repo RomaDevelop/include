@@ -9,7 +9,7 @@
 #include <QDateTime>
 #include <QMessageBox>
 //---------------------------------------------------------------------------
-struct MQFD
+struct MQFileDir
 {
     static QFileInfo GetNewestFI(const QFileInfoList &files)
     {
