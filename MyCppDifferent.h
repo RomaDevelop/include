@@ -40,5 +40,40 @@ public:
 	}
 	return resOff;
     }
+ 
+	template<class T>
+	struct reverted_container
+	{
+		T *container_ptr;
+	 
+		reverted_container(T &aContainer): container_ptr{&aContainer} {}
+	 
+		auto begin()
+		{
+			return container_ptr->rbegin();
+		}
+	 
+		auto end()
+		{
+			return container_ptr->rend();
+		}
+	 
+			auto begin() const
+		{
+			return container_ptr->rbegin();
+		}
+	 
+		auto end() const
+		{
+			return container_ptr->rend();
+		}
+	};
+ 
+	template<class T>
+	auto reverse(T &aContainer)
+	{
+		return reverted_container(aContainer);
+	}
+
 };
 #endif

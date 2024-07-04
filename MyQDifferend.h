@@ -11,10 +11,14 @@
 #include <QWidget>
 #include <QDir>
 #include <QDateTime>
+
+#include "MyQShortings.h"
 //---------------------------------------------------------------------------
 struct MyQDifferent
 {
     static QString GetPathToExe() { return QFileInfo(QCoreApplication::applicationFilePath()).path(); }
+    inline static QString GetGeo(const QWidget &widget);
+    inline static bool SetGeo(QString geoStr, QWidget &widget);
 
     static bool SaveSettings(QString fileName, const std::vector<QWidget*> &widgets, const QStringList &stringSettings)
     {
@@ -137,31 +141,56 @@ struct MyQDifferent
 	return true;
     }
 
-    static QString RemoveOldFiles(QString directory, int counAfterDelete)
-    {
-	QString ret;
-	QDir dir(directory);
-	if(!dir.exists())
-	{
-	    ret += "directory ["+directory+"] not exists";
-	}
-
-	auto content = dir.entryInfoList();
-	for(int i=content.size()-1; i>=0; i--)
-	    if(!content[i].isFile()) content.removeAt(i);
-	std::sort(content.begin(),content.end(),[](const QFileInfo &fi1, const QFileInfo &fi2){
-	    return fi1.lastRead() < fi2.lastRead();
-	});
-
-	while (content.size() > counAfterDelete) {
-	    if(!QFile(content.front().filePath()).remove())
-		ret += "can't remove file ["+content.front().filePath()+"]\n";
-	    content.removeFirst();
-	}
-	return ret;
-    }
+    inline static QString RemoveOldFiles(QString directory, int counAfterDelete);
 };
-//---------------------------------------------------------------------------
-#endif
 
+QString MyQDifferent::GetGeo(const QWidget &widget)
+{
+    return QSn(widget.x())+";"+QSn(widget.y())+";"+QSn(widget.width())+";"+QSn(widget.height());
+}
+
+bool MyQDifferent::SetGeo(QString geoStr, QWidget & widget)
+{
+    auto geo = geoStr.split(";",QString::SkipEmptyParts);
+    if(geo.size() == 4)
+    {
+	bool boolResults[4];
+	int vals[4] {geo[0].toInt(&boolResults[0]), geo[1].toInt(&boolResults[1]), geo[2].toInt(&boolResults[2]), geo[3].toInt(&boolResults[3]) };
+	if(boolResults[0] && boolResults[1] && boolResults[2] && boolResults[3])
+	{
+	    widget.move(vals[0], vals[1]);
+	    widget.resize(vals[2], vals[3]);
+	    return true;
+	}
+	return false;
+    }
+    else return false;
+}
+
+QString MyQDifferent::RemoveOldFiles(QString directory, int counAfterDelete)
+{
+    QString ret;
+    QDir dir(directory);
+    if(!dir.exists())
+    {
+	ret += "directory ["+directory+"] not exists";
+    }
+
+    auto content = dir.entryInfoList();
+    for(int i=content.size()-1; i>=0; i--)
+	if(!content[i].isFile()) content.removeAt(i);
+    std::sort(content.begin(),content.end(),[](const QFileInfo &fi1, const QFileInfo &fi2){
+	return fi1.lastRead() < fi2.lastRead();
+    });
+
+    while (content.size() > counAfterDelete) {
+	if(!QFile(content.front().filePath()).remove())
+	    ret += "can't remove file ["+content.front().filePath()+"]\n";
+	content.removeFirst();
+    }
+    return ret;
+}
+
+#endif
+//---------------------------------------------------------------------------
 
