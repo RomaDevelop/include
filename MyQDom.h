@@ -14,6 +14,7 @@ struct MyQDom
     inline static std::vector<std::pair<QString,QString>> GetAttributes(const QDomElement &element);
     inline static QDomElement FirstChildIncludeSubChilds(const QDomNode &node, const QString &tagName);
     inline static QDomElement FirstChildIncludeSubChilds(const QDomNode &node, const std::pair<QString,QString> &attribute);
+    inline static void ReplaceInAttributes(QDomElement &element, const QString &replaceWhat, const QString &replaceTo);
     inline static QString ToString(const QDomElement &element);
 };
 
@@ -104,6 +105,19 @@ QDomElement MyQDom::FirstChildIncludeSubChilds(const QDomNode & node, const std:
 	if(!res.isNull()) break;
     }
     return res;
+}
+
+void MyQDom::ReplaceInAttributes(QDomElement & element, const QString & replaceWhat, const QString & replaceTo)
+{
+    auto attributes = element.attributes();
+    int size = attributes.size();
+    for(int attr_i=0; attr_i<size; attr_i++)
+    {
+	auto attr = attributes.item(attr_i).toAttr();
+	QString value = attr.value();
+	if(value.contains(replaceWhat))
+	    attr.setValue(value.replace(replaceWhat, replaceTo));
+    }
 }
 
 QString MyQDom::ToString(const QDomElement & element)
