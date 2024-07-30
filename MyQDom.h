@@ -11,11 +11,12 @@ struct MyQDom
 {
     inline static std::vector<QDomElement> GetTopLevelElements(const QDomNode &node);
     inline static std::vector<QDomElement> GetAllLevelElements(const QDomNode &node);
-    inline static std::vector<std::pair<QString,QString>> GetAttributes(const QDomElement &element);
+    inline static std::vector<std::pair<QString,QString>> Attributes(const QDomElement &element);
     inline static QDomElement FirstChildIncludeSubChilds(const QDomNode &node, const QString &tagName);
     inline static QDomElement FirstChildIncludeSubChilds(const QDomNode &node, const std::pair<QString,QString> &attribute);
     inline static void ReplaceInAttributes(QDomElement &element, const QString &replaceWhat, const QString &replaceTo);
     inline static QString ToString(const QDomElement &element);
+    inline static QString ToStringIgnoreNested(const QDomElement &element);
 };
 
 
@@ -56,7 +57,7 @@ std::vector<QDomElement> MyQDom::GetAllLevelElements(const QDomNode & node)
     return elements;
 }
 
-std::vector<std::pair<QString, QString> > MyQDom::GetAttributes(const QDomElement & element)
+std::vector<std::pair<QString, QString> > MyQDom::Attributes(const QDomElement & element)
 {
     std::vector<std::pair<QString,QString>> attrsVector;
     auto attrs = element.attributes();
@@ -127,5 +128,21 @@ QString MyQDom::ToString(const QDomElement & element)
     element.save(stream,2);
     return str;
 }
+
+QString MyQDom::ToStringIgnoreNested(const QDomElement & element)
+{
+    QString ret;
+    auto attrs = Attributes(element);
+    for(auto &attr:attrs) ret += attr.first + "=\"" + attr.second + "\" ";
+    ret.chop(1);
+
+    ret = "<"+element.tagName()+" "+ret;
+    if(element.childNodes().isEmpty()) ret += "/>";
+    else ret += ">";
+    return ret;
+}
+
+
+
 //---------------------------------------------------------------------------
 #endif
