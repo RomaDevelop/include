@@ -20,7 +20,7 @@ public:
 	return messageBox.buttons()[desision]->text();
     }
 
-    static void ShowText(const QString &text, uint w = 0, uint h = 0)
+    static void ShowText(const QString &text, uint w = 800, uint h = 600)
     {
         QDialog *dialog = new QDialog;
         QHBoxLayout *all  = new QHBoxLayout(dialog);
