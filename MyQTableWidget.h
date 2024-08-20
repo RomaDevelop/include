@@ -50,26 +50,51 @@ private slots:
 		copy();  // Копируем сначала данные
 		clearSelectionContent();  // Затем очищаем выделенные ячейки
 	}
-	void copy() {
+	void copy()
+	{
 		QItemSelectionModel *selection = selectionModel();
 		if (!selection->hasSelection()) return;
+		innerClipboard.clear();
+		innerClipboard.emplace_back();
 		QString copiedData;
 		QList<QTableWidgetSelectionRange> ranges = selectedRanges();
 		for (const auto &range : ranges) {
 			for (int row = range.topRow(); row <= range.bottomRow(); ++row) {
 				for (int col = range.leftColumn(); col <= range.rightColumn(); ++col) {
-					if (item(row, col)) {
-						copiedData += item(row, col)->text();
+					if (item(row, col))
+					{
+						innerClipboard.back().push_back(item(row, col)->text());
+						copiedData += "\"" + item(row, col)->text() + "\"";
 					}
 					if (col != range.rightColumn()) copiedData += '\t';
 				}
+				innerClipboard.emplace_back();
 				copiedData += '\n';
 			}
 		}
 		QClipboard *clipboard = QApplication::clipboard();
 		clipboard->setText(copiedData);
 	}
-	void paste() {
+	void paste()
+	{
+		int startRow = currentRow();
+		int startCol = currentColumn();
+		for (uint i = 0; i < innerClipboard.size(); ++i)
+		{
+			QStringList &columns = innerClipboard[i];
+			for (int j = 0; j < columns.size(); ++j) {
+				int row = startRow + i;
+				int col = startCol + j;
+				// Автоматическое добавление строк и столбцов
+				if (row >= rowCount()) insertRow(rowCount());
+				if (col >= columnCount()) insertColumn(columnCount());
+				if (!item(row, col)) setItem(row, col, new QTableWidgetItem());
+				item(row, col)->setText(columns[j]);
+			}
+		}
+	}
+	void pasteFromClip()
+	{
 		QClipboard *clipboard = QApplication::clipboard();
 		QString clipboardData = clipboard->text();
 		QStringList rows = clipboardData.split('\n', QString::SkipEmptyParts);
@@ -89,6 +114,7 @@ private slots:
 		}
 	}
 private:
+	inline static std::vector<QStringList> innerClipboard {};
 	QAction *createAction(const QString &text, const QKeySequence &shortcut, QObject *receiver, const char *slot) {
 		QAction *action = new QAction(text, this);
 		action->setShortcut(shortcut);
