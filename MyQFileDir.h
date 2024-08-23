@@ -17,17 +17,12 @@ struct MyQFileDir
     inline static void ReplaceFilesWithBackup(const QFileInfoList &filesToReplace, const QFileInfo &fileSrc, const QString &backupPath);
     inline static bool CreatePath(QString path);
 
-    inline static QStringList GetAllNestedDirs(QString path)
-    {
-	QDir dir(path);
-	QStringList res;
-	QStringList subdirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-	for (const auto &subdir : subdirs) {
-	    res << path + "/" + subdir;
-	    res += GetAllNestedDirs(path + "/" + subdir);
-	}
-	return res;
-    }
+    inline static QStringList GetAllNestedDirs(QString path);
+    inline static QFileInfoList GetAllFilesIncludeSubcats(QString path);
+
+    using cbProgress_t = std::function<void(int copied)>;
+    inline static bool CopyDirectory(QString directory, QString pathDestination, QString newName = "", cbProgress_t progress = nullptr);
+    // перезаписывает не спрашивая
 };
 
 QFileInfo MyQFileDir::GetNewestFI(const QFileInfoList & files)
@@ -79,42 +74,93 @@ void MyQFileDir::ReplaceFilesWithBackup(const QFileInfoList & filesToReplace, co
     }
 }
 
-bool MyQFileDir::CreatePath(QString path)
+QStringList MyQFileDir::GetAllNestedDirs(QString path)
 {
-    path.replace('\\','/');
-    auto catalogs = path.split("/", QString::SkipEmptyParts);
-    if(catalogs.size())
+    QDir dir(path);
+    QStringList res;
+    QStringList subdirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const auto &subdir : subdirs) {
+	res << path + "/" + subdir;
+	res += GetAllNestedDirs(path + "/" + subdir);
+    }
+    return res;
+}
+
+QFileInfoList MyQFileDir::GetAllFilesIncludeSubcats(QString path)
+{
+    QDir dir(path);
+    auto files = dir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+    QStringList subdirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const auto &subdir : subdirs)
     {
-	if(QFileInfo::exists(catalogs[0]))
+	files += GetAllFilesIncludeSubcats(path + "/" + subdir);
+    }
+    return files;
+}
+
+bool MyQFileDir::CopyDirectory(QString srcDirectory, QString pathDestination, QString newName, MyQFileDir::cbProgress_t progress)
+{
+    QDir srcDir(srcDirectory);
+
+    if(!srcDir.exists()) { qWarning() << "CopyDirectory: " + srcDirectory + " not exists"; return false; }
+    if(!QDir(pathDestination).exists()) { qWarning() << "CopyDirectory: " + pathDestination + " not exists"; return false; }
+
+    if(newName.isEmpty()) newName = srcDir.dirName();
+
+    QString newDirectoryStr = pathDestination + "/" + newName;
+
+    if(!QDir().exists(newDirectoryStr))
+	if(!QDir().mkdir(newDirectoryStr)) { qWarning() << "CopyDirectory: can't create dir " + newDirectoryStr; return false; }
+
+    int i=0;
+    QDir currentDir(newDirectoryStr);
+    QDirIterator it(srcDirectory, QStringList(), QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+    while(it.hasNext())
+    {
+	auto fileOrDir = it.next();
+	if(QDir copyingDir(fileOrDir); copyingDir.exists())
 	{
-	    QString currentDir = catalogs[0];
-	    for(int i=1; i<catalogs.size(); i++)
+	    QString newDirStr = newDirectoryStr + QString(fileOrDir).remove(0,srcDirectory.length());
+	    currentDir.setPath(newDirStr);
+	    if(!currentDir.exists())
 	    {
-		currentDir += "/" + catalogs[i];
-		if(!QFileInfo::exists(currentDir))
-		    if(!QDir().mkdir(currentDir))
-		    {
-			qDebug() << "Error. Can't create dir " + currentDir;
-			return false;
-		    }
+		if(!QDir().mkdir(newDirStr))
+		{
+		    qWarning() << "CopyDirectory: can't create subdir " + currentDir.path();
+		    return false;
+		}
 	    }
 	}
 	else
 	{
-	    qDebug() << "Error. Dir["+catalogs[0]+"] does not exist " + path;
-	    return false;
-	}
-    }
-    else
-    {
-	qDebug() << "Error. Can't detect catalogs in path ["+path+"]";
-	return false;
-    }
+	    QFile srcFile(fileOrDir);
+	    if(srcFile.exists())
+	    {
+		QFile dstFile(newDirectoryStr + QString(fileOrDir).remove(0,srcDirectory.length()));
+		if(dstFile.exists())
+		{
+		    if(!dstFile.remove())
+		    {
+			qWarning() << "CopyDirectory: can't delete existing dst file " + fileOrDir;
+			return false;
+		    }
+		}
 
+		if(!srcFile.copy(dstFile.fileName()))
+		{
+		    qWarning() << "CopyDirectory: can't copy srcFile to dst file " + fileOrDir;
+		}
+	    }
+	    else
+	    {
+		qWarning() << "CopyDirectory: src file not exists " + fileOrDir;
+		return false;
+	    }
+	}
+	if(progress) progress(++i);
+    }
     return true;
 }
-
-
 
 //---------------------------------------------------------------------------
 #endif

@@ -17,7 +17,9 @@
 //---------------------------------------------------------------------------
 struct MyQDifferent
 {
-    inline static QString PathToExe();
+    inline static QString ExePath();
+    inline static QString ExeName();
+    inline static QString ExePathName();
     inline static QString GetGeo(const QWidget &widget);
     inline static bool SetGeo(QString geoStr, QWidget &widget);
 
@@ -29,9 +31,20 @@ struct MyQDifferent
 
 //---------------------------------------------------------------------------
 
-QString MyQDifferent::PathToExe()
+QString MyQDifferent::ExePath()
 {
+    // альтернатива QDir::currentPath(), но если программа запущена из Qt игнорирует /debug
     return QFileInfo(QCoreApplication::applicationFilePath()).path();
+}
+
+QString MyQDifferent::ExeName()
+{
+    return QFileInfo(QCoreApplication::applicationFilePath()).fileName();
+}
+
+QString MyQDifferent::ExePathName()
+{
+    return QCoreApplication::applicationFilePath();
 }
 
 QString MyQDifferent::GetGeo(const QWidget &widget)
