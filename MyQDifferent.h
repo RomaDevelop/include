@@ -17,6 +17,7 @@
 //---------------------------------------------------------------------------
 struct MyQDifferent
 {
+    inline static QString PathToExe() { return ExePath(); }
     inline static QString ExePath();
     inline static QString ExeName();
     inline static QString ExePathName();

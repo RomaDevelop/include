@@ -2,20 +2,31 @@
 #ifndef UpdatingClient_H
 #define UpdatingClient_H
 //---------------------------------------------------------------------------
-#include <thread>
+#include <memory>
 
-#include <windows.h>
+#include <QProcess>
+#include <QString>
+#include <QTimer>
 
-#include "MyQShellExecute.h"
+#include "thread_box.h"
+
 #include "MyQDifferent.h"
 #include "MyQFileDir.h"
+#include "MyQShortings.h"
 
 class UpdatingClient
 {
 public:
     UpdatingClient(QString requestUpdateAddContent = "");
+    ~UpdatingClient()
+    {
+	if(thread.was_started() && !thread.whait_for_ending(3000))
+	    QMbw(nullptr,"Error", "Updating time too long");
+    }
 
-    static void ShowAndWriteError(QString error, QString file = "", QString fileContent = "");
+private:
+    void ShowAndWriteError(QString error, QString file = "", QString fileContent = "");
+    thread_box thread{""};
 };
 
 UpdatingClient::UpdatingClient(QString requestUpdateAddContent)
@@ -26,7 +37,7 @@ UpdatingClient::UpdatingClient(QString requestUpdateAddContent)
 
     if(QFileInfo(updatingManagerOnServerExe).exists())
     {
-	std::thread thread([requestUpdateAddContent, updatingManagerOnServerPath, updatingManagerOnServerFiles]()
+	thread.start([this, requestUpdateAddContent, updatingManagerOnServerPath, updatingManagerOnServerFiles]()
 	{
 	    QString localUpdatingManagerPathContainer = QDir().homePath() + "/AppData/Local/AVSpas";
 	    QString localUpdatingManagerPath = localUpdatingManagerPathContainer+ "/UpdatingManager";
@@ -120,7 +131,10 @@ UpdatingClient::UpdatingClient(QString requestUpdateAddContent)
 
 	    if(QFile::exists(localUpdatingManagerExe) && requestFileQFile.exists())
 	    {
-		MyQShellExecute::ShellExecuteFile(localUpdatingManagerExe);
+		QProcess process;
+		QStringList args;
+		process.startDetached(localUpdatingManagerExe, args);
+		//MyQShellExecute::ShellExecuteFile(localUpdatingManagerExe);
 	    }
 	    else
 	    {
@@ -128,21 +142,24 @@ UpdatingClient::UpdatingClient(QString requestUpdateAddContent)
 		return;
 	    }
 	});
-	thread.detach();
     }
-    else qDebug() << "EasyUpdater " + updatingManagerOnServerExe + " not found";
+    else qDebug() << updatingManagerOnServerExe + " not found, update impossible";
 }
+
+#include <QApplication>
 
 void UpdatingClient::ShowAndWriteError(QString error, QString fileName, QString fileContent)
 {
-    MessageBox(nullptr, error.toStdWString().c_str(), L"Ошибка", MB_OK | MB_ICONERROR);
+    qCritical() << "Error " + error;
+    QMetaObject::invokeMethod(QApplication::instance(), [error](){QMbc(nullptr,"Ошибка",error);}, Qt::QueuedConnection);
 
     if(fileName.isEmpty() && fileContent.isEmpty())
 	return;
 
     if(!QDir().mkpath(QFileInfo(fileName).path()))
     {
-	MessageBox(nullptr, QString("Can't make path " + QFileInfo(fileName).path()).toStdWString().c_str(), L"Ошибка", MB_OK | MB_ICONERROR);
+	QMetaObject::invokeMethod(QApplication::instance(), [fileName](){
+	    QMbc(nullptr,"Ошибка","Can't make path " + QFileInfo(fileName).path());}, Qt::QueuedConnection);
 	return;
     }
 
@@ -151,7 +168,8 @@ void UpdatingClient::ShowAndWriteError(QString error, QString fileName, QString 
     {
 	file.write(fileContent.toUtf8());
     }
-    else MessageBox(nullptr, QString("Can't write "+fileContent+" to file "+fileName).toStdWString().c_str(), L"Ошибка", MB_OK | MB_ICONERROR);
+    else QMetaObject::invokeMethod(QApplication::instance(), [fileContent, fileName](){
+	QMbc(nullptr,"Ошибка","Can't write "+fileContent+" to file "+fileName);}, Qt::QueuedConnection);
 }
 //---------------------------------------------------------------------------
 #endif

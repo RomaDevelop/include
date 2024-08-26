@@ -15,7 +15,6 @@ struct MyQFileDir
     inline static QFileInfo GetNewestFI(const QFileInfoList &files);
     inline static void ReplaceFileWhithBacup(const QFileInfo &src, const QFileInfo &dst, const QString &backupPath);
     inline static void ReplaceFilesWithBackup(const QFileInfoList &filesToReplace, const QFileInfo &fileSrc, const QString &backupPath);
-    inline static bool CreatePath(QString path);
 
     inline static QStringList GetAllNestedDirs(QString path);
     inline static QFileInfoList GetAllFilesIncludeSubcats(QString path);
