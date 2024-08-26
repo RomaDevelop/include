@@ -1,3 +1,6 @@
+#ifndef CodeMarkers_H
+#define CodeMarkers_H
+
 namespace CodeMarkers
 {
 	const QString mock {"MOCK"};
@@ -7,3 +10,5 @@ namespace CodeMarkers
 	const QString note {"note"}; 
 	const QString toDo {"toDo"};
 };
+
+#endif
