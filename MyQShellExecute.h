@@ -1,24 +1,45 @@
 //---------------------------------------------------------------------------
-#ifndef MyQShellExecute_H
-#define MyQShellExecute_H
+#ifndef MyQExecute_H
+#define MyQExecute_H
 //---------------------------------------------------------------------------
-#include <windows.h>
 #include <QString>
 #include <QFileInfo>
+#include <QDir>
+#include <QDebug>
+#include <QProcess>
+#include <QDesktopServices>
+#include <QUrl>
 //---------------------------------------------------------------------------
-struct MyQShellExecute
+struct MyQExecute
 {
-    inline static void ShellExecuteFile(QString file, QString params = "", int SW_MODE = SW_NORMAL)
-    {
-	ShellExecute(NULL, NULL, file.toStdWString().c_str(), params.toStdWString().c_str(), NULL, SW_MODE);
-    }
-    inline static void ShellExecutePath(QString file, int SW_MODE = SW_NORMAL)
+    inline static bool Execute(QString file, QStringList args = {})
     {
 	QFileInfo fileInfo(file);
-	QString command = QString("/select, \"") + fileInfo.fileName() + "\"";
-
-	ShellExecute(NULL, L"open", L"explorer.exe", command.toStdWString().c_str(), fileInfo.path().toStdWString().c_str(), SW_MODE);
+	if(fileInfo.isExecutable()) // Если файл исполняемый
+	{
+	    return QProcess::startDetached(file, args);
+	}
+	else
+	{
+	    if(!args.isEmpty())
+		qDebug() << "MyQExecute::Execute: файл " + file + " не является исполняемым, аргументы игнорируются";
+	    return QDesktopServices::openUrl(QUrl::fromLocalFile(file));
+	}
+    }
+    inline static bool ShowInExplorer(QString fileOrDir)
+    {
+	if(QFileInfo(fileOrDir).exists() || QDir(fileOrDir).exists())
+	{
+	QStringList args;
+	args << "/select," << QDir::toNativeSeparators(fileOrDir);
+	return QProcess::startDetached("explorer", args);
+	}
+	else
+	{
+	    qCritical() << "MyQExecute::Execute: объект " + fileOrDir + " не обнаружен";
+	    return false;
+	}
     }
 };
 //---------------------------------------------------------------------------
-#endif  // MyQShellExecute
+#endif

@@ -131,12 +131,10 @@ UpdatingClient::UpdatingClient(QString requestUpdateAddContent)
 
 	    if(QFile::exists(localUpdatingManagerExe) && requestFileQFile.exists())
 	    {
-		//QProcess process;
+		QProcess process;
 		QStringList args;
-		//process.startDetached(localUpdatingManagerExe, args);
+		process.startDetached(localUpdatingManagerExe, args);
 		//MyQShellExecute::ShellExecuteFile(localUpdatingManagerExe);
-		if(!QProcess::startDetached(localUpdatingManagerExe,QStringList()))
-			ShowAndWriteError("EasyUpdater Error execute " + localUpdatingManagerExe);
 	    }
 	    else
 	    {
