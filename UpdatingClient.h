@@ -17,19 +17,20 @@
 class UpdatingClient
 {
 public:
-    UpdatingClient(QString requestUpdateAddContent = "");
+    UpdatingClient(QStringList updaterArgs);
     ~UpdatingClient()
     {
 	if(thread.was_started() && !thread.whait_for_ending(3000))
 	    QMbw(nullptr,"Error", "Updating time too long");
     }
+    static QString StrToPatchExe(QString progName, QString progVersion) { return "[<programm><"+progName+"><version><"+progVersion+">]"; }
 
 private:
     void ShowAndWriteError(QString error, QString file = "", QString fileContent = "");
     thread_box thread{""};
 };
 
-UpdatingClient::UpdatingClient(QString requestUpdateAddContent)
+UpdatingClient::UpdatingClient(QStringList updaterArgs)
 {
     QString updatingManagerOnServerPath = "S:/___Server/03 Users/MyslivchenkoRI/UpdatingManager";
     QString updatingManagerOnServerExe = updatingManagerOnServerPath+ "/UpdatingManager.exe";
@@ -37,13 +38,12 @@ UpdatingClient::UpdatingClient(QString requestUpdateAddContent)
 
     if(QFileInfo(updatingManagerOnServerExe).exists())
     {
-	thread.start([this, requestUpdateAddContent, updatingManagerOnServerPath, updatingManagerOnServerFiles]()
+	thread.start([this, updatingManagerOnServerPath, updatingManagerOnServerFiles, updaterArgs]()
 	{
 	    QString localUpdatingManagerPathContainer = QDir().homePath() + "/AppData/Local/AVSpas";
 	    QString localUpdatingManagerPath = localUpdatingManagerPathContainer+ "/UpdatingManager";
 	    QString localUpdatingManagerFiles= localUpdatingManagerPath + "/files";
 	    QString localUpdatingManagerExe = localUpdatingManagerPathContainer + "/UpdatingManager/UpdatingManager.exe";
-	    QString contentRequest = MyQDifferent::ExePathName() + "\n" + requestUpdateAddContent;
 
 	    QFile localUpdaterVersion(localUpdatingManagerFiles+"/version.txt");
 	    QFile serverUpdaterVersion(updatingManagerOnServerFiles+"/version.txt");
@@ -60,7 +60,7 @@ UpdatingClient::UpdatingClient(QString requestUpdateAddContent)
 
 	    if(!serverUpdaterVersion.exists())
 	    {
-		ShowAndWriteError("На сервере отсутсвует файл контроля версии, обратитесь к разработчику",
+		ShowAndWriteError("На сервере отсутсвует файл контроля версии UpdatingManager-а, обратитесь к разработчику",
 				  MyQDifferent::ExePath() + "/files/updating_errors.txt",
 				  "Отсутсвует "+serverUpdaterVersion.fileName());
 		return;
@@ -75,6 +75,8 @@ UpdatingClient::UpdatingClient(QString requestUpdateAddContent)
 		    QString serverVersion = serverUpdaterVersion.readAll();
 		    localUpdaterVersion.close();
 		    serverUpdaterVersion.close();
+		    qDebug() << "local version file content: ["+localVersion+"]";
+		    qDebug() << "server version file content: ["+serverVersion+"]";
 		    if(localVersion.toInt() >= serverVersion.toInt())
 			needUpdateUpdater = false;
 		}
@@ -120,7 +122,7 @@ UpdatingClient::UpdatingClient(QString requestUpdateAddContent)
 	    QFile requestFileQFile(requestFilePathName);
 	    if(requestFileQFile.open(QFile::WriteOnly))
 	    {
-		requestFileQFile.write(contentRequest.toUtf8());
+		requestFileQFile.write(updaterArgs.join('\n').toUtf8());
 		requestFileQFile.close();
 	    }
 	    else
@@ -129,14 +131,11 @@ UpdatingClient::UpdatingClient(QString requestUpdateAddContent)
 		return;
 	    }
 
-	    if(QFile::exists(localUpdatingManagerExe) && requestFileQFile.exists())
+	    if(QFile::exists(localUpdatingManagerExe))
 	    {
-		//QProcess process;
 		QStringList args;
-		//process.startDetached(localUpdatingManagerExe, args);
-		//MyQShellExecute::ShellExecuteFile(localUpdatingManagerExe);
-		if(!QProcess::startDetached(localUpdatingManagerExe,QStringList()))
-			ShowAndWriteError("EasyUpdater Error execute " + localUpdatingManagerExe);
+		if(!QProcess::startDetached(localUpdatingManagerExe, QStringList()))
+		    ShowAndWriteError("EasyUpdater Error execute " + localUpdatingManagerExe);
 	    }
 	    else
 	    {
