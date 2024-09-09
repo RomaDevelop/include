@@ -9,6 +9,7 @@
 #include <QKeyEvent>
 #include <QHeaderView>
 #include <QMessageBox>
+#include <QDebug>
 
 class MyQTableWidget : public QTableWidget {
 	Q_OBJECT
@@ -23,6 +24,9 @@ public:
 		addAction(createAction(tr("Paste"), QKeySequence::Paste, this, SLOT(paste())));
 		setSelectionMode(QAbstractItemView::ContiguousSelection);  // Режим выделения
 	}
+	
+	inline static void SetItemEnableState(QTableWidgetItem *item, bool enableNewState);
+	
 protected:
 	void keyPressEvent(QKeyEvent *event) override {
 		if (event->matches(QKeySequence::Cut)) {
@@ -134,5 +138,13 @@ private:
 		}
 	}
 };
+
+void MyQTableWidget::SetItemEnableState(QTableWidgetItem * item, bool enableNewState)
+{
+	if(!item) { qCritical() << "MyQTableWidget::SetItemEnableState nullptr item"; return; }
+	auto flags = item->flags();
+	flags.setFlag(Qt::ItemIsEditable, enableNewState);
+	item->setFlags(flags);
+}
 
 #endif // MYQTABLEWIDGET_H
