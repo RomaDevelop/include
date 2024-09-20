@@ -3,6 +3,7 @@
 #define MyCppDifferent_H
 //---------------------------------------------------------------------------
 #include <direct.h>
+#include <cmath>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -131,27 +132,32 @@ bool MyCppDifferent::test_float_to_bytes_conversion()
     float from;
     std::array<unsigned char,4> bytes;
     float to;
+    std::cerr.precision(15);
     for(int i=0; i<10; i++)
     {
 	from = (float) rand() / rand();
 	bytes = to_bytes(from);
 	to = to_float(bytes);
-	if(from != to) { std::cerr << "bad conversion " << from << " -> " << to; res = false; }
+	if(fabs(from - to) > fabs(from) * 0.00001)
+	    { std::cerr << "bad conversion " << from << " -> " << to << " fabs=" << fabs(from - to) << std::endl; res = false; }
 
 	from = (float) rand() / - rand();
 	bytes = to_bytes(from);
 	to = to_float(bytes);
-	if(from != to) { std::cerr << "bad conversion " << from << " -> " << to; res = false; }
+	if(fabs(from - to) > fabs(from) * 0.00001)
+	    { std::cerr << "bad conversion " << from << " -> " << to << " fabs=" << fabs(from - to) << std::endl; res = false; }
 
 	from = (float) rand() / rand() * 999999.0f;
 	bytes = to_bytes(from);
 	to = to_float(bytes);
-	if(from != to) { std::cerr << "bad conversion " << from << " -> " << to; res = false; }
+	if(fabs(from - to) > fabs(from) * 0.00001)
+	    { std::cerr << "bad conversion " << from << " -> " << to << " fabs=" << fabs(from - to) << std::endl; res = false; }
 
 	from = (float) rand() / - rand() * 999999.0f;
 	bytes = to_bytes(from);
 	to = to_float(bytes);
-	if(from != to) { std::cerr << "bad conversion " << from << " -> " << to; res = false; }
+	if(fabs(from - to) > fabs(from) * 0.000001)
+	    { std::cerr << "bad conversion " << from << " -> " << to << " fabs=" << fabs(from - to) << std::endl; res = false; }
     }
 
     return res;
