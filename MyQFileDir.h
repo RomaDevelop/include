@@ -12,8 +12,12 @@
 //---------------------------------------------------------------------------
 struct MyQFileDir
 {
-    inline static QFileInfo GetNewestFI(const QFileInfoList &files);
-    inline static void ReplaceFileWhithBacup(const QFileInfo &src, const QFileInfo &dst, const QString &backupPath);
+    inline static QFileInfo FindNewest(const QFileInfoList &files);
+
+    enum { modified = 1, read = 2, noSort = 0 };
+    inline static QString RemoveOldFiles(QString directory, int remainCount, int sortFlag = MyQFileDir::modified);
+
+    inline static void ReplaceFileWithBackup(const QFileInfo &src, const QFileInfo &dst, const QString &backupPath);
     inline static void ReplaceFilesWithBackup(const QFileInfoList &filesToReplace, const QFileInfo &fileSrc, const QString &backupPath);
 
     inline static QStringList GetAllNestedDirs(QString path);
@@ -24,7 +28,7 @@ struct MyQFileDir
     // перезаписывает не спрашивая
 };
 
-QFileInfo MyQFileDir::GetNewestFI(const QFileInfoList & files)
+QFileInfo MyQFileDir::FindNewest(const QFileInfoList & files)
 {
     QFileInfo newestModifFI;
     if(files.size())
@@ -37,7 +41,38 @@ QFileInfo MyQFileDir::GetNewestFI(const QFileInfoList & files)
     return newestModifFI;
 }
 
-void MyQFileDir::ReplaceFileWhithBacup(const QFileInfo & src, const QFileInfo & dst, const QString & backupPath)
+QString MyQFileDir::RemoveOldFiles(QString directory, int remainCount, int sortFlag)
+{
+    QString ret;
+    QDir dir(directory);
+    if(!dir.exists())
+    {
+	ret += "directory ["+directory+"] not exists";
+    }
+
+    QFileInfoList content = dir.entryInfoList(QDir::Files);
+    for(int i=content.size()-1; i>=0; i--)
+	if(!content[i].isFile()) content.removeAt(i);
+
+    auto cmpModified = [](const QFileInfo &fi1, const QFileInfo &fi2){ return fi1.lastModified() > fi2.lastModified();};
+    auto cmpRead = [](const QFileInfo &fi1, const QFileInfo &fi2){ return fi1.lastRead() > fi2.lastRead();};
+
+    if(sortFlag == modified)
+	std::sort(content.begin(),content.end(),cmpModified);
+    else if(sortFlag == read)
+	std::sort(content.begin(),content.end(),cmpRead);
+    else if(sortFlag == noSort) {}
+    else ret += "wrong sort flag ("+QString::number(sortFlag)+")";
+
+    while (content.size() > remainCount) {
+	if(!QFile(content.back().filePath()).remove())
+	    ret += "can't remove file ["+content.back().filePath()+"]\n";
+	content.removeLast();
+    }
+    return ret;
+}
+
+void MyQFileDir::ReplaceFileWithBackup(const QFileInfo & src, const QFileInfo & dst, const QString & backupPath)
 {
     QFile fileToReplace(dst.filePath());
     QString dateFormat = "yyyy.MM.dd hh:mm:ss:zzz";
@@ -68,7 +103,7 @@ void MyQFileDir::ReplaceFilesWithBackup(const QFileInfoList & filesToReplace, co
     {
 	for(auto &f:filesToReplace)
 	{
-	    ReplaceFileWhithBacup(fileSrc, f, backupPath);
+	    ReplaceFileWithBackup(fileSrc, f, backupPath);
 	}
     }
 }

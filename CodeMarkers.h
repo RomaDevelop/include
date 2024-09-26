@@ -1,14 +1,17 @@
 #ifndef CodeMarkers_H
 #define CodeMarkers_H
 
-namespace CodeMarkers
+#include <QString>
+
+struct CodeMarkers
 {
-	const QString mock {"MOCK"};
-	const QString legacy {"LEGACY"};
-	const QString needOptimisation {"NEED OPTIMISATION"};
-	const QString canBeOptimized {"canBeOptimized"};
-	const QString note {"note"}; 
-	const QString toDo {"toDo"};
+    inline static const QString mock {"MOCK"};
+    inline static const QString legacy {"LEGACY"};
+    inline static const QString needOptimisation {"NEED OPTIMISATION"};
+    inline static const QString note {"note"};
+    inline static const QString toDo {"toDo"};
+
+    static void CanBeOptimized([[maybe_unused]] const char* comment) {}
 };
 
 #endif

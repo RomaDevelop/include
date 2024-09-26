@@ -26,8 +26,6 @@ struct MyQDifferent
 
     inline static bool SaveSettings(QString fileName, const std::vector<QWidget*> &widgets, const QStringList &stringSettings);
     inline static bool LoadSettings(QString fileName, std::vector<QWidget*> &widgets, QStringList &stringSettings);
-
-    inline static QString RemoveOldFiles(QString directory, int counAfterDelete);
 };
 
 //---------------------------------------------------------------------------
@@ -193,29 +191,7 @@ bool MyQDifferent::LoadSettings(QString fileName, std::vector<QWidget *> & widge
     return true;
 }
 
-QString MyQDifferent::RemoveOldFiles(QString directory, int counAfterDelete)
-{
-    QString ret;
-    QDir dir(directory);
-    if(!dir.exists())
-    {
-	ret += "directory ["+directory+"] not exists";
-    }
 
-    auto content = dir.entryInfoList();
-    for(int i=content.size()-1; i>=0; i--)
-	if(!content[i].isFile()) content.removeAt(i);
-    std::sort(content.begin(),content.end(),[](const QFileInfo &fi1, const QFileInfo &fi2){
-	return fi1.lastRead() < fi2.lastRead();
-    });
-
-    while (content.size() > counAfterDelete) {
-	if(!QFile(content.front().filePath()).remove())
-	    ret += "can't remove file ["+content.front().filePath()+"]\n";
-	content.removeFirst();
-    }
-    return ret;
-}
 
 #endif
 //---------------------------------------------------------------------------
