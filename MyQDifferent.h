@@ -111,8 +111,9 @@ bool MyQDifferent::SaveSettings(QString fileName, const std::vector<QWidget *> &
     }
 
     QFile file(fileName);
+    QTextStream stream(&file);
     if(file.open(QIODevice::WriteOnly))
-	file.write(settings.toUtf8());
+	stream << settings;
     else
     {
 	qDebug() << "Не удалось сохранить файл настроек "+fileName;

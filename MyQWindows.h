@@ -1,11 +1,12 @@
-#ifndef MyQWindows_H
-#define MyQWindows_H
+#ifndef MYQWINDOWS_H
+#define MYQWINDOWS_H
 
-#include <windows.h>
+#include <QWidget>
 
 struct MyQWindows
 {
-	MessageBox(nullptr, QString("Can't make path " + QFileInfo(fileName).path()).toStdWString().c_str(), L"Ошибка", MB_OK | MB_ICONERROR);
+	static void ActivateWindow(QWidget *window);
+	//MessageBox(nullptr, QString("Can't make path " + QFileInfo(fileName).path()).toStdWString().c_str(), L"Ошибка", MB_OK | MB_ICONERROR);
 };
 
-#endif
+#endif // MYQWINDOWS_H

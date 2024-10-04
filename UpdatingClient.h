@@ -20,7 +20,7 @@ public:
     UpdatingClient(QStringList updaterArgs);
     ~UpdatingClient()
     {
-	if(thread.was_started() && !thread.whait_for_ending(3000))
+	if(thread.was_started() && !thread.finish(3000))
 	    QMbw(nullptr,"Error", "Updating time too long");
     }
     static QString StrToPatchExe(QString progName, QString progVersion) { return "[<programm><"+progName+"><version><"+progVersion+">]"; }
@@ -122,7 +122,8 @@ UpdatingClient::UpdatingClient(QStringList updaterArgs)
 	    QFile requestFileQFile(requestFilePathName);
 	    if(requestFileQFile.open(QFile::WriteOnly))
 	    {
-		requestFileQFile.write(updaterArgs.join('\n').toUtf8());
+		QTextStream stream(&requestFileQFile);
+		stream << updaterArgs.join('\n');
 		requestFileQFile.close();
 	    }
 	    else
@@ -167,7 +168,8 @@ void UpdatingClient::ShowAndWriteError(QString error, QString fileName, QString 
     QFile file(fileName);
     if(file.open(QFile::WriteOnly))
     {
-	file.write(fileContent.toUtf8());
+	QTextStream stream(&file);
+	stream << fileContent;
     }
     else QMetaObject::invokeMethod(QApplication::instance(), [fileContent, fileName](){
 	QMbc(nullptr,"Ошибка","Can't write "+fileContent+" to file "+fileName);}, Qt::QueuedConnection);

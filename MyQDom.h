@@ -12,6 +12,8 @@ struct MyQDom
     inline static std::vector<QDomElement> GetTopLevelElements(const QDomNode &node);
     inline static std::vector<QDomElement> GetAllLevelElements(const QDomNode &node);
     inline static std::vector<std::pair<QString,QString>> Attributes(const QDomElement &element);
+    inline static QStringList AttributesNames(const QDomElement &element);
+    inline static QStringList AttributesValues(const QDomElement &element);
     inline static QDomElement FirstChildIncludeSubChilds(const QDomNode &node, const QString &tagName);
     inline static QDomElement FirstChildIncludeSubChilds(const QDomNode &node, const std::pair<QString,QString> &attribute);
     inline static void ReplaceInAttributes(QDomElement &element, const QString &replaceWhat, const QString &replaceTo);
@@ -68,6 +70,32 @@ std::vector<std::pair<QString, QString> > MyQDom::Attributes(const QDomElement &
 	attrsVector.push_back({attr.name(),attr.value()});
     }
     return attrsVector;
+}
+
+QStringList MyQDom::AttributesNames(const QDomElement & element)
+{
+    QStringList attrsNames;
+    auto attrs = element.attributes();
+    int size = attrs.size();
+    for(int i=0; i<size; i++)
+    {
+	auto attr = attrs.item(i).toAttr();
+	attrsNames.push_back(attr.name());
+    }
+    return attrsNames;
+}
+
+QStringList MyQDom::AttributesValues(const QDomElement & element)
+{
+    QStringList attrsVals;
+    auto attrs = element.attributes();
+    int size = attrs.size();
+    for(int i=0; i<size; i++)
+    {
+	auto attr = attrs.item(i).toAttr();
+	attrsVals.push_back(attr.value());
+    }
+    return attrsVals;
 }
 
 QDomElement MyQDom::FirstChildIncludeSubChilds(const QDomNode & node, const QString & tagName)

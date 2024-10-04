@@ -259,15 +259,17 @@ int MyQExcelHasher::InitFile(QString directory, QString fileName)
 			if(file_hashes.open(QFile::Append))
 			{
 				QString curHashStr = MyQBA::QByteArrToStr(curHash.result());
-				file_hashes.write((curHashStr+"[endHashElem]").toUtf8());
-				file_hashes.write(QString(QSn(fileIndex)+"[endHashElem]").toUtf8());
-				file_hashes.write(QString(fileName+"[endHashElem][endHashLine]\r\n").toUtf8());
+				QTextStream stream(&file_hashes);
+				stream << curHashStr << "[endHashElem]";
+				stream << QSn(fileIndex) << "[endHashElem]";
+				stream << fileName << "[endHashElem][endHashLine]\r\n";
 				file_hashes.close();
 
 				QFile fileData(dirHashedFiles.path() + "/" + newFile);
 				if(fileData.open(QFile::WriteOnly))
 				{
-					fileData.write(ewb->ToStr().toUtf8());
+					QTextStream stream(&fileData);
+					stream << ewb->ToStr();
 					fileData.close();
 
 					ewb->CloseNoSave();
