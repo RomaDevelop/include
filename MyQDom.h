@@ -18,7 +18,7 @@ struct MyQDom
     inline static QDomElement FirstChildIncludeSubChilds(const QDomNode &node, const std::pair<QString,QString> &attribute);
     inline static void ReplaceInAttributes(QDomElement &element, const QString &replaceWhat, const QString &replaceTo);
     inline static QString ToString(const QDomElement &element);
-    inline static QString ToStringIgnoreNested(const QDomElement &element);
+    inline static QString ToStringIgnoreNested(const QDomElement &element, int truncateAttrs = -1);
 };
 
 
@@ -157,11 +157,22 @@ QString MyQDom::ToString(const QDomElement & element)
     return str;
 }
 
-QString MyQDom::ToStringIgnoreNested(const QDomElement & element)
+QString MyQDom::ToStringIgnoreNested(const QDomElement & element, int truncateAttrs)
 {
     QString ret;
     auto attrs = Attributes(element);
-    for(auto &attr:attrs) ret += attr.first + "=\"" + attr.second + "\" ";
+    for(auto &attr:attrs)
+    {
+	if(truncateAttrs < 0)
+	    ret += attr.first + "=\"" + attr.second + "\" ";
+	else
+	{
+	    bool needTruncate = truncateAttrs < attr.second.size();
+	    attr.second.truncate(truncateAttrs);
+	    if(needTruncate) attr.second += "...";
+	    ret += attr.first + "=\"" + attr.second + "\" ";
+	}
+    }
     ret.chop(1);
 
     ret = "<"+element.tagName()+" "+ret;
@@ -169,8 +180,6 @@ QString MyQDom::ToStringIgnoreNested(const QDomElement & element)
     else ret += ">";
     return ret;
 }
-
-
 
 //---------------------------------------------------------------------------
 #endif
