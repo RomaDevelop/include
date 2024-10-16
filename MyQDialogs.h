@@ -66,8 +66,6 @@ QString MyQDialogs::InputText(QString captionDialog, uint w, uint h)
     dialog->resize(w, h);
     dialog->exec();
     QString ret = tb->toPlainText();
-    delete tb;
-    delete all;
     delete dialog;
 
     return ret;
