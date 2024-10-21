@@ -3,6 +3,7 @@
 #define MYQDOM
 //---------------------------------------------------------------------------
 #include <vector>
+//#include <functional>
 #include <QDebug>
 #include <QFile>
 #include <QDomDocument>
@@ -11,6 +12,7 @@ struct MyQDom
 {
     inline static std::vector<QDomElement> GetTopLevelElements(const QDomNode &node);
     inline static std::vector<QDomElement> GetAllLevelElements(const QDomNode &node);
+    inline static std::vector<QDomElement> GetAllLevelElements_if(const QDomNode &node, std::function<bool(const QDomNode &node)> condition);
     inline static std::vector<std::pair<QString,QString>> Attributes(const QDomElement &element);
     inline static QStringList AttributesNames(const QDomElement &element);
     inline static QStringList AttributesValues(const QDomElement &element);
@@ -20,7 +22,6 @@ struct MyQDom
     inline static QString ToString(const QDomElement &element);
     inline static QString ToStringIgnoreNested(const QDomElement &element, int truncateAttrs = -1);
 };
-
 
 std::vector<QDomElement> MyQDom::GetTopLevelElements(const QDomNode & node)
 {
@@ -40,22 +41,26 @@ std::vector<QDomElement> MyQDom::GetTopLevelElements(const QDomNode & node)
 
 std::vector<QDomElement> MyQDom::GetAllLevelElements(const QDomNode & node)
 {
+    return GetAllLevelElements_if(node, nullptr);
+}
+
+std::vector<QDomElement> MyQDom::GetAllLevelElements_if(const QDomNode & node, std::function<bool (const QDomNode &)> condition)
+{
     std::vector<QDomElement> elements;
+    bool add = true;
+    if(condition && !condition(node)) add = false;
+
+    if(add && !node.toElement().isNull()) elements.push_back(node.toElement());
+
     QDomNode childNode = node.firstChild();
     while(!childNode.isNull())
     {
-	QDomElement childElement = childNode.toElement(); // try to convert the node to an element.
-	if(!childElement.isNull())
-	{
-	    elements.push_back(childElement);
-	    if(childElement.hasChildNodes())
-	    {
-		auto nestedElementsOfChild = GetAllLevelElements(childNode);
-		std::move(nestedElementsOfChild.begin(), nestedElementsOfChild.end(), std::back_inserter(elements));
-	    }
-	}
+	auto nestedElementsOfChild = GetAllLevelElements_if(childNode, condition);
+	std::move(nestedElementsOfChild.begin(), nestedElementsOfChild.end(), std::back_inserter(elements));
+
 	childNode = childNode.nextSibling();
     }
+
     return elements;
 }
 
