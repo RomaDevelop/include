@@ -37,8 +37,6 @@ void MyQDialogs::ShowText(const QString & text, uint w, uint h)
     if(!h) h = 150;
     dialog->resize(w, h);
     dialog->exec();
-    delete tb;
-    delete all;
     delete dialog;
 }
 

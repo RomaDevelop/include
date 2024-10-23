@@ -1,6 +1,7 @@
 #ifndef MyQStrring_H
 #define MyQStrring_H
 
+#include <QDebug>
 #include <QStringList>
 
 struct MyQString
@@ -11,6 +12,16 @@ struct MyQString
 	ret.reserve(size);
 	for(int i=0; i<size; i++)
 	    ret.append(value);
+	return ret;
+    }
+
+    template<class T>
+    inline static QString AsDebug(const T& obj)
+    {
+	QString ret;
+	ret.clear();
+	QDebug customDebug(&ret);
+	customDebug << obj;
 	return ret;
     }
 };

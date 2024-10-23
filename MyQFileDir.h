@@ -9,6 +9,7 @@
 #include <QDateTime>
 #include <QMessageBox>
 #include <QDirIterator>
+#include <QTextCodec>
 //---------------------------------------------------------------------------
 struct MyQFileDir
 {
@@ -26,6 +27,9 @@ struct MyQFileDir
     using cbProgress_t = std::function<void(int copied)>;
     inline static bool CopyDirectory(QString directory, QString pathDestination, QString newName = "", cbProgress_t progress = nullptr);
     // перезаписывает не спрашивая
+
+    inline static QString ReadFile(const QString &fileName, bool returnErrorText = false);
+    inline static bool WriteFile(const QString &fileName, const QString &content, const QByteArray &encoding = "UTF-8");
 };
 
 QFileInfo MyQFileDir::FindNewest(const QFileInfoList & files)
@@ -194,6 +198,34 @@ bool MyQFileDir::CopyDirectory(QString srcDirectory, QString pathDestination, QS
 	if(progress) progress(++i);
     }
     return true;
+}
+
+QString MyQFileDir::ReadFile(const QString &fileName, bool returnErrorText)
+{
+    QFile file(fileName);
+    if(file.open(QFile::ReadOnly))
+    {
+	return file.readAll();
+    }
+    qCritical() << "MyQFileDir::ReadFile can't open file ["+fileName+"]";
+    if(returnErrorText) return "MyQFileDir::ReadFile can't open file ["+fileName+"]";
+    else return "";
+}
+
+bool MyQFileDir::WriteFile(const QString & fileName, const QString & content, const QByteArray & encoding)
+{
+    QFile file(fileName);
+    if(file.open(QFile::WriteOnly))
+    {
+	QTextStream stream(&file);
+	if(auto codec = QTextCodec::codecForName(encoding))
+	    stream.setCodec(codec);
+	else qCritical() << "MyQFileDir::WriteFile unknown codec ["+encoding+"]";
+	stream << content;
+	return true;
+    }
+    qCritical() << "MyQFileDir::WriteFile can't open file ["+fileName+"]";
+    return false;
 }
 
 //---------------------------------------------------------------------------
