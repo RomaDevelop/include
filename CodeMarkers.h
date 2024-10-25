@@ -5,13 +5,15 @@
 
 struct CodeMarkers
 {
-    inline static const QString mock {"MOCK"};
-    inline static const QString legacy {"LEGACY"};
-    inline static const QString needOptimisation {"NEED OPTIMISATION"};
+    inline static const QString mock {"mock"};
+    inline static const QString deprecated {"deprecated"};
+    inline static const QString retired {"retired"};
     inline static const QString note {"note"};
-    inline static const QString toDo {"toDo"};
 
-    static void CanBeOptimized([[maybe_unused]] const char* comment) {}
+    static void to_do(QString) {}
+    static void can_be_optimized(QString) {}
+    static void need_optimisation(QString) {}
+
 };
 
 #endif

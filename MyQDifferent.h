@@ -32,18 +32,20 @@ struct MyQDifferent
 
 QString MyQDifferent::ExePath()
 {
-    // альтернатива QDir::currentPath(), но если программа запущена из Qt игнорирует /debug
-    return QFileInfo(QCoreApplication::applicationFilePath()).path();
+    static QString path = QFileInfo(QCoreApplication::applicationFilePath()).path(); // альтернатива QDir::currentPath(), но если программа запущена из Qt игнорирует /debug
+    return path;
 }
 
 QString MyQDifferent::ExeName()
 {
-    return QFileInfo(QCoreApplication::applicationFilePath()).fileName();
+    static QString name = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
+    return name;
 }
 
 QString MyQDifferent::ExePathName()
 {
-    return QCoreApplication::applicationFilePath();
+    static QString pathName = QCoreApplication::applicationFilePath();
+    return pathName;
 }
 
 QString MyQDifferent::GetGeo(const QWidget &widget)
