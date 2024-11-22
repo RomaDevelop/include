@@ -14,6 +14,7 @@
 #include <QDateTime>
 
 #include "MyQShortings.h"
+#include "MyQFileDir.h"
 //---------------------------------------------------------------------------
 struct MyQDifferent
 {
@@ -113,10 +114,9 @@ bool MyQDifferent::SaveSettings(QString fileName, const std::vector<QWidget *> &
     }
 
     QFile file(fileName);
+
     QTextStream stream(&file);
-    if(file.open(QIODevice::WriteOnly))
-	stream << settings;
-    else
+    if(!MyQFileDir::WriteFile(fileName, settings))
     {
 	qDebug() << "Не удалось сохранить файл настроек "+fileName;
 	return false;

@@ -28,8 +28,11 @@ struct MyQFileDir
     inline static bool CopyDirectory(QString directory, QString pathDestination, QString newName = "", cbProgress_t progress = nullptr);
     // перезаписывает не спрашивая
 
-    inline static QString ReadFile(const QString &fileName, bool returnErrorText = false);
-    inline static bool WriteFile(const QString &fileName, const QString &content, const QByteArray &encoding = "UTF-8");
+    struct ReadResult { bool success = 0; QString content; };
+
+    inline static bool		WriteFile(const QString &fileName, const QString &content, const char * encoding = "UTF-8");
+    inline static QString	ReadFile(const QString &fileName, bool *success);
+    inline static ReadResult	ReadFile(const QString &fileName);
 };
 
 QFileInfo MyQFileDir::FindNewest(const QFileInfoList & files)
@@ -156,7 +159,8 @@ bool MyQFileDir::CopyDirectory(QString srcDirectory, QString pathDestination, QS
     while(it.hasNext())
     {
 	auto fileOrDir = it.next();
-	if(QDir copyingDir(fileOrDir); copyingDir.exists())
+	QDir copyingDir(fileOrDir);
+	if(copyingDir.exists())
 	{
 	    QString newDirStr = newDirectoryStr + QString(fileOrDir).remove(0,srcDirectory.length());
 	    currentDir.setPath(newDirStr);
@@ -200,29 +204,46 @@ bool MyQFileDir::CopyDirectory(QString srcDirectory, QString pathDestination, QS
     return true;
 }
 
-QString MyQFileDir::ReadFile(const QString &fileName, bool returnErrorText)
+QString MyQFileDir::ReadFile(const QString & fileName, bool * success)
+{
+    if(success) *success = true;
+    QFile file(fileName);
+    if(file.open(QFile::ReadOnly))
+    {
+	QTextStream stream(&file);
+	return stream.readAll();
+    }
+    if(success) *success = false;
+    qCritical() << "MyQFileDir::ReadFile can't open file ["+fileName+"]";
+    return "";
+}
+
+MyQFileDir::ReadResult MyQFileDir::ReadFile(const QString & fileName)
 {
     QFile file(fileName);
     if(file.open(QFile::ReadOnly))
     {
-	return file.readAll();
+	QTextStream stream(&file);
+	return { true, stream.readAll() };
     }
     qCritical() << "MyQFileDir::ReadFile can't open file ["+fileName+"]";
-    if(returnErrorText) return "MyQFileDir::ReadFile can't open file ["+fileName+"]";
-    else return "";
+    return { false, "" };
 }
 
-bool MyQFileDir::WriteFile(const QString & fileName, const QString & content, const QByteArray & encoding)
+bool MyQFileDir::WriteFile(const QString & fileName, const QString & content, const char * encoding)
 {
     QFile file(fileName);
     if(file.open(QFile::WriteOnly))
     {
 	QTextStream stream(&file);
 	if(auto codec = QTextCodec::codecForName(encoding))
+	{
 	    stream.setCodec(codec);
-	else qCritical() << "MyQFileDir::WriteFile unknown codec ["+encoding+"]";
-	stream << content;
-	return true;
+	    stream << content;
+	    return true;
+	}
+	qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
+	return false;
     }
     qCritical() << "MyQFileDir::WriteFile can't open file ["+fileName+"]";
     return false;
