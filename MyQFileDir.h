@@ -33,6 +33,8 @@ struct MyQFileDir
     inline static bool		WriteFile(const QString &fileName, const QString &content, const char * encoding = "UTF-8");
     inline static QString	ReadFile(const QString &fileName, bool *success);
     inline static ReadResult	ReadFile(const QString &fileName);
+
+    inline static bool		CopyFileWithReplace(const QString &file, const QString & fileDst);
 };
 
 QFileInfo MyQFileDir::FindNewest(const QFileInfoList & files)
@@ -228,6 +230,22 @@ MyQFileDir::ReadResult MyQFileDir::ReadFile(const QString & fileName)
     }
     qCritical() << "MyQFileDir::ReadFile can't open file ["+fileName+"]";
     return { false, "" };
+}
+
+bool MyQFileDir::CopyFileWithReplace(const QString & fileSrc, const QString & fileDst)
+{
+    if(QFileInfo fileDstInfo(fileDst); fileDstInfo.exists())
+    {
+	if(fileDstInfo.isFile())
+	{
+	    if(!QFile::remove(fileDst)) { qDebug() << "MyQFileDir::CopyFileWithReplace can't remove existing dst [" + fileDst + "]"; return false; }
+	}
+	else { qDebug() << "MyQFileDir::CopyFileWithReplace existing dst is not file [" + fileDst + "]"; return false; }
+    }
+
+    if(!QFile::copy(fileSrc, fileDst)) { qDebug() << "MyQFileDir::CopyFileWithReplace can't copy ["+fileSrc+"] to ["+fileDst+"]"; return false; }
+
+    return true;
 }
 
 bool MyQFileDir::WriteFile(const QString & fileName, const QString & content, const char * encoding)
