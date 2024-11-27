@@ -1,12 +1,16 @@
 #ifndef MYQDIALOGS_H
 #define MYQDIALOGS_H
 //---------------------------------------------------------------------------
+#include <memory>
+
 #include <QString>
 #include <QDialog>
+#include <QDebug>
 #include <QPushButton>
 #include <QMessageBox>
 #include <QHBoxLayout>
 #include <QTextBrowser>
+#include <QTableWidget>
 #include <QListWidget>
 #include <QCheckBox>
 #include <QDialogButtonBox>
@@ -23,6 +27,43 @@ public:
 					       const std::vector<bool> &startCheched = {},
 					       const std::vector<bool> &enabled = {},
 					       QWidget *parent = nullptr);
+    inline static std::shared_ptr<QTableWidget> Table(const std::vector<QStringList> &rows,
+						      QStringList horisontalHeader = {},
+						      QStringList verticaHeader = {},
+						      uint w = 800, uint h = 600)
+    {
+	QDialog *dialog = new QDialog;
+	if(!w) w = 150;
+	if(!h) h = 150;
+	dialog->resize(w, h);
+
+	QHBoxLayout *all  = new QHBoxLayout(dialog);
+	QTableWidget *table = new QTableWidget;
+	all->addWidget(table);
+
+	table->setRowCount(rows.size());
+	for(uint r=0; r<rows.size(); r++)
+	{
+	    if(table->columnCount() < rows[r].size()) table->setColumnCount(rows[r].size());
+	    for(int c=0; c<rows[r].size(); c++)
+	    {
+		table->setItem(r,c, new QTableWidgetItem(rows[r][c]));
+	    }
+	}
+
+	while(horisontalHeader.size() < table->columnCount()) horisontalHeader += "";
+	while(verticaHeader.size() < table->rowCount()) verticaHeader += "";
+
+	table->setHorizontalHeaderLabels(horisontalHeader);
+	table->setVerticalHeaderLabels(verticaHeader);
+
+	dialog->exec();
+
+	table->setParent(nullptr);
+
+	delete dialog;
+	return std::shared_ptr<QTableWidget>(table);
+    }
 };
 //---------------------------------------------------------------------------
 void MyQDialogs::ShowText(const QString & text, uint w, uint h)
