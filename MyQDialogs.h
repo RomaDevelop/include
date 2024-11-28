@@ -22,12 +22,12 @@ class MyQDialogs
 public:
     inline static void ShowText(const QString &text, uint w = 800, uint h = 600);
     inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
-    inline static QString InputText(QString captionDialog = "", uint w = 0, uint h = 0);
+    inline static QString InputText(QString captionDialog = "", QString startText = "", uint w = 0, uint h = 0);
     inline static CheckBoxDialogResult CheckBoxDialog(const QStringList &values,
 					       const std::vector<bool> &startCheched = {},
 					       const std::vector<bool> &enabled = {},
 					       QWidget *parent = nullptr);
-    inline static std::shared_ptr<QTableWidget> Table(const std::vector<QStringList> &rows,
+    inline static std::unique_ptr<QTableWidget> Table(const std::vector<QStringList> &rows,
 						      QStringList horisontalHeader = {},
 						      QStringList verticaHeader = {},
 						      uint w = 800, uint h = 600)
@@ -51,9 +51,6 @@ public:
 	    }
 	}
 
-	while(horisontalHeader.size() < table->columnCount()) horisontalHeader += "";
-	while(verticaHeader.size() < table->rowCount()) verticaHeader += "";
-
 	table->setHorizontalHeaderLabels(horisontalHeader);
 	table->setVerticalHeaderLabels(verticaHeader);
 
@@ -62,7 +59,7 @@ public:
 	table->setParent(nullptr);
 
 	delete dialog;
-	return std::shared_ptr<QTableWidget>(table);
+	return std::unique_ptr<QTableWidget>(table);
     }
 };
 //---------------------------------------------------------------------------
@@ -90,14 +87,13 @@ QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList butt
     return messageBox.buttons()[desision]->text();
 }
 
-QString MyQDialogs::InputText(QString captionDialog, uint w, uint h)
+QString MyQDialogs::InputText(QString captionDialog, QString startText,  uint w, uint h)
 {
-    if(captionDialog.size()) captionDialog = "InputText:" + captionDialog;
-    else captionDialog = "InputText";
     QDialog *dialog = new QDialog;
     dialog->setWindowTitle(captionDialog);
     QHBoxLayout *all  = new QHBoxLayout(dialog);
     QTextEdit *tb = new QTextEdit;
+    tb->setText(startText);
     all->addWidget(tb);
 
     if(!w) w = 150;
