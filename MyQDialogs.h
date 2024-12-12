@@ -13,6 +13,7 @@
 #include <QTableWidget>
 #include <QListWidget>
 #include <QCheckBox>
+#include <QTimer>
 #include <QDialogButtonBox>
 //---------------------------------------------------------------------------
 struct CheckBoxDialogResult;
@@ -28,27 +29,63 @@ public:
 					       const std::vector<bool> &enabled = {},
 					       QWidget *parent = nullptr);
     inline static std::unique_ptr<QTableWidget> Table(const std::vector<QStringList> &rows,
-						      QStringList horisontalHeader = {},
-						      QStringList verticaHeader = {},
+						      QStringList horisontalHeader = {}, QStringList verticaHeader = {},
+						      bool autoColWidths = true,
 						      uint w = 800, uint h = 600)
     {
+	/// что нужно:
+	/// кнопки вверх, вниз, отменить изменения
+	/// автоподгонка ширины колонок
 	QDialog *dialog = new QDialog;
 	if(!w) w = 150;
 	if(!h) h = 150;
 	dialog->resize(w, h);
 
-	QHBoxLayout *all  = new QHBoxLayout(dialog);
+	QVBoxLayout *all  = new QVBoxLayout(dialog);
+
 	QTableWidget *table = new QTableWidget;
+
+	QHBoxLayout *hlo1 = new QHBoxLayout;
+	all->addLayout(hlo1);
+
+	auto btnAdd = new QPushButton("+");
+	btnAdd->setFixedWidth(QFontMetrics(btnAdd->font()).width(btnAdd->text()) + 15);
+	hlo1->addWidget(btnAdd);
+	btnAdd->connect(btnAdd, &QPushButton::clicked, [table](){ table->insertRow(table->currentRow()); });
+
+	auto btnRemove = new QPushButton("-");
+	btnRemove->setFixedWidth(QFontMetrics(btnRemove->font()).width(btnRemove->text()) + 15);
+	hlo1->addWidget(btnRemove);
+	btnRemove->connect(btnRemove, &QPushButton::clicked, [table](){ table->removeRow(table->currentRow()); });
+
+	hlo1->addStretch();
+
 	all->addWidget(table);
 
+	int colsCount = 0;
+	for(uint r=0; r<rows.size(); r++) if(rows[r].size() > colsCount) colsCount = rows[r].size();
+
 	table->setRowCount(rows.size());
+	table->setColumnCount(colsCount);
 	for(uint r=0; r<rows.size(); r++)
 	{
-	    if(table->columnCount() < rows[r].size()) table->setColumnCount(rows[r].size());
-	    for(int c=0; c<rows[r].size(); c++)
+	    for(int c=0; c<colsCount; c++)
 	    {
-		table->setItem(r,c, new QTableWidgetItem(rows[r][c]));
+		if(c < rows[r].size())
+		    table->setItem(r,c, new QTableWidgetItem(rows[r][c]));
+		else table->setItem(r,c, new QTableWidgetItem(""));
 	    }
+	}
+
+	if(autoColWidths)
+	{
+	    QTimer::singleShot(1,[table](){
+		int oneColWidth = (table->width() - 45) / table->columnCount();
+		for(int col=0; col<table->columnCount(); col++)
+		{
+		    table->setColumnWidth(col, oneColWidth);
+		}
+	    });
 	}
 
 	table->setHorizontalHeaderLabels(horisontalHeader);
@@ -60,6 +97,16 @@ public:
 
 	delete dialog;
 	return std::unique_ptr<QTableWidget>(table);
+    }
+    inline static std::unique_ptr<QTableWidget> Table(QStringList rows,
+						      QStringList horisontalHeader = {}, QStringList verticaHeader = {},
+						      bool autoColWidths = true,
+						      uint w = 800, uint h = 600)
+    {
+	std::vector<QStringList> rowsTmp;
+	for(auto &row:rows)
+	    rowsTmp.emplace_back(std::move(row));
+	return Table(rowsTmp, horisontalHeader, verticaHeader, autoColWidths, w, h);
     }
 };
 //---------------------------------------------------------------------------
