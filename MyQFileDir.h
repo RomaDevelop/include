@@ -31,6 +31,7 @@ struct MyQFileDir
     struct ReadResult { bool success = 0; QString content; };
 
     inline static bool		WriteFile(const QString &fileName, const QString &content, const char * encoding = "UTF-8");
+    inline static bool		AppendFile(const QString &fileName, const QString &content, const char * encoding = "UTF-8");
     inline static QString	ReadFile(const QString &fileName, bool *success);
     inline static ReadResult	ReadFile(const QString &fileName);
 
@@ -206,6 +207,44 @@ bool MyQFileDir::CopyDirectory(QString srcDirectory, QString pathDestination, QS
     return true;
 }
 
+bool MyQFileDir::WriteFile(const QString & fileName, const QString & content, const char * encoding)
+{
+    QFile file(fileName);
+    if(file.open(QFile::WriteOnly))
+    {
+	QTextStream stream(&file);
+	if(auto codec = QTextCodec::codecForName(encoding))
+	{
+	    stream.setCodec(codec);
+	    stream << content;
+	    return true;
+	}
+	qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
+	return false;
+    }
+    qCritical() << "MyQFileDir::WriteFile can't open file ["+fileName+"]";
+    return false;
+}
+
+bool MyQFileDir::AppendFile(const QString & fileName, const QString & content, const char * encoding)
+{
+    QFile file(fileName);
+    if(file.open(QFile::Append))
+    {
+	QTextStream stream(&file);
+	if(auto codec = QTextCodec::codecForName(encoding))
+	{
+	    stream.setCodec(codec);
+	    stream << content;
+	    return true;
+	}
+	qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
+	return false;
+    }
+    qCritical() << "MyQFileDir::WriteFile can't open file ["+fileName+"]";
+    return false;
+}
+
 QString MyQFileDir::ReadFile(const QString & fileName, bool * success)
 {
     if(success) *success = true;
@@ -246,25 +285,6 @@ bool MyQFileDir::CopyFileWithReplace(const QString & fileSrc, const QString & fi
     if(!QFile::copy(fileSrc, fileDst)) { qDebug() << "MyQFileDir::CopyFileWithReplace can't copy ["+fileSrc+"] to ["+fileDst+"]"; return false; }
 
     return true;
-}
-
-bool MyQFileDir::WriteFile(const QString & fileName, const QString & content, const char * encoding)
-{
-    QFile file(fileName);
-    if(file.open(QFile::WriteOnly))
-    {
-	QTextStream stream(&file);
-	if(auto codec = QTextCodec::codecForName(encoding))
-	{
-	    stream.setCodec(codec);
-	    stream << content;
-	    return true;
-	}
-	qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
-	return false;
-    }
-    qCritical() << "MyQFileDir::WriteFile can't open file ["+fileName+"]";
-    return false;
 }
 
 //---------------------------------------------------------------------------
