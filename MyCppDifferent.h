@@ -9,14 +9,23 @@
 #include <vector>
 #include <thread>
 #include <algorithm>
+#include <iomanip>
+
+#include "CodeMarkers.h"
 //---------------------------------------------------------------------------
 class MyCppDifferent
 {
 public:
     inline static std::string ToDiapasons(std::vector<int> vect);
+
     inline static std::string GetPathToExe();	// если программа запускается из среды Qt creator, то выдаёт путь не до конца
 						// пропускает последнюю папку debug или release
 						// если программа запущена уже как выпущенный exe-файл, то всё норм
+
+    inline static std::string current_date_time(const char *format = "%Y.%m.%d %H-%M-%S");
+
+    inline static void sleep_ms(uint milliseconds) { std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds)); }
+
     template<class T>
     struct reverted_container
     {
@@ -90,6 +99,19 @@ std::string MyCppDifferent::GetPathToExe()
 	std::cerr << "GetPathToExe ERROR getcwd returned NULL" << std::endl;
 	return "ERROR";
     }
+}
+
+std::string MyCppDifferent::current_date_time(const char * format)
+{
+    if(0) CodeMarkers::to_do("нужно пределать эту функцию, убрать stringstream и put_time, сделать быстрее");
+
+    time_t now = time(nullptr); // Получаем текущее время как количество секунд с начала 1970 года
+    struct tm timeinfo;
+    localtime_s(&timeinfo, &now); // Преобразуем время в структуру tm с локальным временем
+    std::stringstream ss;
+    ss << std::put_time(&timeinfo, format);
+    std::string time_str = ss.str();
+    return time_str;
 }
 
 std::array<unsigned char, 4> MyCppDifferent::to_bytes(float value)

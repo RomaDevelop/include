@@ -4,22 +4,28 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 #include <functional>
 
-using stopper_t = volatile bool &;
+using uint = unsigned int;
 
 class thread_box
 {
-
 public:
     volatile bool stopper = false;
     std::mutex mtx;
+    std::condition_variable cv;
 
-    inline thread_box(std::string name, int finish_policy = smart_policy):
-	_name {name}, finish_policy {finish_policy}  {}
+    explicit inline thread_box():
+	name_var {}, finish_policy {smart_policy}  {}
+    explicit inline thread_box(std::string aName, int finish_policy = smart_policy):
+	name_var {std::move(aName)}, finish_policy {finish_policy}  {}
     inline ~thread_box();
 
-    enum finish_policies { smart_policy, user_must_call_finish, no_checks_in_destructor };
+    /// smart_policy - если поток был запущен и не закончил работу, пробует остановать 3 секунды и выдаёт ошибки если не получилось
+    /// user_must_call_finish - если поток был запущен и не закончил работу, выдаёт ошибки и пробует остановать 3 секунды
+    /// no_checks_in_destructor - ничего не делает
+    enum destructor_policies { smart_policy, user_must_call_finish, no_checks_in_destructor };
 
     /// если в поток нужно передать условно бесконечную функцию
     /// флаг выхода ей ставим thread_box::stopper
@@ -28,13 +34,15 @@ public:
     /// после выполнения task флаг завершения потока будет установлен в true
     inline void start(std::function<void()> task);
 
-    /// устанавливает флаг остановки работы потока и ожидает пока флаг завершения потока не подтвердит завершение
-    inline bool finish(unsigned int wait_for_milliseconds = 1000);
+    /// устанавливает флаг stopper, уведомляет всех клиентов cv и ожидает пока флаг завершения потока не подтвердит завершение
+    /// выдаёт ошибки если поток и не был запущен, если не завершился
+    inline bool finish(uint wait_for_milliseconds = 1000);
 
-    std::string name() { return _name; }
+    void set_name(std::string aName) { name_var = std::move(aName); }
+    std::string name() { return name_var; }
     bool was_started() { return thread_was_started; }
     bool ended() { return thread_ended; }
-    bool finish_executed() { return _finish_executed; }
+    bool finish_executed() { return finish_executed_var; }
 
     inline static void test_thread_box(std::string name, std::string description, bool doFinish, std::function<void()> task);
     inline static void do_thread_box_tests();
@@ -42,12 +50,11 @@ public:
 private:
     volatile bool thread_was_started = false;
     volatile bool thread_ended = false;
-    bool _finish_executed = false;
-    std::string _name;
+    bool finish_executed_var = false;
+    std::string name_var;
     int finish_policy = smart_policy;
     std::string errors;
 
-    thread_box() = delete;
     thread_box(const thread_box &) = delete;
     thread_box(thread_box &&) = delete;
     thread_box& operator= (const thread_box& other) = delete;
@@ -76,50 +83,44 @@ thread_box::~thread_box()
     {
 	if(thread_was_started && !thread_ended)
 	    if(!finish(3000))
-		std::cerr << "thread "+_name+" smart_policy can't finish thread\n";
+		std::cerr << "thread "+name_var+" smart_policy can't finish thread\n";
 
-	if(!errors.empty()) std::cerr << "thread "+_name+" errors: " + errors + "\n";
+	if(!errors.empty()) std::cerr << "thread "+name_var+" errors: " + errors + "\n";
 	return;
     }
 
     if(finish_policy == user_must_call_finish)
     {
-	if(thread_was_started)
+	if(thread_was_started && !thread_ended)
 	{
-	    if(!thread_ended)
+	    std::cerr << "thread "+name_var+" destructor called, policy is user_must_call_finish, but thread is going\n";
+	    if(!finish_executed_var)
 	    {
-		std::cerr << "thread "+_name+" destructor called, policy is user_must_call_finish, but thread is going\n";
-		if(!_finish_executed)
-		{
-		    std::cerr << "thread "+_name+" finish was not did. Call finish(3000)\n";
-		}
-		else
-		{
-		    std::cerr << "thread "+_name+" finish did earlier, call finish again\n";
-		}
-
-		if(finish(3000)) std::cerr << "thread "+_name+" now finish did successful\n";
-		else std::cerr << "thread "+_name+" call finish(3000) unsuccessfully\n";
+		std::cerr << "thread "+name_var+" finish was not did. Call finish(3000)\n";
 	    }
+	    else
+	    {
+		std::cerr << "thread "+name_var+" finish did earlier, call finish again\n";
+	    }
+
+	    if(finish(3000)) std::cerr << "thread "+name_var+" now finish did successful\n";
+	    else std::cerr << "thread "+name_var+" call finish(3000) unsuccessfully\n";
 	}
 
-	if(!errors.empty()) std::cerr << "thread "+_name+" errors: " + errors + "\n";
+	if(!errors.empty()) std::cerr << "thread "+name_var+" errors: " + errors + "\n";
 	return;
     }
 }
 
-//void thread_box::start(std::function<void (stopper_t)> task)
-//{
-//    thread_was_started = true;
-//    std::thread thread([this, task](){
-//	task(stopper);
-//	thread_ended = true;
-//    });
-//    thread.detach();
-//}
-
 void thread_box::start(std::function<void ()> task)
 {
+    if(name_var.empty()) std::cerr << "thread_box with empty name starting\n";
+    if(thread_was_started)
+    {
+	std::cerr << "thread "+name_var+" start executed, but thread already started\n";
+	return;
+    }
+
     thread_was_started = true;
     std::thread thread([this, task](){
 	task();
@@ -128,31 +129,35 @@ void thread_box::start(std::function<void ()> task)
     thread.detach();
 }
 
-bool thread_box::finish(unsigned int wait_for_milliseconds)
+bool thread_box::finish(uint wait_for_milliseconds)
 {
     if(thread_was_started == false)
     {
-	errors += "thread "+_name+" finish executed, but thread was not started\n";
+	errors += "thread "+name_var+" finish executed, but thread was not started\n";
 	return errors.empty();
     }
 
     stopper = true;
-    int count_waits = 100;
-    int one_wait = wait_for_milliseconds / count_waits;
+    cv.notify_all();
+    uint one_wait = 1;
+    uint wait_fakt = 0;
+    uint add = 1;
 
-    for(int i=0; i<count_waits && !thread_ended; i++)
+    while(!thread_ended && wait_fakt < wait_for_milliseconds)
     {
 	std::this_thread::sleep_for(std::chrono::milliseconds(one_wait));
+	wait_fakt += one_wait;
+	one_wait += add;
+	add < 10 ? add += 1 : add < 100 ? add += 10 : add += 30;
     }
+    std::cout << name_var << " " << "waited " << wait_fakt << " milliseconds for finish\n";
 
     if(!thread_ended)
-	errors += "thread "+_name+" was not finished after waiting " + std::to_string(wait_for_milliseconds) + " milliseconds\n";
+	errors += "thread "+name_var+" was not finished after waiting " + std::to_string(wait_for_milliseconds) + " milliseconds\n";
 
-    _finish_executed = true;
+    finish_executed_var = true;
     return errors.empty();
 }
-
-
 
 void thread_box::test_thread_box(std::string name, std::string description, bool doFinish, std::function<void ()> task)
 {

@@ -32,8 +32,8 @@ struct MyQFileDir
 
     inline static bool		WriteFile(const QString &fileName, const QString &content, const char * encoding = "UTF-8");
     inline static bool		AppendFile(const QString &fileName, const QString &content, const char * encoding = "UTF-8");
-    inline static QString	ReadFile(const QString &fileName, bool *success);
-    inline static ReadResult	ReadFile(const QString &fileName);
+    inline static QString	ReadFile1(const QString &fileName, const char * encoding = "UTF-8", bool *success = nullptr);
+    inline static ReadResult	ReadFile2(const QString &fileName, const char * encoding = "UTF-8");
 
     inline static bool		CopyFileWithReplace(const QString &file, const QString & fileDst);
 };
@@ -213,7 +213,12 @@ bool MyQFileDir::WriteFile(const QString & fileName, const QString & content, co
     if(file.open(QFile::WriteOnly))
     {
 	QTextStream stream(&file);
-	if(auto codec = QTextCodec::codecForName(encoding))
+	if(encoding == nullptr || strcmp(encoding, "") != 0)
+	{
+	    stream << content;
+	    return true;
+	}
+	else if(auto codec = QTextCodec::codecForName(encoding))
 	{
 	    stream.setCodec(codec);
 	    stream << content;
@@ -232,7 +237,12 @@ bool MyQFileDir::AppendFile(const QString & fileName, const QString & content, c
     if(file.open(QFile::Append))
     {
 	QTextStream stream(&file);
-	if(auto codec = QTextCodec::codecForName(encoding))
+	if(encoding == nullptr || strcmp(encoding, "") != 0)
+	{
+	    stream << content;
+	    return true;
+	}
+	else if(auto codec = QTextCodec::codecForName(encoding))
 	{
 	    stream.setCodec(codec);
 	    stream << content;
@@ -245,13 +255,20 @@ bool MyQFileDir::AppendFile(const QString & fileName, const QString & content, c
     return false;
 }
 
-QString MyQFileDir::ReadFile(const QString & fileName, bool * success)
+QString MyQFileDir::ReadFile1(const QString & fileName, const char * encoding, bool * success)
 {
     if(success) *success = true;
     QFile file(fileName);
     if(file.open(QFile::ReadOnly))
     {
 	QTextStream stream(&file);
+
+	if(encoding != nullptr && strcmp(encoding, "") != 0)
+	{
+	    if(auto codec = QTextCodec::codecForName(encoding)) stream.setCodec(codec);
+	    else qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
+	}
+
 	return stream.readAll();
     }
     if(success) *success = false;
@@ -259,12 +276,19 @@ QString MyQFileDir::ReadFile(const QString & fileName, bool * success)
     return "";
 }
 
-MyQFileDir::ReadResult MyQFileDir::ReadFile(const QString & fileName)
+MyQFileDir::ReadResult MyQFileDir::ReadFile2(const QString & fileName, const char * encoding)
 {
     QFile file(fileName);
     if(file.open(QFile::ReadOnly))
     {
 	QTextStream stream(&file);
+
+	if(encoding != nullptr && strcmp(encoding, "") != 0)
+	{
+	    if(auto codec = QTextCodec::codecForName(encoding)) stream.setCodec(codec);
+	    else qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
+	}
+
 	return { true, stream.readAll() };
     }
     qCritical() << "MyQFileDir::ReadFile can't open file ["+fileName+"]";
