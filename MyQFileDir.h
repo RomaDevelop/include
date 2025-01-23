@@ -91,7 +91,8 @@ void MyQFileDir::ReplaceFileWithBackup(const QFileInfo & src, const QFileInfo & 
     else
     {
 	if(!fileToReplace.remove()) QMessageBox::information(nullptr,"Ошибка","Не удалось удалить файл " + fileToReplace.fileName());
-	if(!QFile::copy(src.filePath(),dst.filePath())) QMessageBox::information(nullptr,"Ошибка","Не удалось создать файл " + dst.fileName());
+	if(!QFile::copy(src.filePath(),dst.filePath()))
+	    QMessageBox::information(nullptr,"Ошибка","Не удалось создать файл " + dst.fileName());
     }
 }
 
@@ -213,7 +214,7 @@ bool MyQFileDir::WriteFile(const QString & fileName, const QString & content, co
     if(file.open(QFile::WriteOnly))
     {
 	QTextStream stream(&file);
-	if(encoding == nullptr || strcmp(encoding, "") != 0)
+	if(encoding == nullptr || strcmp(encoding, "") == 0)
 	{
 	    stream << content;
 	    return true;
@@ -237,7 +238,7 @@ bool MyQFileDir::AppendFile(const QString & fileName, const QString & content, c
     if(file.open(QFile::Append))
     {
 	QTextStream stream(&file);
-	if(encoding == nullptr || strcmp(encoding, "") != 0)
+	if(encoding == nullptr || strcmp(encoding, "") == 0)
 	{
 	    stream << content;
 	    return true;
@@ -301,12 +302,24 @@ bool MyQFileDir::CopyFileWithReplace(const QString & fileSrc, const QString & fi
     {
 	if(fileDstInfo.isFile())
 	{
-	    if(!QFile::remove(fileDst)) { qDebug() << "MyQFileDir::CopyFileWithReplace can't remove existing dst [" + fileDst + "]"; return false; }
+	    if(!QFile::remove(fileDst))
+	    {
+		qDebug() << "MyQFileDir::CopyFileWithReplace can't remove existing dst [" + fileDst + "]";
+		return false;
+	    }
 	}
-	else { qDebug() << "MyQFileDir::CopyFileWithReplace existing dst is not file [" + fileDst + "]"; return false; }
+	else
+	{
+	    qDebug() << "MyQFileDir::CopyFileWithReplace existing dst is not file [" + fileDst + "]";
+	    return false;
+	}
     }
 
-    if(!QFile::copy(fileSrc, fileDst)) { qDebug() << "MyQFileDir::CopyFileWithReplace can't copy ["+fileSrc+"] to ["+fileDst+"]"; return false; }
+    if(!QFile::copy(fileSrc, fileDst))
+    {
+	qDebug() << "MyQFileDir::CopyFileWithReplace can't copy ["+fileSrc+"] to ["+fileDst+"]";
+	return false;
+    }
 
     return true;
 }
