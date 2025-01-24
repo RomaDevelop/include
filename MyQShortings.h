@@ -15,4 +15,6 @@
 #define qDbg qDebug()
 #define qdbg qDebug()
 //---------------------------------------------------------------------------
+#define LastAddedWidget(Grid, Type) static_cast<Type*>(Grid->itemAt(Grid->count()-1)->widget())
+//---------------------------------------------------------------------------
 #endif
