@@ -128,7 +128,6 @@ void MyQDialogs::ShowText(const QString & text, uint w, uint h)
 QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList buttons)
 {
     QMessageBox messageBox(QMessageBox::Question, caption, text);
-    //messageBox.setWindowTitle(caption);
     for(auto &btn:buttons)
 	messageBox.addButton(btn,QMessageBox::YesRole);  // Role не имеет значения
     int desision =  messageBox.exec(); // возвращает 0 1 2 по порядку кнопок
