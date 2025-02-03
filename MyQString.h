@@ -8,6 +8,8 @@ struct MyQString
 {
 	inline static QStringList QStringListSized(int size, const QString &value = "");
 
+	template<typename... Args>
+	inline static void Append(QString& s, const Args&... args) { (s.append(args), ...); }
 	template<class char_type>
 	inline static QString& RightJistifie(QString &str_to_justifie, int width, char_type fill = ' ', bool trunc = false);
 	template<class char_type>
