@@ -98,16 +98,33 @@ public:
 	delete dialog;
 	return std::unique_ptr<QTableWidget>(table);
     }
-    inline static std::unique_ptr<QTableWidget> Table(QStringList rows,
-						      QStringList horisontalHeader = {}, QStringList verticaHeader = {},
-						      bool autoColWidths = true,
-						      uint w = 800, uint h = 600)
-    {
+
+	inline static std::unique_ptr<QTableWidget> Table(QString content, QString colSplitter, QString rowSplitter,
+							  QStringList horisontalHeader = {}, QStringList verticaHeader = {},
+							  bool autoColWidths = true,
+							  uint w = 800, uint h = 600)
+	{
+		if(content.endsWith(colSplitter+rowSplitter)) content.chop(colSplitter.size()+rowSplitter.size());
+		std::vector<QStringList> rowsTmp;
+		QStringList splitByRows = content.split(rowSplitter);
+		for(auto &row:splitByRows)
+		{
+			if(row.endsWith(colSplitter)) row.chop(colSplitter.size());
+			rowsTmp.emplace_back(row.split(colSplitter));
+		}
+		return Table(rowsTmp, horisontalHeader, verticaHeader, autoColWidths, w, h);
+	}
+
+	inline static std::unique_ptr<QTableWidget> TableOneCol(QStringList rows,
+							  QStringList horisontalHeader = {}, QStringList verticaHeader = {},
+							  bool autoColWidths = true,
+							  uint w = 800, uint h = 600)
+	{
 	std::vector<QStringList> rowsTmp;
 	for(auto &row:rows)
-	    rowsTmp.emplace_back(std::move(row));
+		rowsTmp.emplace_back(std::move(row));
 	return Table(rowsTmp, horisontalHeader, verticaHeader, autoColWidths, w, h);
-    }
+	}
 };
 //---------------------------------------------------------------------------
 void MyQDialogs::ShowText(const QString & text, uint w, uint h)
