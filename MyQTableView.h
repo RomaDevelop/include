@@ -20,60 +20,58 @@ public:
 	auto currentRecordData(int col) { return model()->index(currentIndex().row(), col).data(); }
 	auto currentRecordDataStr(int col) { return currentRecordData(col).toString(); }
 
-	void contextMenuEvent(QContextMenuEvent *event) override
-	{
-		qdbg << "contextMenuEvent";
-	}
+	bool Locate(const QString &fieldName, const QString &fieldValue);
+	bool LocateRow(int row, int col);
+};
 
-	inline bool Locate(const QString &fieldName, const QString &fieldValue)
-	{
-		QAbstractItemModel *model = this->model();
-		if (!model) return false;
+inline bool MyQTableView::Locate(const QString &fieldName, const QString &fieldValue)
+{
+	QAbstractItemModel *model = this->model();
+	if (!model) return false;
 
-		int column = -1;
-		for (int i = 0; i < model->columnCount(); ++i)
+	int column = -1;
+	for (int i = 0; i < model->columnCount(); ++i)
+	{
+		if (model->headerData(i, Qt::Horizontal).toString() == fieldName)
 		{
-			if (model->headerData(i, Qt::Horizontal).toString() == fieldName)
-			{
-				column = i;
-				break;
-			}
+			column = i;
+			break;
 		}
-		if (column == -1) return false;
-
-		for (int row = 0; row < model->rowCount(); ++row)
-		{
-			QModelIndex index = model->index(row, column);
-			if (index.isValid() && model->data(index).toString() == fieldValue)
-			{
-				this->setCurrentIndex(index);
-				this->scrollTo(index, QAbstractItemView::PositionAtTop);
-				return true;
-			}
-
-			// догрузка записей
-			if(row >= model->rowCount()-2 && model->canFetchMore(QModelIndex()))
-				model->fetchMore(QModelIndex());
-		}
-		return false;
 	}
+	if (column == -1) return false;
 
-	inline bool LocateRow(int row, int col)
+	for (int row = 0; row < model->rowCount(); ++row)
 	{
-		QAbstractItemModel *model = this->model();
-		if (!model) return false;
-
-		while(row >= model->rowCount() && model->canFetchMore(QModelIndex()))
-			  model->fetchMore(QModelIndex());
-		QModelIndex index = model->index(row, col);
-		if(index.isValid())
+		QModelIndex index = model->index(row, column);
+		if (index.isValid() && model->data(index).toString() == fieldValue)
 		{
-			setCurrentIndex(index);
-			scrollTo(index, QAbstractItemView::PositionAtTop);
+			this->setCurrentIndex(index);
+			this->scrollTo(index, QAbstractItemView::PositionAtTop);
 			return true;
 		}
-		return false;
+
+		// догрузка записей
+		if(row >= model->rowCount()-2 && model->canFetchMore(QModelIndex()))
+			model->fetchMore(QModelIndex());
 	}
-};
+	return false;
+}
+
+inline bool MyQTableView::LocateRow(int row, int col)
+{
+	QAbstractItemModel *model = this->model();
+	if (!model) return false;
+
+	while(row >= model->rowCount() && model->canFetchMore(QModelIndex()))
+		model->fetchMore(QModelIndex());
+	QModelIndex index = model->index(row, col);
+	if(index.isValid())
+	{
+		setCurrentIndex(index);
+		scrollTo(index, QAbstractItemView::PositionAtTop);
+		return true;
+	}
+	return false;
+}
 
 #endif // MYQTABLEVIEW_H

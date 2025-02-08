@@ -4,6 +4,7 @@
 
 #include <iostream>
 
+#include <QApplication>
 #include <QDateTime>
 #include <QDebug>
 
@@ -59,4 +60,26 @@ bool MyQWindows::IsProcessRunning(uint processID) {
 		std::cerr << "OpenProcess error: " << GetLastError() << std::endl;
 	}
 	return false; // Процесс не запущен или не может быть открыт
+}
+
+int MyQWindows::CopyMoveFile(QString S, QString D, CopyMoveFileMode Mode)
+{
+	S.replace('/','\\');
+	D.replace('/','\\');
+	wchar_t cFrom[MAX_PATH] = {0};
+	wcscpy(cFrom, S.toStdWString().c_str());
+	wchar_t cTo[MAX_PATH] = {0};
+	wcscpy(cTo, D.toStdWString().c_str());
+	SHFILEOPSTRUCT fos;
+	memset(&fos, 0, sizeof(SHFILEOPSTRUCT));
+	if(QApplication::activeWindow())
+		fos.hwnd = (HWND)QApplication::activeWindow()->winId();
+	else if(GetConsoleWindow())
+		fos.hwnd = GetConsoleWindow();
+	else fos.hwnd = nullptr;
+	fos.wFunc = Mode == move ? FO_MOVE : FO_COPY;
+	fos.pFrom = cFrom;
+	fos.pTo = cTo;
+	fos.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMMKDIR | FOF_SIMPLEPROGRESS;
+	return SHFileOperation(&fos);
 }
