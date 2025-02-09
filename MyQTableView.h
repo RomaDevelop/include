@@ -13,6 +13,26 @@ class MyQTableView : public QTableView
 public:
 	explicit MyQTableView(QWidget *parent = nullptr) : QTableView{parent} {}
 
+	QString saveColumnWidths()
+	{
+		QString ret;
+		for (int column = 0; column < model()->columnCount(); ++column) {
+			ret += QSn(columnWidth(column)) + ";";
+		}
+		return ret;
+	}
+	void restoreColumnWidths(const QString &widthsStr)
+	{
+		QStringList widths = widthsStr.split(";", QString::SkipEmptyParts);
+		for(int i=0; i<widths.size() && i<model()->columnCount(); i++)
+		{
+			bool ok;
+			int width = widths[i].toInt(&ok);
+			if(ok) setColumnWidth(i, width);
+			else QMbError("restoreColumnWidths wrong widthsStr: [" + widthsStr + "]");
+		}
+	}
+
 	auto currentRow() { return currentIndex().row(); }
 	auto cellData(int row, int col) { return model()->index(row, col).data(); }
 	auto cellDataStr(int row, int col) { return cellData(row, col).toString(); }

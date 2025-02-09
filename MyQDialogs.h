@@ -15,6 +15,8 @@
 #include <QCheckBox>
 #include <QTimer>
 #include <QDialogButtonBox>
+
+#include "MyQShortings.h"
 //---------------------------------------------------------------------------
 struct CheckBoxDialogResult;
 
@@ -24,107 +26,54 @@ public:
     inline static void ShowText(const QString &text, uint w = 800, uint h = 600);
     inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
     inline static QString InputText(QString captionDialog = "", QString startText = "", uint w = 0, uint h = 0);
+	inline static QString ListDialog(QString caption, QStringList valuesList,  uint w = 0, uint h = 0)
+	{
+		std::shared_ptr<QString> retText(new QString);
+		std::unique_ptr<QDialog> dialog(new QDialog);
+		if(!w) w = 650;
+		if(!h) h = 340;
+		dialog->resize(w, h);
+		dialog->setWindowTitle(caption);
+		QVBoxLayout *vloMain  = new QVBoxLayout(dialog.get());
+		QListWidget *listWidget = new QListWidget;
+		listWidget->addItems(valuesList);
+		vloMain->addWidget(listWidget);
+
+		auto acceptAction = [retText, listWidget, &dialog]()
+		{
+			if(listWidget->currentItem())
+				*retText = listWidget->currentItem()->text();
+			dialog->close();
+		};
+		QObject::connect(listWidget, &QListWidget::itemDoubleClicked, acceptAction);
+
+		auto hloBtns = new QHBoxLayout();
+		vloMain->addLayout(hloBtns);
+		hloBtns->addStretch();
+		hloBtns->addWidget(new QPushButton("Принять"));
+		QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, acceptAction);
+		hloBtns->addWidget(new QPushButton("Отмена"));
+		QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog]() { dialog->close(); });
+
+		dialog->exec();
+		return QString(*retText);
+	}
     inline static CheckBoxDialogResult CheckBoxDialog(const QStringList &values,
 					       const std::vector<bool> &startCheched = {},
 					       const std::vector<bool> &enabled = {},
 					       QWidget *parent = nullptr);
-    inline static std::unique_ptr<QTableWidget> Table(const std::vector<QStringList> &rows,
-						      QStringList horisontalHeader = {}, QStringList verticaHeader = {},
-						      bool autoColWidths = true,
-						      uint w = 800, uint h = 600)
-    {
-	/// что нужно:
-	/// кнопки вверх, вниз, отменить изменения
-	/// автоподгонка ширины колонок
-	QDialog *dialog = new QDialog;
-	if(!w) w = 150;
-	if(!h) h = 150;
-	dialog->resize(w, h);
-
-	QVBoxLayout *all  = new QVBoxLayout(dialog);
-
-	QTableWidget *table = new QTableWidget;
-
-	QHBoxLayout *hlo1 = new QHBoxLayout;
-	all->addLayout(hlo1);
-
-	auto btnAdd = new QPushButton("+");
-	btnAdd->setFixedWidth(QFontMetrics(btnAdd->font()).width(btnAdd->text()) + 15);
-	hlo1->addWidget(btnAdd);
-	btnAdd->connect(btnAdd, &QPushButton::clicked, [table](){ table->insertRow(table->currentRow()); });
-
-	auto btnRemove = new QPushButton("-");
-	btnRemove->setFixedWidth(QFontMetrics(btnRemove->font()).width(btnRemove->text()) + 15);
-	hlo1->addWidget(btnRemove);
-	btnRemove->connect(btnRemove, &QPushButton::clicked, [table](){ table->removeRow(table->currentRow()); });
-
-	hlo1->addStretch();
-
-	all->addWidget(table);
-
-	int colsCount = 0;
-	for(uint r=0; r<rows.size(); r++) if(rows[r].size() > colsCount) colsCount = rows[r].size();
-
-	table->setRowCount(rows.size());
-	table->setColumnCount(colsCount);
-	for(uint r=0; r<rows.size(); r++)
-	{
-	    for(int c=0; c<colsCount; c++)
-	    {
-		if(c < rows[r].size())
-		    table->setItem(r,c, new QTableWidgetItem(rows[r][c]));
-		else table->setItem(r,c, new QTableWidgetItem(""));
-	    }
-	}
-
-	if(autoColWidths)
-	{
-	    QTimer::singleShot(1,[table](){
-		int oneColWidth = (table->width() - 45) / table->columnCount();
-		for(int col=0; col<table->columnCount(); col++)
-		{
-		    table->setColumnWidth(col, oneColWidth);
-		}
-	    });
-	}
-
-	table->setHorizontalHeaderLabels(horisontalHeader);
-	table->setVerticalHeaderLabels(verticaHeader);
-
-	dialog->exec();
-
-	table->setParent(nullptr);
-
-	delete dialog;
-	return std::unique_ptr<QTableWidget>(table);
-    }
-
-	inline static std::unique_ptr<QTableWidget> Table(QString content, QString colSplitter, QString rowSplitter,
+	static std::unique_ptr<QTableWidget> Table(const std::vector<QStringList> &rows,
 							  QStringList horisontalHeader = {}, QStringList verticaHeader = {},
 							  bool autoColWidths = true,
-							  uint w = 800, uint h = 600)
-	{
-		if(content.endsWith(colSplitter+rowSplitter)) content.chop(colSplitter.size()+rowSplitter.size());
-		std::vector<QStringList> rowsTmp;
-		QStringList splitByRows = content.split(rowSplitter);
-		for(auto &row:splitByRows)
-		{
-			if(row.endsWith(colSplitter)) row.chop(colSplitter.size());
-			rowsTmp.emplace_back(row.split(colSplitter));
-		}
-		return Table(rowsTmp, horisontalHeader, verticaHeader, autoColWidths, w, h);
-	}
-
-	inline static std::unique_ptr<QTableWidget> TableOneCol(QStringList rows,
+							  uint w = 800, uint h = 600);
+	static std::unique_ptr<QTableWidget> Table(QString content, QString colSplitter, QString rowSplitter,
 							  QStringList horisontalHeader = {}, QStringList verticaHeader = {},
 							  bool autoColWidths = true,
-							  uint w = 800, uint h = 600)
-	{
-	std::vector<QStringList> rowsTmp;
-	for(auto &row:rows)
-		rowsTmp.emplace_back(std::move(row));
-	return Table(rowsTmp, horisontalHeader, verticaHeader, autoColWidths, w, h);
-	}
+							  uint w = 800, uint h = 600);
+	static std::unique_ptr<QTableWidget> TableOneCol(QStringList rows,
+							  QStringList horisontalHeader = {}, QStringList verticaHeader = {},
+							  bool autoColWidths = true,
+							  uint w = 800, uint h = 600);
 };
 //---------------------------------------------------------------------------
 void MyQDialogs::ShowText(const QString & text, uint w, uint h)
@@ -256,6 +205,95 @@ CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QStringList & values,
     }
 
     return result;
+}
+
+inline std::unique_ptr<QTableWidget> MyQDialogs::Table(const std::vector<QStringList> &rows, QStringList horisontalHeader, QStringList verticaHeader, bool autoColWidths, uint w, uint h)
+{
+	/// что нужно:
+	/// кнопки вверх, вниз, отменить изменения
+	/// автоподгонка ширины колонок
+	QDialog *dialog = new QDialog;
+	if(!w) w = 150;
+	if(!h) h = 150;
+	dialog->resize(w, h);
+
+	QVBoxLayout *all  = new QVBoxLayout(dialog);
+
+	QTableWidget *table = new QTableWidget;
+
+	QHBoxLayout *hlo1 = new QHBoxLayout;
+	all->addLayout(hlo1);
+
+	auto btnAdd = new QPushButton("+");
+	btnAdd->setFixedWidth(QFontMetrics(btnAdd->font()).width(btnAdd->text()) + 15);
+	hlo1->addWidget(btnAdd);
+	btnAdd->connect(btnAdd, &QPushButton::clicked, [table](){ table->insertRow(table->currentRow()); });
+
+	auto btnRemove = new QPushButton("-");
+	btnRemove->setFixedWidth(QFontMetrics(btnRemove->font()).width(btnRemove->text()) + 15);
+	hlo1->addWidget(btnRemove);
+	btnRemove->connect(btnRemove, &QPushButton::clicked, [table](){ table->removeRow(table->currentRow()); });
+
+	hlo1->addStretch();
+
+	all->addWidget(table);
+
+	int colsCount = 0;
+	for(uint r=0; r<rows.size(); r++) if(rows[r].size() > colsCount) colsCount = rows[r].size();
+
+	table->setRowCount(rows.size());
+	table->setColumnCount(colsCount);
+	for(uint r=0; r<rows.size(); r++)
+	{
+		for(int c=0; c<colsCount; c++)
+		{
+			if(c < rows[r].size())
+				table->setItem(r,c, new QTableWidgetItem(rows[r][c]));
+			else table->setItem(r,c, new QTableWidgetItem(""));
+		}
+	}
+
+	if(autoColWidths)
+	{
+		QTimer::singleShot(1,[table](){
+			int oneColWidth = (table->width() - 45) / table->columnCount();
+			for(int col=0; col<table->columnCount(); col++)
+			{
+				table->setColumnWidth(col, oneColWidth);
+			}
+		});
+	}
+
+	table->setHorizontalHeaderLabels(horisontalHeader);
+	table->setVerticalHeaderLabels(verticaHeader);
+
+	dialog->exec();
+
+	table->setParent(nullptr);
+
+	delete dialog;
+	return std::unique_ptr<QTableWidget>(table);
+}
+
+inline std::unique_ptr<QTableWidget> MyQDialogs::Table(QString content, QString colSplitter, QString rowSplitter, QStringList horisontalHeader, QStringList verticaHeader, bool autoColWidths, uint w, uint h)
+{
+	if(content.endsWith(colSplitter+rowSplitter)) content.chop(colSplitter.size()+rowSplitter.size());
+	std::vector<QStringList> rowsTmp;
+	QStringList splitByRows = content.split(rowSplitter);
+	for(auto &row:splitByRows)
+	{
+		if(row.endsWith(colSplitter)) row.chop(colSplitter.size());
+		rowsTmp.emplace_back(row.split(colSplitter));
+	}
+	return Table(rowsTmp, horisontalHeader, verticaHeader, autoColWidths, w, h);
+}
+
+inline std::unique_ptr<QTableWidget> MyQDialogs::TableOneCol(QStringList rows, QStringList horisontalHeader, QStringList verticaHeader, bool autoColWidths, uint w, uint h)
+{
+	std::vector<QStringList> rowsTmp;
+	for(auto &row:rows)
+		rowsTmp.emplace_back(std::move(row));
+	return Table(rowsTmp, horisontalHeader, verticaHeader, autoColWidths, w, h);
 }
 
 //---------------------------------------------------------------------------
