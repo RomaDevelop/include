@@ -8,6 +8,15 @@
  * Progress progress(countMsgs, stepCount, [](int pr){ qdbg << "выполнено" << pr*10 << "%"; });
  *
  * progress.CheckProgressF();  // В теле цикла. При достижении каждого этапа будет вызываться обработчик прогресса.
+ 
+ виджет ручного прогресса
+ 	QLabel *labelProgerss = new QLabel("Старт");
+	labelProgerss->setAlignment(Qt::AlignCenter);
+	auto f = labelProgerss->font(); f.setPointSize(14); labelProgerss->setFont(f);
+	labelProgerss->resize(320,100);
+	labelProgerss->show();
+	this->setEnabled(false);
+ 
 */
 //==================================================================================================
 #ifndef PROGRESSH
