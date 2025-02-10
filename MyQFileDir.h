@@ -10,6 +10,8 @@
 #include <QMessageBox>
 #include <QDirIterator>
 #include <QTextCodec>
+
+#include "MyQShortings.h"
 //---------------------------------------------------------------------------
 struct MyQFileDir
 {
@@ -17,6 +19,8 @@ struct MyQFileDir
 
     enum { modified = 1, read = 2, noSort = 0 };
     inline static QString RemoveOldFiles(QString directory, int remainCount, int sortFlag = MyQFileDir::modified);
+
+	static bool RemoveDirIfEmpty(const QString &dirStr, bool ShowErrorMessage);
 
     inline static void ReplaceFileWithBackup(const QFileInfo &src, const QFileInfo &dst, const QString &backupPath);
     inline static void ReplaceFilesWithBackup(const QFileInfoList &filesToReplace, const QFileInfo &fileSrc, const QString &backupPath);
@@ -82,11 +86,24 @@ QString MyQFileDir::RemoveOldFiles(QString directory, int remainCount, int sortF
     return ret;
 }
 
+inline bool MyQFileDir::RemoveDirIfEmpty(const QString &dirStr, bool ShowErrorMessage)
+{
+	if(QDir dir(dirStr); dir.isEmpty())
+	{
+		if(!dir.rmdir(dirStr))
+		{
+			if(ShowErrorMessage) QMbError("Err removing dir " + dirStr);
+			return false;
+		}
+	}
+	return true;
+}
+
 void MyQFileDir::ReplaceFileWithBackup(const QFileInfo & src, const QFileInfo & dst, const QString & backupPath)
 {
-    QFile fileToReplace(dst.filePath());
-    QString dateFormat = "yyyy.MM.dd hh:mm:ss:zzz";
-    QString backupFile = backupPath + "/" + QDateTime::currentDateTime().toString(dateFormat).replace(':','.') + " " + dst.fileName();
+	QFile fileToReplace(dst.filePath());
+	QString dateFormat = "yyyy.MM.dd hh:mm:ss:zzz";
+	QString backupFile = backupPath + "/" + QDateTime::currentDateTime().toString(dateFormat).replace(':','.') + " " + dst.fileName();
     if(!fileToReplace.copy(backupFile)) QMessageBox::information(nullptr,"Ошибка","Не удалось создать backup-файл" + backupFile);
     else
     {
