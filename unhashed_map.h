@@ -28,7 +28,8 @@ namespace stdx
 	    exists[key] = true;
 	    return values[key];
 	}
-	bool insert(key_t key, value_t value)
+	enum insert_result { new_node_inserted, existing_node_was_rewrited };
+	insert_result insert(key_t key, value_t value)
 	{
 	    if(key >= values.size())
 	    {
@@ -37,12 +38,12 @@ namespace stdx
 
 		exists[key] = true;
 		values[key] = std::move(value);
-		return false;
+		return new_node_inserted;
 	    }
 
 	    values[key] = std::move(value);
-	    if(exists[key]) return true;
-	    else { exists[key] = true; return false; }
+	    if(exists[key]) return existing_node_was_rewrited;
+	    else { exists[key] = true; return new_node_inserted; }
 	}
 	/*
 	итераторы
