@@ -17,7 +17,7 @@ struct matrix
     T* operator[](int row)		    { return ptr+row*ColCount; }
     const T* operator[](int row) const	    { return ptr+row*ColCount; }
 
-public:
+private:
     T *ptr;
     int ColCount;
 };
@@ -36,7 +36,7 @@ struct matrix_by_cols
     T* operator[](int col)		    { return ptr+col*RowCount; }
     const T* operator[](int col) const	    { return ptr+col*RowCount; }
 
-public:
+private:
     T *ptr;
     int RowCount;
 };
