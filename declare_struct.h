@@ -35,4 +35,14 @@
         struct_name(type1 name1, type2 name2, type3 name3): name1{name1}, name2{name2}, name3{name3} {}	\
     }
 
+#define declare_struct_4_fields_no_move(struct_name, type1, name1, type2, name2, type3, name3, type4, name4) 		\
+    struct struct_name { 										\
+        type1 name1; 											\
+        type2 name2; 											\
+        type3 name3;											\
+        type4 name4;											\
+        struct_name() = default;									\
+        struct_name(type1 name1, type2 name2, type3 name3, type4 name4): name1{name1}, name2{name2}, name3{name3}, name4{name4} {}	\
+    }
+
 #endif
