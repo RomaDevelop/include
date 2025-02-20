@@ -12,6 +12,11 @@
 //---------------------------------------------------------------------------
 #define QSn QString::number
 //---------------------------------------------------------------------------
+template<class T>
+bool IsInt(T QStringVariable) { bool ok; QStringVariable.toInt(&ok); return ok; }
+template<class T>
+bool IsUInt(T QStringVariable) { bool ok; QStringVariable.toUInt(&ok); return ok; }
+//---------------------------------------------------------------------------
 #define qDbg qDebug()
 #define qdbg qDebug()
 //---------------------------------------------------------------------------
