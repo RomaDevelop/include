@@ -50,7 +50,7 @@ public:
 	inline auto currentRecordDataStr(int col) { return currentRecordData(col).toString(); }
 
 	inline bool Locate(const QString &fieldName, const QString &fieldValue);
-	inline bool LocateRow(int row, int col);
+	inline bool LocateRow(int row, int col = -1); // col = -1 и останется в текущей колонке
 
 	///\brief for empty feildsIndexes return all fields
 	inline std::vector<QStringList> ToTable(std::vector<int> feildsIndexes)
@@ -139,6 +139,9 @@ inline bool MyQTableView::Locate(const QString &fieldName, const QString &fieldV
 	QAbstractItemModel *model = this->model();
 	if (!model) return false;
 
+	int colBefore = this->currentIndex().column();
+
+	// определение колонки для этого поля
 	int column = -1;
 	for (int i = 0; i < model->columnCount(); ++i)
 	{
@@ -155,6 +158,7 @@ inline bool MyQTableView::Locate(const QString &fieldName, const QString &fieldV
 		QModelIndex index = model->index(row, column);
 		if(index.data().toString() == fieldValue)
 		{
+			index = model->index(row, colBefore);
 			this->setCurrentIndex(index);
 			this->scrollTo(index, QAbstractItemView::PositionAtTop);
 			return true;
@@ -174,7 +178,7 @@ inline bool MyQTableView::LocateRow(int row, int col)
 
 	while(row >= model->rowCount() && model->canFetchMore(QModelIndex()))
 		model->fetchMore(QModelIndex());
-	QModelIndex index = model->index(row, col);
+	QModelIndex index = model->index(row, col != -1 ? col : this->currentIndex().column());
 	if(index.isValid())
 	{
 		setCurrentIndex(index);
