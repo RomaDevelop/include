@@ -17,6 +17,7 @@ class MyQTableView : public QTableView
 	Q_OBJECT
 public:
 	inline explicit MyQTableView(QWidget *parent = nullptr);
+	virtual ~MyQTableView() = default;
 
 	ColoriserDelegate *coloriserDelegate;
 

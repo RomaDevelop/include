@@ -15,12 +15,15 @@
 //---------------------------------------------------------------------------
 struct MyQFileDir
 {
+    inline static QString Rename(QString oldFile, QString newFile, bool forceCaseSensitiveRename);
+    inline static QString GetCurrentFileNameFromRenameError(QString errorStr);
+
     inline static QFileInfo FindNewest(const QFileInfoList &files);
 
     enum { modified = 1, read = 2, noSort = 0 };
     inline static QString RemoveOldFiles(QString directory, int remainCount, int sortFlag = MyQFileDir::modified);
 
-	static bool RemoveDirIfEmpty(const QString &dirStr, bool ShowErrorMessage);
+    inline static bool RemoveDirIfEmpty(const QString &dirStr, bool ShowErrorMessage);
 
     inline static void ReplaceFileWithBackup(const QFileInfo &src, const QFileInfo &dst, const QString &backupPath);
     inline static void ReplaceFilesWithBackup(const QFileInfoList &filesToReplace, const QFileInfo &fileSrc, const QString &backupPath);
@@ -40,7 +43,51 @@ struct MyQFileDir
     inline static ReadResult	ReadFile2(const QString &fileName, const char * encoding = "UTF-8");
 
     inline static bool		CopyFileWithReplace(const QString &file, const QString & fileDst);
+
+private:
+    inline static const QString& RenameErrMarker() { static QString str = "currentFileName:"; return str; }
 };
+//---------------------------------------------------------------------------
+QString MyQFileDir::Rename(QString oldFile, QString newFile, bool forceCaseSensitiveRename)
+{
+    if(forceCaseSensitiveRename)
+    {
+        oldFile = QDir::toNativeSeparators(oldFile);
+        newFile = QDir::toNativeSeparators(newFile);
+        if(oldFile.toLower() == newFile.toLower())
+        {
+            QString tmpNewFile = newFile.chopped(1);
+            for(int i=0; i<10; i++)
+                if(!QFileInfo::exists(tmpNewFile + QChar('0'+i)))
+                {
+                    tmpNewFile += QChar('0'+i);
+                    break;
+                }
+            if(tmpNewFile.size() != newFile.size())
+                return "Can't create tmp name to forceCaseSensitiveRename\n\n" + oldFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+oldFile;
+
+            qDebug() << oldFile + " to " + tmpNewFile;
+            if(!QFile::rename(oldFile, tmpNewFile))
+                return "QFile::rename returned false for forceCaseSensitiveRename(step1)\n\n" + oldFile + "\n\nto\n\n" + tmpNewFile + "\n\n"+RenameErrMarker()+oldFile;
+            qDebug() << tmpNewFile + " to " + newFile;
+            if(!QFile::rename(tmpNewFile, newFile))
+                return "QFile::rename returned false for forceCaseSensitiveRename(step2)\n\n" + tmpNewFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+tmpNewFile;
+            return "";
+        }
+        else
+        {
+            if(QFile::rename(oldFile, newFile)) return "";
+            else return "QFile::rename returned false for rename\n\n" + oldFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+oldFile;
+        }
+    }
+    if(QFile::rename(oldFile, newFile)) return "";
+    else return "QFile::rename returned false for rename\n\n" + oldFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+oldFile;
+}
+
+QString MyQFileDir::GetCurrentFileNameFromRenameError(QString errorStr)
+{
+    return errorStr.remove(0,errorStr.indexOf(RenameErrMarker()) + RenameErrMarker().size());
+}
 
 QFileInfo MyQFileDir::FindNewest(const QFileInfoList & files)
 {
