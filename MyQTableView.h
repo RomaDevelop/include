@@ -50,8 +50,8 @@ public:
 	inline auto currentRecordData(int col) { return model()->index(currentIndex().row(), col).data(); }
 	inline auto currentRecordDataStr(int col) { return currentRecordData(col).toString(); }
 
-	inline bool Locate(const QString &fieldName, const QString &fieldValue);
-	inline bool LocateRow(int row, int col = -1); // col = -1 и останется в текущей колонке
+	inline bool Locate(const QString &fieldName, const QString &fieldValue, int columnToSet = -1);
+	inline bool LocateRow(int row, int column = -1); // col = -1 и останется в текущей колонке
 
 	///\brief for empty feildsIndexes return all fields
 	inline std::vector<QStringList> ToTable(std::vector<int> feildsIndexes)
@@ -135,31 +135,32 @@ int MyQTableView::RowsCount(bool do_fetch)
 	return model->rowCount();
 }
 
-inline bool MyQTableView::Locate(const QString &fieldName, const QString &fieldValue)
+inline bool MyQTableView::Locate(const QString &fieldName, const QString &fieldValue, int columnToSet)
 {
 	QAbstractItemModel *model = this->model();
 	if (!model) return false;
 
-	int colBefore = this->currentIndex().column();
+	if(columnToSet == -1) columnToSet = this->currentIndex().column();
+	if(columnToSet == -1) columnToSet = 0;
 
 	// определение колонки для этого поля
-	int column = -1;
+	int columnOfField = -1;
 	for (int i = 0; i < model->columnCount(); ++i)
 	{
 		if (model->headerData(i, Qt::Horizontal).toString() == fieldName)
 		{
-			column = i;
+			columnOfField = i;
 			break;
 		}
 	}
-	if (column == -1) return false;
+	if (columnOfField == -1) return false;
 
 	for (int row = 0; row < model->rowCount(); ++row)
 	{
-		QModelIndex index = model->index(row, column);
+		QModelIndex index = model->index(row, columnOfField);
 		if(index.data().toString() == fieldValue)
 		{
-			index = model->index(row, colBefore);
+			index = model->index(row, columnToSet);
 			this->setCurrentIndex(index);
 			this->scrollTo(index, QAbstractItemView::PositionAtTop);
 			return true;
@@ -172,14 +173,17 @@ inline bool MyQTableView::Locate(const QString &fieldName, const QString &fieldV
 	return false;
 }
 
-inline bool MyQTableView::LocateRow(int row, int col)
+inline bool MyQTableView::LocateRow(int row, int column)
 {
 	QAbstractItemModel *model = this->model();
 	if (!model) return false;
 
+	if(column == -1) column = this->currentIndex().column();
+	if(column == -1) column = 0;
+
 	while(row >= model->rowCount() && model->canFetchMore(QModelIndex()))
 		model->fetchMore(QModelIndex());
-	QModelIndex index = model->index(row, col != -1 ? col : this->currentIndex().column());
+	QModelIndex index = model->index(row, column);
 	if(index.isValid())
 	{
 		setCurrentIndex(index);
