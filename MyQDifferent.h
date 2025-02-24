@@ -20,8 +20,8 @@ struct MyQDifferent
 {
     inline static QString PathToExe() { return ExePath(); }
     inline static QString ExePath();
-    inline static QString ExeName();
-    inline static QString ExePathName();
+    inline static QString ExeNameNoPath();
+    inline static QString ExeNameWithPath();
     inline static QString GetGeo(const QWidget &widget);
     inline static bool SetGeo(QString geoStr, QWidget &widget);
 
@@ -37,13 +37,13 @@ QString MyQDifferent::ExePath()
     return path;
 }
 
-QString MyQDifferent::ExeName()
+QString MyQDifferent::ExeNameNoPath()
 {
     static QString name = QFileInfo(QCoreApplication::applicationFilePath()).fileName();
     return name;
 }
 
-QString MyQDifferent::ExePathName()
+QString MyQDifferent::ExeNameWithPath()
 {
     static QString pathName = QCoreApplication::applicationFilePath();
     return pathName;

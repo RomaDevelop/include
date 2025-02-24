@@ -15,6 +15,18 @@ struct MyQString
 	template<class char_type>
 	inline static QString& LeftJistifie(QString &str_to_justifie, int width, char_type fill = ' ', bool trunc = false);
 
+        template<class int_type>
+        inline static QString AsNumberDigits(int_type n, QChar separator = ' ')
+        {
+            static_assert(std::is_integral<int_type>::value, "AsNumberDigits accepts only integral type");
+            QString result = QString::number(n);
+            for(int i=result.size()-1, j=1; i>=0; i--, j++)
+            {
+                if(j%3 == 0) result.insert(i, separator);
+            }
+            return result;
+        }
+
 	template<class uint_type>
 	inline static QString ToBincode(uint_type n, int output_width = -1)
 	{
