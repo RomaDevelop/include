@@ -22,4 +22,7 @@ bool IsUInt(T QStringVariable) { bool ok; QStringVariable.toUInt(&ok); return ok
 //---------------------------------------------------------------------------
 #define LastAddedWidget(Grid, Type) static_cast<Type*>(Grid->itemAt(Grid->count()-1)->widget())
 //---------------------------------------------------------------------------
+#define DateTimeFormat "yyyy.MM.dd hh:mm:ss"
+#define DateTimeFormatForFileName "yyyy.MM.dd hh-mm-ss"
+//---------------------------------------------------------------------------
 #endif

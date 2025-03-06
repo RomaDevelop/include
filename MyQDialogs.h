@@ -21,6 +21,8 @@
 #include "declare_struct.h"
 //---------------------------------------------------------------------------
 struct CheckBoxDialogResult;
+//---------------------------------------------------------------------------
+Esc и Enter в диалогах
 
 class MyQDialogs
 {
@@ -30,39 +32,9 @@ public:
     inline static QString InputText(QString captionDialog = "", QString startText = "", uint w = 0, uint h = 0);
     declare_struct_2_fields_move(InputLineRes, QString, line, QString, button);
     inline static InputLineRes InputLineExt(QString captionDialog = "", QString startText = "", QStringList buttons = {"Принять","Отмена"}, uint w = 0);
-    inline static QString ListDialog(QString caption, QStringList valuesList,  uint w = 0, uint h = 0)
-    {
-        std::shared_ptr<QString> retText(new QString);
-        std::unique_ptr<QDialog> dialog(new QDialog);
-        if(!w) w = 650;
-        if(!h) h = 340;
-        dialog->resize(w, h);
-        dialog->setWindowTitle(caption);
-        QVBoxLayout *vloMain  = new QVBoxLayout(dialog.get());
-        QListWidget *listWidget = new QListWidget;
-        listWidget->addItems(valuesList);
-        vloMain->addWidget(listWidget);
-
-        auto acceptAction = [retText, listWidget, &dialog]()
-        {
-            if(listWidget->currentItem())
-                *retText = listWidget->currentItem()->text();
-            dialog->close();
-        };
-        QObject::connect(listWidget, &QListWidget::itemDoubleClicked, acceptAction);
-
-        auto hloBtns = new QHBoxLayout();
-        vloMain->addLayout(hloBtns);
-        hloBtns->addStretch();
-        hloBtns->addWidget(new QPushButton("Принять"));
-        QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, acceptAction);
-        hloBtns->addWidget(new QPushButton("Отмена"));
-        QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog]() { dialog->close(); });
-
-        dialog->exec();
-        return QString(*retText);
-    }
-    inline static CheckBoxDialogResult CheckBoxDialog(const QStringList &values,
+    inline static QString ListDialog(QString caption, QStringList valuesList,  uint w = 0, uint h = 0);
+    inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption,
+                                                      const QStringList &values,
                                                       const std::vector<bool> &startCheched = {},
                                                       const std::vector<bool> &enabled = {},
                                                       QWidget *parent = nullptr);
@@ -161,11 +133,44 @@ MyQDialogs::InputLineRes MyQDialogs::InputLineExt(QString captionDialog, QString
     return ret;
 }
 
+QString MyQDialogs::ListDialog(QString caption, QStringList valuesList, uint w, uint h)
+{
+    std::shared_ptr<QString> retText(new QString);
+    std::unique_ptr<QDialog> dialog(new QDialog);
+    if(!w) w = 650;
+    if(!h) h = 340;
+    dialog->resize(w, h);
+    dialog->setWindowTitle(caption);
+    QVBoxLayout *vloMain  = new QVBoxLayout(dialog.get());
+    QListWidget *listWidget = new QListWidget;
+    listWidget->addItems(valuesList);
+    vloMain->addWidget(listWidget);
+
+    auto acceptAction = [retText, listWidget, &dialog]()
+    {
+        if(listWidget->currentItem())
+            *retText = listWidget->currentItem()->text();
+        dialog->close();
+    };
+    QObject::connect(listWidget, &QListWidget::itemDoubleClicked, acceptAction);
+
+    auto hloBtns = new QHBoxLayout();
+    vloMain->addLayout(hloBtns);
+    hloBtns->addStretch();
+    hloBtns->addWidget(new QPushButton("Принять"));
+    QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, acceptAction);
+    hloBtns->addWidget(new QPushButton("Отмена"));
+    QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog]() { dialog->close(); });
+
+    dialog->exec();
+    return QString(*retText);
+}
+
 struct CheckBoxDialogItem
 {
     QString text;
     bool chekState = false;
-    CheckBoxDialogItem(QString text, bool chekState): text {text}, chekState {chekState} {}
+    CheckBoxDialogItem(QString text, bool chekState): text {std::move(text)}, chekState {chekState} {}
 };
 struct CheckBoxDialogResult
 {
@@ -176,7 +181,8 @@ struct CheckBoxDialogResult
     QStringList checkedTexts;
 };
 
-CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QStringList & values,
+CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &caption,
+                                                const QStringList & values,
                                                 const std::vector<bool> & startCheched,
                                                 const std::vector<bool> & enabled,
                                                 QWidget *parent)
@@ -184,6 +190,7 @@ CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QStringList & values,
     CheckBoxDialogResult result;
 
     QDialog *dialog = new QDialog(parent);
+    dialog->setWindowTitle(caption);
     auto loV = new QVBoxLayout(dialog);
     auto loH = new QHBoxLayout;
     auto lw = new QListWidget(dialog);

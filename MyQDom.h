@@ -6,7 +6,10 @@
 //#include <functional>
 #include <QDebug>
 #include <QFile>
+#include <QTextCodec>
 #include <QDomDocument>
+
+#include "MyQFileDir.h"
 //---------------------------------------------------------------------------
 struct MyQDom
 {
@@ -21,6 +24,36 @@ struct MyQDom
     inline static void ReplaceInAttributes(QDomElement &element, const QString &replaceWhat, const QString &replaceTo);
     inline static QString ToString(const QDomElement &element);
     inline static QString ToStringIgnoreNested(const QDomElement &element, int truncateAttrs = -1);
+    inline static QDomDocument FromFile(const QString &fileName, const char * encoding = "UTF-8")
+    {
+        QDomDocument doc;
+        auto readRes = MyQFileDir::ReadFile2(fileName, encoding);
+        if(!readRes.success)  qCritical() << "MyQDom::FromFile ReadFile2 unsuccess";
+        else if(!doc.setContent(readRes.content))  qCritical() << "MyQDom::FromFile setContent returned false";
+        return doc;
+    }
+    inline static bool ToFile(const QDomNode &node, const QString &fileName, const char * encoding = "UTF-8")
+    {
+        QFile file(fileName);
+        if(file.open(QFile::WriteOnly))
+        {
+            QTextStream stream(&file);
+            if(encoding != nullptr && strcmp(encoding, "") != 0)
+            {
+                if(auto codec = QTextCodec::codecForName(encoding)) stream.setCodec(codec);
+                else
+                {
+                    qCritical() << QString("MyQDom::ToFile unknown codec [") +encoding+"]";
+                    return false;
+                }
+            }
+
+            node.save(stream, 2);
+            return true;
+        }
+        qCritical() << "MyQDom::ToFile can't open file ["+fileName+"]";
+        return false;
+    }
 };
 
 std::vector<QDomElement> MyQDom::GetTopLevelElements(const QDomNode & node)
@@ -47,12 +80,14 @@ std::vector<QDomElement> MyQDom::GetAllLevelElements(const QDomNode & node)
 std::vector<QDomElement> MyQDom::GetAllLevelElements_if(const QDomNode & node, std::function<bool (const QDomNode &)> condition)
 {
     std::vector<QDomElement> elements;
-    bool add = true;
-    if(condition && !condition(node)) add = false;
 
-    if(add && !node.toElement().isNull()) elements.push_back(node.toElement());
+    if(node.isElement())
+    {
+        if(!condition || condition(node)) elements.push_back(node.toElement());
+    }
 
-    QDomNode childNode = node.firstChild();
+    QDomNode childNode = node.firstChildElement();
+    if(node.isDocument()) childNode = node.toDocument().documentElement().firstChildElement();
     while(!childNode.isNull())
     {
 	auto nestedElementsOfChild = GetAllLevelElements_if(childNode, condition);

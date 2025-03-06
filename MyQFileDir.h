@@ -277,20 +277,20 @@ bool MyQFileDir::WriteFile(const QString & fileName, const QString & content, co
     QFile file(fileName);
     if(file.open(QFile::WriteOnly))
     {
-	QTextStream stream(&file);
-	if(encoding == nullptr || strcmp(encoding, "") == 0)
-	{
-	    stream << content;
-	    return true;
-	}
-	else if(auto codec = QTextCodec::codecForName(encoding))
-	{
-	    stream.setCodec(codec);
-	    stream << content;
-	    return true;
-	}
-	qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
-	return false;
+        QTextStream stream(&file);
+
+        if(encoding != nullptr && strcmp(encoding, "") != 0)
+        {
+            if(auto codec = QTextCodec::codecForName(encoding)) stream.setCodec(codec);
+            else
+            {
+                qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
+                return false;
+            }
+        }
+
+        stream << content;
+        return true;
     }
     qCritical() << "MyQFileDir::WriteFile can't open file ["+fileName+"]";
     return false;
@@ -302,21 +302,21 @@ bool MyQFileDir::AppendFile(const QString & fileName, const QString & content, c
     if(file.open(QFile::Append))
     {
 	QTextStream stream(&file);
-	if(encoding == nullptr || strcmp(encoding, "") == 0)
-	{
-	    stream << content;
-	    return true;
-	}
-	else if(auto codec = QTextCodec::codecForName(encoding))
-	{
-	    stream.setCodec(codec);
-	    stream << content;
-	    return true;
-	}
-	qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
-	return false;
+
+        if(encoding != nullptr && strcmp(encoding, "") != 0)
+        {
+            if(auto codec = QTextCodec::codecForName(encoding)) stream.setCodec(codec);
+            else
+            {
+                qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
+                return false;
+            }
+        }
+
+        stream << content;
+        return true;
     }
-    qCritical() << "MyQFileDir::WriteFile can't open file ["+fileName+"]";
+    qCritical() << "MyQFileDir::AppendFile can't open file ["+fileName+"]";
     return false;
 }
 
@@ -328,16 +328,20 @@ QString MyQFileDir::ReadFile1(const QString & fileName, const char * encoding, b
     {
 	QTextStream stream(&file);
 
-	if(encoding != nullptr && strcmp(encoding, "") != 0)
-	{
-	    if(auto codec = QTextCodec::codecForName(encoding)) stream.setCodec(codec);
-	    else qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
-	}
+        if(encoding != nullptr && strcmp(encoding, "") != 0)
+        {
+            if(auto codec = QTextCodec::codecForName(encoding)) stream.setCodec(codec);
+            else
+            {
+                qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
+                return "";
+            }
+        }
 
 	return stream.readAll();
     }
     if(success) *success = false;
-    qCritical() << "MyQFileDir::ReadFile can't open file ["+fileName+"]";
+    qCritical() << "MyQFileDir::ReadFile1 can't open file ["+fileName+"]";
     return "";
 }
 
@@ -348,15 +352,19 @@ MyQFileDir::ReadResult MyQFileDir::ReadFile2(const QString & fileName, const cha
     {
 	QTextStream stream(&file);
 
-	if(encoding != nullptr && strcmp(encoding, "") != 0)
-	{
-	    if(auto codec = QTextCodec::codecForName(encoding)) stream.setCodec(codec);
-	    else qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
-	}
+        if(encoding != nullptr && strcmp(encoding, "") != 0)
+        {
+            if(auto codec = QTextCodec::codecForName(encoding)) stream.setCodec(codec);
+            else
+            {
+                qCritical() << QString("MyQFileDir::WriteFile unknown codec [") +encoding+"]";
+                return { false, "" };
+            }
+        }
 
 	return { true, stream.readAll() };
     }
-    qCritical() << "MyQFileDir::ReadFile can't open file ["+fileName+"]";
+    qCritical() << "MyQFileDir::ReadFile2 can't open file ["+fileName+"]";
     return { false, "" };
 }
 
