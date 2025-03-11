@@ -12,11 +12,10 @@ struct ParseHex
     using QStringsMap = std::map<QString,QString>;
     inline static QString ParseFile(const QString &file, QStringsMap &adressesAndCommands)
     {
-
         // https://microsin.net/programming/pc/intel-hex-file-format.html?ysclid=m6ixn3tdg4403881195
 
         auto readRes = MyQFileDir::ReadFile2(file);
-        if(!readRes.success) { return "Error readig file"; }
+        if(!readRes.success) { return "Error reading file"; }
 
         QStringList lines = readRes.content.split("\n");
         for(auto &line:lines) if(line.endsWith('\r')) line.chop(1);
@@ -26,7 +25,6 @@ struct ParseHex
         const QString adressHmarker = "04";
         QString adressH;
         QString data;
-
 
         for(auto &line:lines)
         {
