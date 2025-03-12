@@ -135,15 +135,15 @@ QString MyQFileDir::RemoveOldFiles(QString directory, int remainCount, int sortF
 
 inline bool MyQFileDir::RemoveDirIfEmpty(const QString &dirStr, bool ShowErrorMessage)
 {
-	if(QDir dir(dirStr); dir.isEmpty())
-	{
-		if(!dir.rmdir(dirStr))
-		{
-			if(ShowErrorMessage) QMbError("Err removing dir " + dirStr);
-			return false;
-		}
-	}
-	return true;
+    if(QDir dir(dirStr); dir.isEmpty())
+    {
+        if(!dir.rmdir(dirStr))
+        {
+            if(ShowErrorMessage) QMbError("Err removing dir " + dirStr);
+            return false;
+        }
+    }
+    return true;
 }
 
 void MyQFileDir::ReplaceFileWithBackup(const QFileInfo & src, const QFileInfo & dst, const QString & backupPath)
