@@ -6,6 +6,7 @@
 
 #include <QApplication>
 #include <QDateTime>
+#include <QWidget>
 #include <QDebug>
 
 #include "MyQShortings.h"

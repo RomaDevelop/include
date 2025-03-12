@@ -1,8 +1,8 @@
 #ifndef MYQWINDOWS_H
 #define MYQWINDOWS_H
 
-#include <QWidget>
 #include <QString>
+#include <QDateTime>
 
 struct MyQWindows
 {
@@ -11,7 +11,7 @@ struct MyQWindows
 	static bool IsProcessRunning(uint processID);
 
 	enum CopyMoveFileMode { move, copy };
-	static int CopyMoveFile(QString S, QString D, CopyMoveFileMode Mode);
+	static int CopyMoveFile(QString SourceFile, QString Destination, CopyMoveFileMode Mode); // требуется QT += widgets, работает и в консольном
 };
 
 #endif // MYQWINDOWS_H
