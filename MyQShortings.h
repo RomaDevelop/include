@@ -2,6 +2,8 @@
 #ifndef MYQSHORTINGS_H
 #define MYQSHORTINGS_H
 //---------------------------------------------------------------------------
+#include <QString>
+//---------------------------------------------------------------------------
 #define QMb  QMessageBox::information
 #define QMbi QMessageBox::information
 #define QMbw QMessageBox::warning
@@ -10,12 +12,14 @@
 #define QMbInfo(text) QMessageBox::information(0, "Information", text)
 #define QMbError(text) QMessageBox::critical(0, "Error", text)
 //---------------------------------------------------------------------------
-#define QSn QString::number
+//#define QSn QString::number
+template<class NumberType>
+QString QSn(NumberType number) { return QString::number(number); }
 //---------------------------------------------------------------------------
-template<class T>
-bool IsInt(T QStringVariable) { bool ok; QStringVariable.toInt(&ok); return ok; }
-template<class T>
-bool IsUInt(T QStringVariable) { bool ok; QStringVariable.toUInt(&ok); return ok; }
+template<class QStringType>
+bool IsInt(QStringType stringVariable) { bool ok; stringVariable.toInt(&ok); return ok; }
+template<class QStringType>
+bool IsUInt(QStringType stringVariable) { bool ok; stringVariable.toUInt(&ok); return ok; }
 //---------------------------------------------------------------------------
 #define qDbg qDebug()
 #define qdbg qDebug()
