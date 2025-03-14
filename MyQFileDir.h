@@ -66,10 +66,8 @@ QString MyQFileDir::Rename(QString oldFile, QString newFile, bool forceCaseSensi
             if(tmpNewFile.size() != newFile.size())
                 return "Can't create tmp name to forceCaseSensitiveRename\n\n" + oldFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+oldFile;
 
-            qDebug() << oldFile + " to " + tmpNewFile;
             if(!QFile::rename(oldFile, tmpNewFile))
                 return "QFile::rename returned false for forceCaseSensitiveRename(step1)\n\n" + oldFile + "\n\nto\n\n" + tmpNewFile + "\n\n"+RenameErrMarker()+oldFile;
-            qDebug() << tmpNewFile + " to " + newFile;
             if(!QFile::rename(tmpNewFile, newFile))
                 return "QFile::rename returned false for forceCaseSensitiveRename(step2)\n\n" + tmpNewFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+tmpNewFile;
             return "";

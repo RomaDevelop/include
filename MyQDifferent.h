@@ -24,6 +24,7 @@ struct MyQDifferent
     inline static QString ExeNameWithPath();
     inline static QString GetGeo(const QWidget &widget);
     inline static bool SetGeo(QString geoStr, QWidget &widget);
+    inline static QString BytesToString(uint64_t bytesCount);
 
     inline static bool SaveSettings(QString fileName, const std::vector<QWidget*> &widgets, const QStringList &stringSettings);
     inline static bool LoadSettings(QString fileName, std::vector<QWidget*> &widgets, QStringList &stringSettings);
@@ -72,6 +73,16 @@ bool MyQDifferent::SetGeo(QString geoStr, QWidget & widget)
     else return false;
 }
 
+QString MyQDifferent::BytesToString(uint64_t bytesCount)
+{
+    if(bytesCount > (uint64_t)1024 * 1024 * 1024 * 1024)
+        return QSn(float(bytesCount) / float((uint64_t)1024 * 1024 * 1024 * 1024), 'f', 1) + " Tb";
+    if(bytesCount > 1024 * 1024 * 1024) return QSn(float(bytesCount) / float(1024 * 1024 * 1024), 'f', 1) + " Gb";
+    if(bytesCount > 1024 * 1024       ) return QSn(float(bytesCount) / float(1024 * 1024       ), 'f', 1) + " Mb";
+    if(bytesCount > 1024              ) return QSn(float(bytesCount) / float(1024              ), 'f', 1) + " Kb";
+    return QSn(bytesCount) + " b";
+}
+
 bool MyQDifferent::SaveSettings(QString fileName, const std::vector<QWidget *> & widgets, const QStringList & stringSettings)
 {
     QString endSetting = "[endSetting]\n";
@@ -80,16 +91,16 @@ bool MyQDifferent::SaveSettings(QString fileName, const std::vector<QWidget *> &
     QString settings = "save_version 003" + endSetting;
     for(uint i=0; i<widgets.size(); i++)
     {
-	QString class_name=widgets[i]->metaObject()->className();
-	QString name=widgets[i]->objectName();
-	QString value;
+        QString class_name=widgets[i]->metaObject()->className();
+        QString name=widgets[i]->objectName();
+        QString value;
 
-	if(0) {}
+        if(0) {}
 #ifdef QLINEEDIT_H
-	else if(class_name=="QLineEdit") value = static_cast<QLineEdit*>(widgets[i])->text();
+        else if(class_name=="QLineEdit") value = static_cast<QLineEdit*>(widgets[i])->text();
 #endif
 #ifdef QCHECKBOX_H
-	else if(class_name=="QCheckBox") value = QString::number(static_cast<QCheckBox*>(widgets[i])->isChecked());
+        else if(class_name=="QCheckBox") value = QString::number(static_cast<QCheckBox*>(widgets[i])->isChecked());
 #endif
 #ifdef QTEXTEDIT_H
 	else if (class_name=="QTextEdit") value = static_cast<QTextEdit*>(widgets[i])->toPlainText();
