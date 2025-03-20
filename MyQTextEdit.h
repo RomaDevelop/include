@@ -3,13 +3,24 @@
 
 #include <QDebug>
 #include <QTextEdit>
+#include <QMimeData>
 
-struct MyQTextEdit
+class MyQTextEdit : public QTextEdit
 {
-    inline static void AppendInLastRow(QTextEdit *textEdit, const QString& text);
-    inline static void ColorizeLastRow(QTextEdit *textEdit, const QBrush &brush);
-    inline static void ColorizeLastCount(QTextEdit *textEdit, const QBrush &brush, uint count);
-    inline void Colorize(QTextEdit *textEdit, int from, int to, const QColor &color);
+	Q_OBJECT
+public:
+	inline static void AppendInLastRow(QTextEdit *textEdit, const QString& text);
+	inline static void ColorizeLastRow(QTextEdit *textEdit, const QBrush &brush);
+	inline static void ColorizeLastCount(QTextEdit *textEdit, const QBrush &brush, uint count);
+	inline void Colorize(QTextEdit *textEdit, int from, int to, const QColor &color);
+
+public:
+	explicit MyQTextEdit(QWidget *parent = nullptr) : QTextEdit(parent) {}
+	virtual ~MyQTextEdit() = default;
+	bool richTextPaste = true; // если флаг установлен - текст будет вставляться с сохранением его форматирования
+
+protected:
+	inline void insertFromMimeData(const QMimeData *source) override;
 };
 
 void MyQTextEdit::AppendInLastRow(QTextEdit * textEdit, const QString & text)
@@ -52,6 +63,16 @@ void MyQTextEdit::Colorize(QTextEdit * textEdit, int from, int to, const QColor 
     cursor.setPosition(from,QTextCursor::MoveAnchor);
     cursor.setPosition(to,QTextCursor::KeepAnchor);
     cursor.setCharFormat(format);
+}
+
+void MyQTextEdit::insertFromMimeData(const QMimeData * source)
+{
+	if(richTextPaste) QTextEdit::insertFromMimeData(source);
+	else
+	{
+		QString text = source->text(); // Получаем текст из буфера обмена без форматирования
+		textCursor().insertText(text); // Вставляем текст с текущим форматированием QTextEdit
+	}
 }
 
 #endif
