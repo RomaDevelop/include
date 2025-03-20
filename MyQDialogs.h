@@ -16,6 +16,7 @@
 #include <QTimer>
 #include <QDialogButtonBox>
 #include <QLineEdit>
+#include <QLabel>
 
 #include "MyQShortings.h"
 #include "declare_struct.h"
@@ -28,9 +29,14 @@ public:
     inline static void ShowText(const QString &text, uint w = 800, uint h = 600);
     inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
     inline static QString InputText(QString captionDialog = "", QString startText = "", uint w = 0, uint h = 0);
+
     declare_struct_2_fields_move(InputLineRes, QString, line, QString, button);
-    inline static InputLineRes InputLineExt(QString captionDialog = "", QString startText = "", QStringList buttons = {"Принять","Отмена"}, uint w = 0);
+    inline static const QString& Accept() { static QString str = "Принять"; return str; }
+    inline static const QString& Cansel() { static QString str = "Отмена"; return str; }
+    inline static InputLineRes InputLineExt(QString captionDialog = "", QString textDialog = "", QString startText = "", QStringList buttons = {Accept(),Cansel()}, uint w = 0);
+
     inline static QString ListDialog(QString caption, QStringList valuesList,  uint w = 0, uint h = 0);
+    inline static QString ListDialog(QString caption, QString valuesList, QString splitter, uint w = 0, uint h = 0);
     inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption,
                                                       const QStringList &values,
                                                       const std::vector<bool> &startCheched = {},
@@ -103,12 +109,16 @@ QString MyQDialogs::InputText(QString captionDialog, QString startText,  uint w,
     return ret;
 }
 
-MyQDialogs::InputLineRes MyQDialogs::InputLineExt(QString captionDialog, QString startText, QStringList buttons, uint w)
+MyQDialogs::InputLineRes MyQDialogs::InputLineExt(QString captionDialog, QString textDialog, QString startText, QStringList buttons, uint w)
 {
     std::unique_ptr<QDialog> dialog(new QDialog);
     InputLineRes ret;
     dialog->setWindowTitle(captionDialog);
     QVBoxLayout *all  = new QVBoxLayout(dialog.get());
+
+    QLabel *label = new QLabel(textDialog);
+    all->addWidget(label);
+
     QLineEdit *lineEdit = new QLineEdit;
     lineEdit->setText(startText);
     all->addWidget(lineEdit);
@@ -162,6 +172,12 @@ QString MyQDialogs::ListDialog(QString caption, QStringList valuesList, uint w, 
 
     dialog->exec();
     return QString(*retText);
+}
+
+QString MyQDialogs::ListDialog(QString caption, QString valuesList, QString splitter, uint w, uint h)
+{
+    if(valuesList.endsWith(splitter)) valuesList.chop(splitter.size());
+    return ListDialog(caption, valuesList.split(splitter), w, h);
 }
 
 struct CheckBoxDialogItem

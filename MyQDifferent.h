@@ -28,6 +28,8 @@ struct MyQDifferent
 
     inline static bool SaveSettings(QString fileName, const std::vector<QWidget*> &widgets, const QStringList &stringSettings);
     inline static bool LoadSettings(QString fileName, std::vector<QWidget*> &widgets, QStringList &stringSettings);
+
+    inline static void GetPathName(QString file, QString *path, QString *name);
 };
 
 //---------------------------------------------------------------------------
@@ -205,7 +207,12 @@ bool MyQDifferent::LoadSettings(QString fileName, std::vector<QWidget *> & widge
     return true;
 }
 
-
+void MyQDifferent::GetPathName(QString file, QString *path, QString *name)
+{
+    QFileInfo fi(file);
+    *path = fi.path();
+    *name = fi.fileName();
+}
 
 #endif
 //---------------------------------------------------------------------------
