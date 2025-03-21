@@ -1,4 +1,4 @@
-#include "MyQWindows.h"
+#include "PlatformDependent.h"
 
 #include <windows.h>
 
@@ -11,7 +11,7 @@
 
 #include "MyQShortings.h"
 
-QDateTime MyQWindows::GetProcessStartTime(uint processID) {
+QDateTime PlatformDependent::GetProcessStartTime(uint processID) {
 	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, (DWORD)processID);
 	if (hProcess == NULL) {
 	std::cerr << "Не удалось открыть процесс с PID " << processID << ". Ошибка: " << GetLastError() << std::endl;
@@ -38,7 +38,7 @@ QDateTime MyQWindows::GetProcessStartTime(uint processID) {
 	}
 }
 
-bool MyQWindows::IsProcessRunning(uint processID) {
+bool PlatformDependent::IsProcessRunning(uint processID) {
 	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
 	if(hProcess != NULL)
 	{
@@ -63,7 +63,7 @@ bool MyQWindows::IsProcessRunning(uint processID) {
 	return false; // Процесс не запущен или не может быть открыт
 }
 
-int MyQWindows::CopyMoveFile(QString S, QString D, CopyMoveFileMode Mode)
+int PlatformDependent::CopyMoveFile(QString S, QString D, CopyMoveFileMode Mode)
 {
 	S.replace('/','\\');
 	D.replace('/','\\');
@@ -83,4 +83,11 @@ int MyQWindows::CopyMoveFile(QString S, QString D, CopyMoveFileMode Mode)
 	fos.pTo = cTo;
 	fos.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMMKDIR | FOF_SIMPLEPROGRESS;
 	return SHFileOperation(&fos);
+}
+
+void PlatformDependent::SetTopMost(QWidget * w, bool topMost)
+{
+	HWND hwnd = reinterpret_cast<HWND>(w->winId());
+	SetWindowPos(hwnd, topMost ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0,
+				 SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 }
