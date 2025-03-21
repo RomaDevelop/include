@@ -34,7 +34,7 @@ private:
 	QRegularExpression pattern;
 	QTextCharFormat format;
     };
-    QVector<HighlightingRule> highlightingRules;
+    //QVector<HighlightingRule> highlightingRules;
 };
 //---------------------------------------------------------------------------
 QTextCharFormat ForSyntaxHighlighters::GetFormatUnderCursor(QTextEdit * textEdit)
@@ -64,9 +64,9 @@ XmlHighlighter::XmlHighlighter(QTextDocument * parent, QTextCharFormat * tagForm
     if(valueFormat) this->formatValue = *valueFormat;
     else this->formatValue.setForeground(Qt::blue);
 
-    highlightingRules.append({ QRegularExpression("<[^>]*>"), this->formatTag });
-    highlightingRules.append({ QRegularExpression("\\b\\w+(?=\\=)"), this->formatAttribute });
-    highlightingRules.append({ QRegularExpression("\"[^\"]*\"(?=[^<]*>)"), this->formatValue });
+    //highlightingRules.append({ QRegularExpression("<[^>]*>"), this->formatTag });
+    //highlightingRules.append({ QRegularExpression("\\b\\w+(?=\\=)"), this->formatAttribute });
+    //highlightingRules.append({ QRegularExpression("\"[^\"]*\"(?=[^<]*>)"), this->formatValue });
 }
 
 void XmlHighlighter::highlightBlock(const QString & text)

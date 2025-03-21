@@ -16,7 +16,7 @@ struct MyQExecute
     inline static bool OpenDir(QString dir);
     inline static bool ShowInExplorer(QString fileOrDir);
 };
-
+//---------------------------------------------------------------------------
 bool MyQExecute::Execute(QString file, QStringList args)
 {
     QFileInfo fileInfo(file);

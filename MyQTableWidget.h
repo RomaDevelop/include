@@ -15,10 +15,9 @@ class MyQTableWidget : public QTableWidget
 {
 	Q_OBJECT
 public:
+	inline static void SetItemEditableState(QTableWidgetItem *item, bool editableNewState);
 
-	inline static QString SaveColsWidths(const QTableWidget *tableWidget);
-	inline static QString LoadColsWidths(QTableWidget *tableWidget, QString value); // возвращает пустую строку если ok или описание ошибки
-
+public:
 	MyQTableWidget(QWidget *parent = nullptr) : QTableWidget(parent)
 	{
 		setContextMenuPolicy(Qt::CustomContextMenu);
@@ -26,8 +25,6 @@ public:
 
 		setSelectionMode(QAbstractItemView::ContiguousSelection);
 	}
-
-	inline static void SetItemEnableState(QTableWidgetItem *item, bool enableNewState);
 
 protected:
 	void keyPressEvent(QKeyEvent *event) override
@@ -147,39 +144,11 @@ private:
 	}
 };
 
-QString MyQTableWidget::SaveColsWidths(const QTableWidget * tableWidget)
+void MyQTableWidget::SetItemEditableState(QTableWidgetItem * item, bool editableNewState)
 {
-	QString ret;
-	for(int i=0; i<tableWidget->columnCount(); i++)
-		ret.append(QString::number(tableWidget->columnWidth(i))).append(";");
-	return ret;
-}
-
-QString MyQTableWidget::LoadColsWidths(QTableWidget * tableWidget, QString value)
-{
-	QString ret;
-	auto valsList = value.split(";", QString::SkipEmptyParts);
-	if(valsList.size() != tableWidget->columnCount()) ret += "sizes different";
-	bool check;
-	for(int i=0; i<tableWidget->columnCount() && i<valsList.size(); i++)
-	{
-		int w = valsList[i].toUInt(&check);
-		if(!check)
-		{
-			if(!ret.isEmpty()) ret += " and ";
-			ret += "bad value ("+ valsList[i] +")";
-		}
-		tableWidget->setColumnWidth(i, w);
-	}
-
-	return ret;
-}
-
-void MyQTableWidget::SetItemEnableState(QTableWidgetItem * item, bool enableNewState)
-{
-	if(!item) { qCritical() << "MyQTableWidget::SetItemEnableState nullptr item"; return; }
+	if(!item) { qCritical() << "MyQTableWidget::SetItemEditableState nullptr item"; return; }
 	auto flags = item->flags();
-	flags.setFlag(Qt::ItemIsEditable, enableNewState);
+	flags.setFlag(Qt::ItemIsEditable, editableNewState);
 	item->setFlags(flags);
 }
 
