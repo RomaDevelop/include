@@ -20,8 +20,8 @@ struct MyQFileDir
 
     inline static QFileInfo FindNewest(const QFileInfoList &files);
 
-    enum { modified = 1, read = 2, noSort = 0 };
-    inline static QString RemoveOldFiles(QString directory, int remainCount, int sortFlag = MyQFileDir::modified);
+    enum SortFlags { noSort, name, modified, read };
+    inline static QString RemoveOldFiles(QString directory, int remainCount, SortFlags sortFlag = MyQFileDir::modified);
 
     inline static bool RemoveDirIfEmpty(const QString &dirStr, bool ShowErrorMessage);
 
@@ -100,7 +100,7 @@ QFileInfo MyQFileDir::FindNewest(const QFileInfoList & files)
     return newestModifFI;
 }
 
-QString MyQFileDir::RemoveOldFiles(QString directory, int remainCount, int sortFlag)
+QString MyQFileDir::RemoveOldFiles(QString directory, int remainCount, SortFlags sortFlag)
 {
     QString ret;
     QDir dir(directory);
@@ -113,20 +113,36 @@ QString MyQFileDir::RemoveOldFiles(QString directory, int remainCount, int sortF
     for(int i=content.size()-1; i>=0; i--)
 	if(!content[i].isFile()) content.removeAt(i);
 
-    auto cmpModified = [](const QFileInfo &fi1, const QFileInfo &fi2){ return fi1.lastModified() > fi2.lastModified();};
-    auto cmpRead = [](const QFileInfo &fi1, const QFileInfo &fi2){ return fi1.lastRead() > fi2.lastRead();};
+    static auto cmpName = [](const QFileInfo &a, const QFileInfo &b){
+        return a.fileName() < b.fileName(); // сортировка по имени (по возрастанию)
+    };
 
-    if(sortFlag == modified)
+    static auto cmpModified = [](const QFileInfo &a, const QFileInfo &b){
+        if (a.lastModified() != b.lastModified()) {
+            return a.lastModified() < b.lastModified(); // Сортировка по дате (от ранней к поздней)
+        }
+        return a.fileName() < b.fileName(); // Если даты одинаковые, сортировка по имени (по возрастанию)
+    };
+    static auto cmpRead = [](const QFileInfo &a, const QFileInfo &b){
+        if (a.lastModified() != b.lastModified()) {
+            return a.lastRead() < b.lastRead(); // Сортировка по дате (от ранней к поздней)
+        }
+        return a.fileName() < b.fileName(); // Если даты одинаковые, сортировка по имени (по возрастанию)
+    };
+
+    if(sortFlag == name)
+        std::sort(content.begin(),content.end(),cmpName);
+    else if(sortFlag == modified)
 	std::sort(content.begin(),content.end(),cmpModified);
     else if(sortFlag == read)
 	std::sort(content.begin(),content.end(),cmpRead);
     else if(sortFlag == noSort) {}
-    else ret += "wrong sort flag ("+QString::number(sortFlag)+")";
+    else ret += "unrealesed sort flag ("+QString::number(sortFlag)+")";
 
     while (content.size() > remainCount) {
-	if(!QFile(content.back().filePath()).remove())
+        if(!QFile(content.front().filePath()).remove())
 	    ret += "can't remove file ["+content.back().filePath()+"]\n";
-	content.removeLast();
+        content.removeFirst();
     }
     return ret;
 }
