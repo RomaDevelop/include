@@ -14,27 +14,27 @@
 QDateTime PlatformDependent::GetProcessStartTime(uint processID) {
 	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, (DWORD)processID);
 	if (hProcess == NULL) {
-	std::cerr << "Не удалось открыть процесс с PID " << processID << ". Ошибка: " << GetLastError() << std::endl;
-	return QDateTime(); // Возвращаем пустой QDateTime в случае ошибки
+		std::cerr << "Не удалось открыть процесс с PID " << processID << ". Ошибка: " << GetLastError() << std::endl;
+		return QDateTime(); // Возвращаем пустой QDateTime в случае ошибки
 	}
 
 	FILETIME creationTime, exitTime, kernelTime, userTime;
 
 	if (GetProcessTimes(hProcess, &creationTime, &exitTime, &kernelTime, &userTime)) {
-	// Преобразуем FILETIME в QDateTime
-	ULARGE_INTEGER ull;
-	ull.LowPart = creationTime.dwLowDateTime;
-	ull.HighPart = creationTime.dwHighDateTime;
+		// Преобразуем FILETIME в QDateTime
+		ULARGE_INTEGER ull;
+		ull.LowPart = creationTime.dwLowDateTime;
+		ull.HighPart = creationTime.dwHighDateTime;
 
-	// FILETIME представляет время в 100-наносекундных интервалах с 1 января 1601 года
-	// Преобразуем в QDateTime
-	QDateTime startTime = QDateTime::fromMSecsSinceEpoch(ull.QuadPart / 10000 - 11644473600000LL);
-	CloseHandle(hProcess);
-	return startTime;
+		// FILETIME представляет время в 100-наносекундных интервалах с 1 января 1601 года
+		// Преобразуем в QDateTime
+		QDateTime startTime = QDateTime::fromMSecsSinceEpoch(ull.QuadPart / 10000 - 11644473600000LL);
+		CloseHandle(hProcess);
+		return startTime;
 	} else {
-	std::cerr << "Не удалось получить время процесса. Ошибка: " << GetLastError() << std::endl;
-	CloseHandle(hProcess);
-	return QDateTime(); // Возвращаем пустой QDateTime в случае ошибки
+		std::cerr << "Не удалось получить время процесса. Ошибка: " << GetLastError() << std::endl;
+		CloseHandle(hProcess);
+		return QDateTime(); // Возвращаем пустой QDateTime в случае ошибки
 	}
 }
 

@@ -25,6 +25,7 @@ public:
 
 		setSelectionMode(QAbstractItemView::ContiguousSelection);
 	}
+	//inline static std::vector<int> CopyedRows
 
 protected:
 	void keyPressEvent(QKeyEvent *event) override
@@ -65,10 +66,23 @@ private slots:
 		if (!selection->hasSelection()) return;
 		innerClipboard.clear();
 		innerClipboard.emplace_back();
+		innerClipboardVerticalHeaderValues.clear();
+		innerClipboardAllColums.clear();
+
 		QString copiedData;
 		QList<QTableWidgetSelectionRange> ranges = selectedRanges();
 		for (const auto &range : ranges) {
 			for (int row = range.topRow(); row <= range.bottomRow(); ++row) {
+
+				auto vHeaderItem = this->verticalHeaderItem(row);
+				if(vHeaderItem) innerClipboardVerticalHeaderValues.emplace_back(vHeaderItem->text());
+				else innerClipboardVerticalHeaderValues.emplace_back();
+
+				innerClipboardAllColums.emplace_back();
+				for (int col = 0; col <= columnCount(); ++col)
+					if (item(row, col)) innerClipboardAllColums.back().push_back(item(row, col)->text());
+					// else ... not need, innerClipboardAllColums.back() is empty by default
+
 				for (int col = range.leftColumn(); col <= range.rightColumn(); ++col) {
 					if (item(row, col))
 					{
@@ -124,6 +138,9 @@ private slots:
 	}
 private:
 	inline static std::vector<QStringList> innerClipboard {};
+	inline static std::vector<QString> innerClipboardVerticalHeaderValues {};
+	inline static std::vector<QStringList> innerClipboardAllColums {};
+
 	QAction *createAction(const QString &text, const QKeySequence &shortcut, QObject *receiver, const char *slot) {
 		QAction *action = new QAction(text, this);
 		action->setShortcut(shortcut);

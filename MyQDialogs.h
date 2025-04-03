@@ -3,6 +3,7 @@
 //---------------------------------------------------------------------------
 #include <memory>
 
+#include <QApplication>
 #include <QString>
 #include <QDialog>
 #include <QDebug>
@@ -19,6 +20,7 @@
 #include <QLabel>
 
 #include "MyQShortings.h"
+#include "MyQWidget.h"
 #include "declare_struct.h"
 //---------------------------------------------------------------------------
 struct CheckBoxDialogResult;
@@ -42,18 +44,72 @@ public:
                                                       const std::vector<bool> &startCheched = {},
                                                       const std::vector<bool> &enabled = {},
                                                       QWidget *parent = nullptr);
-    static std::unique_ptr<QTableWidget> Table(const std::vector<QStringList> &rows,
+	inline static std::unique_ptr<QTableWidget> Table(const std::vector<QStringList> &rows,
                                                QStringList horisontalHeader = {}, QStringList verticaHeader = {},
                                                bool autoColWidths = true,
                                                uint w = 800, uint h = 600);
-    static std::unique_ptr<QTableWidget> Table(QString content, QString colSplitter, QString rowSplitter,
+	inline static std::unique_ptr<QTableWidget> Table(QString content, QString colSplitter, QString rowSplitter,
                                                QStringList horisontalHeader = {}, QStringList verticaHeader = {},
                                                bool autoColWidths = true,
                                                uint w = 800, uint h = 600);
-    static std::unique_ptr<QTableWidget> TableOneCol(QStringList rows,
+	inline static std::unique_ptr<QTableWidget> TableOneCol(QStringList rows,
                                                      QStringList horisontalHeader = {}, QStringList verticaHeader = {},
                                                      bool autoColWidths = true,
                                                      uint w = 800, uint h = 600);
+	static void ShowAllStandartIcons()
+	{
+		QWidget *w = new QWidget;
+		w->setAttribute(Qt::WA_DeleteOnClose);
+		auto hlo_main = new QHBoxLayout(w);
+		static std::vector<QPixmap*> pixmaps;
+		pixmaps.clear();
+		QVBoxLayout *vlo = nullptr;
+
+		if(QString(QT_VERSION_STR) == "5.12.10") ; // все норм, enum проверен
+		else { QMbWarning("enum QStyle::SP_TitleBarMenuButton not checked for Qt " QT_VERSION_STR); }
+
+		bool fillDummy = false;
+		int start = QStyle::SP_TitleBarMenuButton;
+		int max = QStyle::SP_LineEditClearButton;
+		int addDummy = 10 - (max+1) % 10;
+		for(int i=start, count = 0; i<=max; i++, count++)
+		{
+			if(count%10 == 0)
+			{
+				vlo = new QVBoxLayout;
+				hlo_main->addLayout(vlo);
+			}
+			if(!vlo) { QMbError("!vlo"); return; }
+
+			pixmaps.emplace_back(new QPixmap);
+			QPixmap& pixmapRef = *pixmaps.back();
+
+			if(!fillDummy) pixmapRef = QApplication::style()->standardIcon((QStyle::StandardPixmap)i).pixmap(50,50);
+
+			auto hlo = new QHBoxLayout;
+			vlo->addLayout(hlo);
+			auto labelImage = new QLabel;
+			labelImage->setAlignment(Qt::AlignCenter);
+			MyQWidget::SetFontPointSize(labelImage,14);
+			if(!fillDummy) labelImage->setPixmap(pixmapRef);
+			else { labelImage->setText("0"); }
+			hlo->addWidget(labelImage);
+			//QStyle::StandardPixmap pixmapVar = (QStyle::StandardPixmap)i;
+			hlo->addSpacing(10);
+			auto labelCaption = new QLabel("i="+QSn(i)+" n="+QSn(count+1));
+			hlo->addWidget(labelCaption);
+			MyQWidget::SetFontPointSize(labelCaption,14);
+			hlo->addSpacing(10);
+
+			if(i == max && !fillDummy)
+			{
+				fillDummy = true;
+				max += addDummy;
+			}
+		}
+		w->move(200,200);
+		w->show();
+	}
 };
 //---------------------------------------------------------------------------
 void MyQDialogs::ShowText(const QString & text, uint w, uint h)
