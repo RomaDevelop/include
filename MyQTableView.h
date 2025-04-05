@@ -22,6 +22,8 @@ public:
 
 	ColoriserDelegate *coloriserDelegate;
 	bool keyBoardSearch = true; // обработка происходит в keyPressEvent
+	enum wheelScrollBehaviors { moveScrollBar, moveCurrentIndex };
+	wheelScrollBehaviors wheelScrollBehavior = moveScrollBar; // обработка происходит в wheelEvent
 
 	inline int RowsCount(bool do_fetch);
 
@@ -36,10 +38,12 @@ public:
 	inline bool LocateRow(int row, int column = -1); // col = -1 и останется в текущей колонке
 
 	///\brief for empty feildsIndexes returns all fields
-	inline std::vector<QStringList> ToTable(std::vector<int> feildsIndexes);
+	inline std::vector<QStringList> ToTable(std::vector<int> feildsIndexes = {}); // QStringList = row
 
 protected:
 	inline void keyPressEvent(QKeyEvent* event) override;
+protected:
+	inline void wheelEvent(QWheelEvent* event) override;
 private:
 	inline bool CheckArrows(QKeyEvent* event);
 	inline bool CheckEditTriggers(QKeyEvent* event);
@@ -198,6 +202,33 @@ void MyQTableView::keyPressEvent(QKeyEvent *event)
 			}
 	}
 	QTableView::keyPressEvent(event); // иначе, запускается стандартный обработчик
+}
+
+void MyQTableView::wheelEvent(QWheelEvent *event) {
+	if(wheelScrollBehavior == moveScrollBar)
+	{
+		QTableView::wheelEvent(event);
+		return;
+	}
+	else if(wheelScrollBehavior == moveCurrentIndex)
+	{
+		QModelIndex current = currentIndex();
+		int row = current.row();
+
+		// Направление прокрутки
+		int delta = event->angleDelta().y(); // положительное — вверх, отрицательное — вниз
+
+		int newRow = row + (delta < 0 ? 1 : -1);
+		int rowCount = model()->rowCount();
+
+		// Проверка границ
+		if (newRow >= 0 && newRow < rowCount) {
+			QModelIndex newIndex = model()->index(newRow, current.column());
+			setCurrentIndex(newIndex);
+			scrollTo(newIndex);
+		}
+		return;
+	}
 }
 
 bool MyQTableView::CheckArrows(QKeyEvent *event)

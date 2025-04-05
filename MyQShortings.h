@@ -7,9 +7,9 @@
 #define QMbw QMessageBox::warning
 #define QMbc QMessageBox::critical
 #define QMbq QMessageBox::question
-#define QMbInfo(text) QMessageBox::information(0, "Information", text)
-#define QMbWarning(text) QMessageBox::warning(0, "Warning", text)
-#define QMbError(text) QMessageBox::critical(0, "Error", text)
+#define QMbInfo(text) QMessageBox::information(nullptr, "Information", text)
+#define QMbWarning(text) QMessageBox::warning(nullptr, "Warning", text)
+#define QMbError(text) QMessageBox::critical(nullptr, "Error", text)
 //---------------------------------------------------------------------------
 #define QSn QString::number
 //---------------------------------------------------------------------------
@@ -21,7 +21,7 @@ bool IsUInt(QStringType stringVariable) { bool ok; stringVariable.toUInt(&ok); r
 #define qDbg qDebug()
 #define qdbg qDebug()
 //---------------------------------------------------------------------------
-#define LastAddedWidget(Grid, Type) static_cast<Type*>(Grid->itemAt(Grid->count()-1)->widget())
+#define LastAddedWidget(Layout, Type) static_cast<Type*>(Layout->itemAt(Layout->count()-1)->widget())
 //---------------------------------------------------------------------------
 #define DateTimeFormat "yyyy.MM.dd hh:mm:ss"
 #define DateTimeFormatForFileName "yyyy.MM.dd hh-mm-ss"

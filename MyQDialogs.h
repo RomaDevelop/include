@@ -37,8 +37,9 @@ public:
     inline static const QString& Cansel() { static QString str = "Отмена"; return str; }
     inline static InputLineRes InputLineExt(QString captionDialog = "", QString textDialog = "", QString startText = "", QStringList buttons = {Accept(),Cansel()}, uint w = 0);
 
-    inline static QString ListDialog(QString caption, QStringList valuesList,  uint w = 0, uint h = 0);
-    inline static QString ListDialog(QString caption, QString valuesList, QString splitter, uint w = 0, uint h = 0);
+    declare_struct_2_fields_move(ListDialogRes, int, index, QString, text);
+    inline static ListDialogRes ListDialog(QString caption, QStringList valuesList,  uint w = 0, uint h = 0);
+    inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter, uint w = 0, uint h = 0);
     inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption,
                                                       const QStringList &values,
                                                       const std::vector<bool> &startCheched = {},
@@ -197,9 +198,10 @@ MyQDialogs::InputLineRes MyQDialogs::InputLineExt(QString captionDialog, QString
     return ret;
 }
 
-QString MyQDialogs::ListDialog(QString caption, QStringList valuesList, uint w, uint h)
+MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList valuesList, uint w, uint h)
 {
-    std::shared_ptr<QString> retText(new QString);
+    std::shared_ptr<int> retIndex(new int);     // because we need to give this in lambda
+    std::shared_ptr<QString> retText(new QString);  // same
     std::unique_ptr<QDialog> dialog(new QDialog);
     if(!w) w = 650;
     if(!h) h = 340;
@@ -210,10 +212,13 @@ QString MyQDialogs::ListDialog(QString caption, QStringList valuesList, uint w, 
     listWidget->addItems(valuesList);
     vloMain->addWidget(listWidget);
 
-    auto acceptAction = [retText, listWidget, &dialog]()
+    auto acceptAction = [retText, retIndex, listWidget, &dialog]()
     {
-        if(listWidget->currentItem())
-            *retText = listWidget->currentItem()->text();
+        if(auto item = listWidget->currentItem())
+        {
+            *retIndex = listWidget->currentRow();
+            *retText = item->text();
+        }
         dialog->close();
     };
     QObject::connect(listWidget, &QListWidget::itemDoubleClicked, acceptAction);
@@ -227,10 +232,10 @@ QString MyQDialogs::ListDialog(QString caption, QStringList valuesList, uint w, 
     QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog]() { dialog->close(); });
 
     dialog->exec();
-    return QString(*retText);
+    return ListDialogRes(*retIndex, *retText);
 }
 
-QString MyQDialogs::ListDialog(QString caption, QString valuesList, QString splitter, uint w, uint h)
+MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QString valuesList, QString splitter, uint w, uint h)
 {
     if(valuesList.endsWith(splitter)) valuesList.chop(splitter.size());
     return ListDialog(caption, valuesList.split(splitter), w, h);
