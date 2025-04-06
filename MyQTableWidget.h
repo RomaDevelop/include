@@ -1,6 +1,8 @@
 #ifndef MYQTABLEWIDGET_H
 #define MYQTABLEWIDGET_H
 
+#include <memory>
+
 #include <QApplication>
 #include <QTableWidget>
 #include <QClipboard>
@@ -10,6 +12,8 @@
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QDebug>
+
+#include "MyQShortings.h"
 
 class MyQTableWidget : public QTableWidget
 {
@@ -25,7 +29,6 @@ public:
 
 		setSelectionMode(QAbstractItemView::ContiguousSelection);
 	}
-	//inline static std::vector<int> CopyedRows
 
 protected:
 	void keyPressEvent(QKeyEvent *event) override
@@ -34,6 +37,38 @@ protected:
 		else if (event->matches(QKeySequence::Copy)) copy();
 		else if (event->matches(QKeySequence::Paste)) paste();
 		QTableWidget::keyPressEvent(event);
+	}
+public: signals:
+	void SignalAfterCut();
+	void SignalAfterPaste();
+public:
+	struct ItemState
+	{
+		int itemRow;
+		int itemCol;
+		QString text;
+
+		ItemState(int itemRow, int itemCol, QString text):
+			itemRow{itemRow}, itemCol{itemCol}, text{std::move(text)} {}
+		static const QString& ItemWasNullptr() { static QString str = "ItemState::ItemWasNullptr()"; return str; }
+	};
+	std::vector<ItemState> itemStatesBeforePaste;
+	std::vector<ItemState> itemStatesBeforeCut;
+	QString RestoreState(const std::vector<ItemState> &states)
+	{
+		QString errors;
+		for(auto &state:states)
+		{
+			auto changingItem = item(state.itemRow, state.itemCol);
+			if(changingItem)
+			{
+				if(state.text == ItemState::ItemWasNullptr())
+					setItem(state.itemRow, state.itemCol, nullptr);
+				else changingItem->setText(state.text);
+			}
+			else errors += "restoring item ("+QSn(state.itemRow)+","+QSn(state.itemCol)+") is nullptr\n";
+		}
+		return errors;
 	}
 private slots:
 	void showContextMenu(const QPoint &pos)
@@ -57,8 +92,22 @@ private slots:
 	}
 	void cut()
 	{
-		copy();  // Копируем сначала данные
-		clearSelectionContent();  // Затем очищаем выделенные ячейки
+		copy();
+		itemStatesBeforeCut.clear();
+		QList<QTableWidgetSelectionRange> ranges = selectedRanges();
+		for (const auto &range : ranges) {
+			for (int row = range.topRow(); row <= range.bottomRow(); ++row) {
+				for (int col = range.leftColumn(); col <= range.rightColumn(); ++col) {
+
+					auto itemToChange = item(row, col);
+					if (itemToChange) {
+						itemStatesBeforeCut.emplace_back(row, col, itemToChange->text());
+						itemToChange->setText("");
+					}
+				}
+			}
+		}
+		emit SignalAfterCut();
 	}
 	void copy()
 	{
@@ -100,6 +149,7 @@ private slots:
 	}
 	void paste()
 	{
+		itemStatesBeforePaste.clear();
 		int startRow = currentRow();
 		int startCol = currentColumn();
 		for (uint i = 0; i < innerClipboard.size(); ++i)
@@ -111,13 +161,23 @@ private slots:
 				// Автоматическое добавление строк и столбцов
 				if (row >= rowCount()) insertRow(rowCount());
 				if (col >= columnCount()) insertColumn(columnCount());
-				if (!item(row, col)) setItem(row, col, new QTableWidgetItem());
-				item(row, col)->setText(columns[j]);
+
+				auto itemToChange = item(row, col);
+				if (!itemToChange)
+				{
+					itemToChange = new QTableWidgetItem();
+					setItem(row, col, itemToChange);
+					itemStatesBeforePaste.emplace_back(row, col, ItemState::ItemWasNullptr());
+				}
+				else itemStatesBeforePaste.emplace_back(row, col, itemToChange->text());
+				itemToChange->setText(columns[j]);
 			}
 		}
+		emit SignalAfterPaste();
 	}
 	void pasteFromClip()
 	{
+		itemStatesBeforePaste.clear();
 		QClipboard *clipboard = QApplication::clipboard();
 		QString clipboardData = clipboard->text();
 		QStringList rows = clipboardData.split('\n', QString::SkipEmptyParts);
@@ -131,8 +191,17 @@ private slots:
 				// Автоматическое добавление строк и столбцов
 				if (row >= rowCount()) insertRow(rowCount());
 				if (col >= columnCount()) insertColumn(columnCount());
-				if (!item(row, col)) setItem(row, col, new QTableWidgetItem());
-				item(row, col)->setText(columns[j]);
+
+
+				auto itemToChange = item(row, col);
+				if (!itemToChange)
+				{
+					itemToChange = new QTableWidgetItem();
+					setItem(row, col, itemToChange);
+					itemStatesBeforePaste.emplace_back(row, col, ItemState::ItemWasNullptr());
+				}
+				else itemStatesBeforePaste.emplace_back(row, col, itemToChange->text());
+				itemToChange->setText(columns[j]);
 			}
 		}
 	}
@@ -146,18 +215,6 @@ private:
 		action->setShortcut(shortcut);
 		connect(action, SIGNAL(triggered()), receiver, slot);
 		return action;
-	}
-	void clearSelectionContent() {
-		QList<QTableWidgetSelectionRange> ranges = selectedRanges();
-		for (const auto &range : ranges) {
-			for (int row = range.topRow(); row <= range.bottomRow(); ++row) {
-				for (int col = range.leftColumn(); col <= range.rightColumn(); ++col) {
-					if (item(row, col)) {
-						item(row, col)->setText("");
-					}
-				}
-			}
-		}
 	}
 };
 

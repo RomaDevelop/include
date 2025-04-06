@@ -32,6 +32,7 @@ public:
     inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
     inline static QString InputText(QString captionDialog = "", QString startText = "", uint w = 0, uint h = 0);
 
+	inline static QString InputLine(QString captionDialog = "", QString textDialog = "", QString startText = "", uint w = 0);
     declare_struct_2_fields_move(InputLineRes, QString, line, QString, button);
     inline static const QString& Accept() { static QString str = "Принять"; return str; }
     inline static const QString& Cansel() { static QString str = "Отмена"; return str; }
@@ -57,60 +58,7 @@ public:
                                                      QStringList horisontalHeader = {}, QStringList verticaHeader = {},
                                                      bool autoColWidths = true,
                                                      uint w = 800, uint h = 600);
-	static void ShowAllStandartIcons()
-	{
-		QWidget *w = new QWidget;
-		w->setAttribute(Qt::WA_DeleteOnClose);
-		auto hlo_main = new QHBoxLayout(w);
-		static std::vector<QPixmap*> pixmaps;
-		pixmaps.clear();
-		QVBoxLayout *vlo = nullptr;
-
-		if(QString(QT_VERSION_STR) == "5.12.10") ; // все норм, enum проверен
-		else { QMbWarning("enum QStyle::SP_TitleBarMenuButton not checked for Qt " QT_VERSION_STR); }
-
-		bool fillDummy = false;
-		int start = QStyle::SP_TitleBarMenuButton;
-		int max = QStyle::SP_LineEditClearButton;
-		int addDummy = 10 - (max+1) % 10;
-		for(int i=start, count = 0; i<=max; i++, count++)
-		{
-			if(count%10 == 0)
-			{
-				vlo = new QVBoxLayout;
-				hlo_main->addLayout(vlo);
-			}
-			if(!vlo) { QMbError("!vlo"); return; }
-
-			pixmaps.emplace_back(new QPixmap);
-			QPixmap& pixmapRef = *pixmaps.back();
-
-			if(!fillDummy) pixmapRef = QApplication::style()->standardIcon((QStyle::StandardPixmap)i).pixmap(50,50);
-
-			auto hlo = new QHBoxLayout;
-			vlo->addLayout(hlo);
-			auto labelImage = new QLabel;
-			labelImage->setAlignment(Qt::AlignCenter);
-			MyQWidget::SetFontPointSize(labelImage,14);
-			if(!fillDummy) labelImage->setPixmap(pixmapRef);
-			else { labelImage->setText("0"); }
-			hlo->addWidget(labelImage);
-			//QStyle::StandardPixmap pixmapVar = (QStyle::StandardPixmap)i;
-			hlo->addSpacing(10);
-			auto labelCaption = new QLabel("i="+QSn(i)+" n="+QSn(count+1));
-			hlo->addWidget(labelCaption);
-			MyQWidget::SetFontPointSize(labelCaption,14);
-			hlo->addSpacing(10);
-
-			if(i == max && !fillDummy)
-			{
-				fillDummy = true;
-				max += addDummy;
-			}
-		}
-		w->move(200,200);
-		w->show();
-	}
+	inline static void ShowAllStandartIcons();
 };
 //---------------------------------------------------------------------------
 void MyQDialogs::ShowText(const QString & text, uint w, uint h)
@@ -164,6 +112,13 @@ QString MyQDialogs::InputText(QString captionDialog, QString startText,  uint w,
     if(accepted) ret = tb->toPlainText();
 
     return ret;
+}
+
+QString MyQDialogs::InputLine(QString captionDialog, QString textDialog, QString startText, uint w)
+{
+	auto res = InputLineExt(captionDialog, textDialog, startText, {Accept(),Cansel()}, w);
+	if(res.button == Accept()) return res.line;
+	return "";
 }
 
 MyQDialogs::InputLineRes MyQDialogs::InputLineExt(QString captionDialog, QString textDialog, QString startText, QStringList buttons, uint w)
@@ -418,6 +373,61 @@ inline std::unique_ptr<QTableWidget> MyQDialogs::TableOneCol(QStringList rows, Q
     for(auto &row:rows)
         rowsTmp.emplace_back(std::move(row));
     return Table(rowsTmp, horisontalHeader, verticaHeader, autoColWidths, w, h);
+}
+
+void MyQDialogs::ShowAllStandartIcons()
+{
+	QWidget *w = new QWidget;
+	w->setAttribute(Qt::WA_DeleteOnClose);
+	auto hlo_main = new QHBoxLayout(w);
+	static std::vector<QPixmap*> pixmaps;
+	pixmaps.clear();
+	QVBoxLayout *vlo = nullptr;
+
+	if(QString(QT_VERSION_STR) == "5.12.10") ; // все норм, enum проверен
+	else { QMbWarning("enum QStyle::SP_TitleBarMenuButton not checked for Qt " QT_VERSION_STR); }
+
+	bool fillDummy = false;
+	int start = QStyle::SP_TitleBarMenuButton;
+	int max = QStyle::SP_LineEditClearButton;
+	int addDummy = 10 - (max+1) % 10;
+	for(int i=start, count = 0; i<=max; i++, count++)
+	{
+		if(count%10 == 0)
+		{
+			vlo = new QVBoxLayout;
+			hlo_main->addLayout(vlo);
+		}
+		if(!vlo) { QMbError("!vlo"); return; }
+
+		pixmaps.emplace_back(new QPixmap);
+		QPixmap& pixmapRef = *pixmaps.back();
+
+		if(!fillDummy) pixmapRef = QApplication::style()->standardIcon((QStyle::StandardPixmap)i).pixmap(50,50);
+
+		auto hlo = new QHBoxLayout;
+		vlo->addLayout(hlo);
+		auto labelImage = new QLabel;
+		labelImage->setAlignment(Qt::AlignCenter);
+		MyQWidget::SetFontPointSize(labelImage,14);
+		if(!fillDummy) labelImage->setPixmap(pixmapRef);
+		else { labelImage->setText("0"); }
+		hlo->addWidget(labelImage);
+		//QStyle::StandardPixmap pixmapVar = (QStyle::StandardPixmap)i;
+		hlo->addSpacing(10);
+		auto labelCaption = new QLabel("i="+QSn(i)+" n="+QSn(count+1));
+		hlo->addWidget(labelCaption);
+		MyQWidget::SetFontPointSize(labelCaption,14);
+		hlo->addSpacing(10);
+
+		if(i == max && !fillDummy)
+		{
+			fillDummy = true;
+			max += addDummy;
+		}
+	}
+	w->move(200,200);
+	w->show();
 }
 
 //---------------------------------------------------------------------------
