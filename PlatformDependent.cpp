@@ -91,3 +91,9 @@ void PlatformDependent::SetTopMost(QWidget * w, bool topMost)
 	SetWindowPos(hwnd, topMost ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0,
 				 SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 }
+
+void PlatformDependent::SetTopMostFlash(QWidget *w)
+{
+	SetTopMost(w, true);
+	SetTopMost(w, false);
+}

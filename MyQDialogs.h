@@ -18,6 +18,7 @@
 #include <QDialogButtonBox>
 #include <QLineEdit>
 #include <QLabel>
+#include <QMenu>
 
 #include "MyQShortings.h"
 #include "MyQWidget.h"
@@ -29,23 +30,32 @@ class MyQDialogs
 {
 public:
     inline static void ShowText(const QString &text, uint w = 800, uint h = 600);
+
     inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
+
+	declare_struct_2_fields_move(MenuItem, QString, text, std::function<void()>, worker);
+	inline static void MenuUnderWidget(QWidget *w, std::vector<MenuItem> items);
+	inline static void MenuUnderWidget(QWidget *w, QStringList menuItems, std::vector<std::function<void()>> workers);
+
     inline static QString InputText(QString captionDialog = "", QString startText = "", uint w = 0, uint h = 0);
 
 	inline static QString InputLine(QString captionDialog = "", QString textDialog = "", QString startText = "", uint w = 0);
     declare_struct_2_fields_move(InputLineRes, QString, line, QString, button);
     inline static const QString& Accept() { static QString str = "Принять"; return str; }
     inline static const QString& Cansel() { static QString str = "Отмена"; return str; }
-    inline static InputLineRes InputLineExt(QString captionDialog = "", QString textDialog = "", QString startText = "", QStringList buttons = {Accept(),Cansel()}, uint w = 0);
+	inline static InputLineRes InputLineExt(QString captionDialog = "", QString textDialog = "", QString startText = "",
+											QStringList buttons = {Accept(),Cansel()}, uint w = 0);
 
     declare_struct_2_fields_move(ListDialogRes, int, index, QString, text);
     inline static ListDialogRes ListDialog(QString caption, QStringList valuesList,  uint w = 0, uint h = 0);
     inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter, uint w = 0, uint h = 0);
+
     inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption,
                                                       const QStringList &values,
                                                       const std::vector<bool> &startCheched = {},
                                                       const std::vector<bool> &enabled = {},
                                                       QWidget *parent = nullptr);
+
 	inline static std::unique_ptr<QTableWidget> Table(const std::vector<QStringList> &rows,
                                                QStringList horisontalHeader = {}, QStringList verticaHeader = {},
                                                bool autoColWidths = true,
@@ -58,6 +68,7 @@ public:
                                                      QStringList horisontalHeader = {}, QStringList verticaHeader = {},
                                                      bool autoColWidths = true,
                                                      uint w = 800, uint h = 600);
+
 	inline static void ShowAllStandartIcons();
 };
 //---------------------------------------------------------------------------
@@ -85,23 +96,53 @@ QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList butt
     return messageBox.buttons()[desision]->text();
 }
 
+void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<MenuItem> items)
+{
+	static std::vector<MenuItem> staticItems;
+	staticItems = std::move(items);
+
+	QMenu *menu = new QMenu(w);
+	for(auto &item:staticItems)
+	{
+		QAction *action = new QAction(item.text, menu);
+		menu->addAction(action);
+		QObject::connect(action, &QAction::triggered, [action](){
+			for(uint i=0; i<staticItems.size(); i++)
+			{
+				if(staticItems[i].text == action->text())
+				{
+					staticItems[i].worker();
+					return;
+				}
+			}
+			QMbError("MenuUnderWidget: error, action text not found in texts");
+		});
+	}
+	menu->exec(w->mapToGlobal(QPoint(0, w->height())));
+}
+
+void MyQDialogs::MenuUnderWidget(QWidget */*w*/, QStringList /*menuItems*/, std::vector<std::function<void ()> > /*workers*/)
+{
+	QMbError("unrealesed");
+}
+
 QString MyQDialogs::InputText(QString captionDialog, QString startText,  uint w, uint h)
 {
-    std::unique_ptr<QDialog> dialog(new QDialog);
-    bool accepted = false;
-    dialog->setWindowTitle(captionDialog);
-    QVBoxLayout *all  = new QVBoxLayout(dialog.get());
-    QTextEdit *tb = new QTextEdit;
-    tb->setText(startText);
-    all->addWidget(tb);
+	std::unique_ptr<QDialog> dialog(new QDialog);
+	bool accepted = false;
+	dialog->setWindowTitle(captionDialog);
+	QVBoxLayout *all  = new QVBoxLayout(dialog.get());
+	QTextEdit *tb = new QTextEdit;
+	tb->setText(startText);
+	all->addWidget(tb);
 
-    auto hloBtns = new QHBoxLayout;
-    all->addLayout(hloBtns);
+	auto hloBtns = new QHBoxLayout;
+	all->addLayout(hloBtns);
 
-    hloBtns->addStretch();
-    hloBtns->addWidget(new QPushButton("Принять"));
-    QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&accepted, &dialog](){ accepted=true; dialog->close(); });
-    hloBtns->addWidget(new QPushButton("Отмена"));
+	hloBtns->addStretch();
+	hloBtns->addWidget(new QPushButton("Принять"));
+	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&accepted, &dialog](){ accepted=true; dialog->close(); });
+	hloBtns->addWidget(new QPushButton("Отмена"));
     QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog](){ dialog->close(); });
 
     if(!w) w = 300;
@@ -202,6 +243,7 @@ struct CheckBoxDialogItem
     bool chekState = false;
     CheckBoxDialogItem(QString text, bool chekState): text {std::move(text)}, chekState {chekState} {}
 };
+
 struct CheckBoxDialogResult
 {
     bool accepted = false;

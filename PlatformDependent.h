@@ -14,6 +14,7 @@ struct PlatformDependent
 	static int CopyMoveFile(QString SourceFile, QString Destination, CopyMoveFileMode Mode); // требуется QT += widgets, работает и в консольном
 
 	static void SetTopMost(QWidget *w, bool topMost);
+	static void SetTopMostFlash(QWidget *w); // set topMost in true and immitietly sets false
 };
 
 #endif

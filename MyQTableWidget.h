@@ -81,12 +81,14 @@ private slots:
 			QAction *cutAction = menu.addAction("Cut");
 			QAction *copyAction = menu.addAction("Copy");
 			QAction *pasteAction = menu.addAction("Paste");
+			QAction *pasteActionFromOsClip = menu.addAction("Paste from OS clipboard");
 			cutAction->setShortcut(QKeySequence::Cut);
 			copyAction->setShortcut(QKeySequence::Copy);
 			pasteAction->setShortcut(QKeySequence::Paste);
 			connect(cutAction, &QAction::triggered, this, &MyQTableWidget::cut);
 			connect(copyAction, &QAction::triggered, this, &MyQTableWidget::copy);
 			connect(pasteAction, &QAction::triggered, this, &MyQTableWidget::paste);
+			connect(pasteActionFromOsClip, &QAction::triggered, this, &MyQTableWidget::pasteFromOsClip);
 		}
 		mPtr->exec(mapToGlobal(pos));
 	}
@@ -175,7 +177,7 @@ private slots:
 		}
 		emit SignalAfterPaste();
 	}
-	void pasteFromClip()
+	void pasteFromOsClip()
 	{
 		itemStatesBeforePaste.clear();
 		QClipboard *clipboard = QApplication::clipboard();
@@ -209,13 +211,6 @@ private:
 	inline static std::vector<QStringList> innerClipboard {};
 	inline static std::vector<QString> innerClipboardVerticalHeaderValues {};
 	inline static std::vector<QStringList> innerClipboardAllColums {};
-
-	QAction *createAction(const QString &text, const QKeySequence &shortcut, QObject *receiver, const char *slot) {
-		QAction *action = new QAction(text, this);
-		action->setShortcut(shortcut);
-		connect(action, SIGNAL(triggered()), receiver, slot);
-		return action;
-	}
 };
 
 void MyQTableWidget::SetItemEditableState(QTableWidgetItem * item, bool editableNewState)
