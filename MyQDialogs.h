@@ -87,6 +87,7 @@ void MyQDialogs::ShowText(const QString & text, uint w, uint h)
 	std::unique_ptr<QDialog> dialog(new QDialog);
 	QHBoxLayout *all  = new QHBoxLayout(dialog.get());
     QTextBrowser *tb = new QTextBrowser;
+	tb->setTabStopDistance(40);
     tb->setPlainText(text);
     all->addWidget(tb);
 
@@ -141,18 +142,19 @@ MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString st
 	InputTextRes res;
 	dialog->setWindowTitle(captionDialog);
 	QVBoxLayout *all  = new QVBoxLayout(dialog.get());
-	QTextEdit *tb = new QTextEdit;
-	tb->setText(startText);
-	all->addWidget(tb);
+	QTextEdit *textEdit = new QTextEdit;
+	textEdit->setTabStopDistance(40);
+	textEdit->setText(startText);
+	all->addWidget(textEdit);
 
 	auto hloBtns = new QHBoxLayout;
 	all->addLayout(hloBtns);
 
 	hloBtns->addStretch();
 	hloBtns->addWidget(new QPushButton(Accept()));
-	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&res, &dialog, tb](){
+	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&res, &dialog, textEdit](){
 		res.accepted=true;
-		res.text = tb->toPlainText();
+		res.text = textEdit->toPlainText();
 		dialog->close();
 	});
 	hloBtns->addWidget(new QPushButton(Cansel()));
