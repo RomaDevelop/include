@@ -12,6 +12,7 @@
 #include <QHBoxLayout>
 #include <QTextBrowser>
 #include <QTableWidget>
+#include <QHeaderView>
 #include <QListWidget>
 #include <QCheckBox>
 #include <QTimer>
@@ -60,17 +61,17 @@ public:
 													  const std::vector<bool> &enabled = {});
 
 	declare_struct_2_fields_move(TableDialogRes, std::unique_ptr<QTableWidget>, table, bool, accepted);
-	inline static TableDialogRes Table(const std::vector<QStringList> &rows,
-									   QStringList horisontalHeader = {}, QStringList verticaHeader = {},
-									   bool autoColWidths = true,
+	inline static TableDialogRes Table(const QString &caption, const std::vector<QStringList> &rows,
+									   QStringList horisontalHeader = {}, QStringList verticalHeader = {},
+									   bool autoColWidths = true, bool readOnly = false,
 									   uint w = 800, uint h = 600);
-	inline static TableDialogRes Table(QString content, QString colSplitter, QString rowSplitter,
-                                               QStringList horisontalHeader = {}, QStringList verticaHeader = {},
-                                               bool autoColWidths = true,
+	inline static TableDialogRes Table(const QString &caption, QString content, QString colSplitter, QString rowSplitter,
+											   QStringList horisontalHeader = {}, QStringList verticalHeader = {},
+											   bool autoColWidths = true, bool readOnly = false,
                                                uint w = 800, uint h = 600);
-	inline static TableDialogRes TableOneCol(QStringList rows,
-                                                     QStringList horisontalHeader = {}, QStringList verticaHeader = {},
-                                                     bool autoColWidths = true,
+	inline static TableDialogRes TableOneCol(const QString &caption, QStringList rows,
+													 QStringList horisontalHeader = {}, QStringList verticalHeader = {},
+													 bool autoColWidths = true, bool readOnly = false,
                                                      uint w = 800, uint h = 600);
 
 	inline static void ShowAllStandartIcons();
@@ -78,6 +79,7 @@ public:
 	// buttons
 	inline static const QString& Accept() { static QString str = "Принять"; return str; }
 	inline static const QString& Cansel() { static QString str = "Отмена"; return str; }
+	inline static const QString& Close() { static QString str = "Закрыть"; return str; }
 
 	inline static const QString& Undefined() { static QString str = "Undefined"; return str; }
 };
@@ -327,9 +329,11 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
     return result;
 }
 
-MyQDialogs::TableDialogRes MyQDialogs::Table(const std::vector<QStringList> &rows, QStringList horisontalHeader, QStringList verticaHeader, bool autoColWidths, uint w, uint h)
+MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::vector<QStringList> &rows, QStringList horisontalHeader, QStringList verticalHeader,
+											 bool autoColWidths, bool readOnly, uint w, uint h)
 {
 	std::unique_ptr<QDialog> dialog(new QDialog);
+	dialog->setWindowTitle(caption);
 	if(0) CodeMarkers::to_do("кнопки вверх, вниз, отменить изменения, автоподгонка ширины колонок");
 	if(!w) w = 640;
 	if(!h) h = 480;
@@ -342,20 +346,23 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const std::vector<QStringList> &row
 	QTableWidget *table = new QTableWidget;
 	res.table = std::unique_ptr<QTableWidget>(table);
 
-	QHBoxLayout *hlo1 = new QHBoxLayout;
-	vlo_main->addLayout(hlo1);
+	if(!readOnly)
+	{
+		QHBoxLayout *hlo1 = new QHBoxLayout;
+		vlo_main->addLayout(hlo1);
 
-	auto btnAdd = new QPushButton("+");
-	btnAdd->setFixedWidth(QFontMetrics(btnAdd->font()).width(btnAdd->text()) + 15);
-	hlo1->addWidget(btnAdd);
-	btnAdd->connect(btnAdd, &QPushButton::clicked, [table](){ table->insertRow(table->currentRow()); });
+		auto btnAdd = new QPushButton("+");
+		btnAdd->setFixedWidth(23);
+		hlo1->addWidget(btnAdd);
+		btnAdd->connect(btnAdd, &QPushButton::clicked, [table](){ table->insertRow(table->currentRow()); });
 
-	auto btnRemove = new QPushButton("-");
-	btnRemove->setFixedWidth(QFontMetrics(btnRemove->font()).width(btnRemove->text()) + 15);
-	hlo1->addWidget(btnRemove);
-	btnRemove->connect(btnRemove, &QPushButton::clicked, [table](){ table->removeRow(table->currentRow()); });
+		auto btnRemove = new QPushButton("-");
+		btnRemove->setFixedWidth(23);
+		hlo1->addWidget(btnRemove);
+		btnRemove->connect(btnRemove, &QPushButton::clicked, [table](){ table->removeRow(table->currentRow()); });
 
-	hlo1->addStretch();
+		hlo1->addStretch();
+	}
 
 	vlo_main->addWidget(table);
 
@@ -363,13 +370,25 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const std::vector<QStringList> &row
 	vlo_main->addLayout(hlo2);
 
 	hlo2->addStretch();
-	auto btnAccept = new QPushButton(Accept());
-	hlo2->addWidget(btnAccept);
-	btnAccept->connect(btnAccept, &QPushButton::clicked, [&dialog, &res](){ res.accepted = true; dialog->close(); });
 
-	auto btnCansel = new QPushButton(Cansel());
-	hlo2->addWidget(btnCansel);
-	btnCansel->connect(btnCansel, &QPushButton::clicked, [&dialog](){ dialog->close(); });
+	if(!readOnly)
+	{
+		auto btnAccept = new QPushButton(Accept());
+		btnAccept->setDefault(true);
+		hlo2->addWidget(btnAccept);
+		btnAccept->connect(btnAccept, &QPushButton::clicked, [&dialog, &res](){ res.accepted = true; dialog->close(); });
+
+		auto btnCansel = new QPushButton(Cansel());
+		hlo2->addWidget(btnCansel);
+		btnCansel->connect(btnCansel, &QPushButton::clicked, [&dialog](){ dialog->close(); });
+	}
+	else
+	{
+		auto btnAccept = new QPushButton(Close());
+		btnAccept->setDefault(true);
+		hlo2->addWidget(btnAccept);
+		btnAccept->connect(btnAccept, &QPushButton::clicked, [&dialog](){ dialog->close(); });
+	}
 
 	int colsCount = 0;
 	for(uint r=0; r<rows.size(); r++) if(rows[r].size() > colsCount) colsCount = rows[r].size();
@@ -397,8 +416,10 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const std::vector<QStringList> &row
 		});
 	}
 
-	table->setHorizontalHeaderLabels(horisontalHeader);
-	table->setVerticalHeaderLabels(verticaHeader);
+	if(horisontalHeader.isEmpty()) table->horizontalHeader()->hide();
+	else table->setHorizontalHeaderLabels(horisontalHeader);
+	if(verticalHeader.isEmpty()) table->verticalHeader()->hide();
+	else table->setVerticalHeaderLabels(verticalHeader);
 
 	dialog->exec();
 
@@ -407,9 +428,9 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const std::vector<QStringList> &row
 	return res;
 }
 
-MyQDialogs::TableDialogRes MyQDialogs::Table(QString content, QString colSplitter, QString rowSplitter,
-											 QStringList horisontalHeader, QStringList verticaHeader,
-											 bool autoColWidths, uint w, uint h)
+MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, QString content, QString colSplitter, QString rowSplitter,
+											 QStringList horisontalHeader, QStringList verticalHeader,
+											 bool autoColWidths, bool readOnly, uint w, uint h)
 {
 	if(content.endsWith(colSplitter+rowSplitter)) content.chop(colSplitter.size()+rowSplitter.size());
 	std::vector<QStringList> rowsTmp;
@@ -419,15 +440,16 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(QString content, QString colSplitte
 		if(row.endsWith(colSplitter)) row.chop(colSplitter.size());
 		rowsTmp.emplace_back(row.split(colSplitter));
 	}
-	return Table(rowsTmp, horisontalHeader, verticaHeader, autoColWidths, w, h);
+	return Table(caption, rowsTmp, horisontalHeader, verticalHeader, autoColWidths, readOnly, w, h);
 }
 
-MyQDialogs::TableDialogRes MyQDialogs::TableOneCol(QStringList rows, QStringList horisontalHeader, QStringList verticaHeader, bool autoColWidths, uint w, uint h)
+MyQDialogs::TableDialogRes MyQDialogs::TableOneCol(const QString &caption, QStringList rows, QStringList horisontalHeader, QStringList verticalHeader,
+												   bool autoColWidths, bool readOnly, uint w, uint h)
 {
 	std::vector<QStringList> rowsTmp;
 	for(auto &row:rows)
 		rowsTmp.emplace_back(std::move(row));
-	return Table(rowsTmp, horisontalHeader, verticaHeader, autoColWidths, w, h);
+	return Table(caption, rowsTmp, horisontalHeader, verticalHeader, autoColWidths, readOnly, w, h);
 }
 
 void MyQDialogs::ShowAllStandartIcons()
