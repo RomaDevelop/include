@@ -58,7 +58,8 @@ public:
     inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption,
                                                       const QStringList &values,
                                                       const std::vector<bool> &startCheched = {},
-													  const std::vector<bool> &enabled = {});
+	                                                  const std::vector<bool> &enabled = {},
+	                                                  uint w = 0, uint h = 0);
 
 	declare_struct_2_fields_move(TableDialogRes, std::unique_ptr<QTableWidget>, table, bool, accepted);
 	inline static TableDialogRes Table(const QString &caption, const std::vector<QStringList> &rows,
@@ -251,18 +252,22 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 
 MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QString valuesList, QString splitter, uint w, uint h)
 {
-    if(valuesList.endsWith(splitter)) valuesList.chop(splitter.size());
-    return ListDialog(caption, valuesList.split(splitter), w, h);
+	if(valuesList.endsWith(splitter)) valuesList.chop(splitter.size());
+	return ListDialog(caption, valuesList.split(splitter), w, h);
 }
 
 MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &caption,
-                                                const QStringList & values,
-                                                const std::vector<bool> & startCheched,
-												const std::vector<bool> & enabled)
+                                                            const QStringList & values,
+                                                            const std::vector<bool> & startCheched,
+                                                            const std::vector<bool> & enabled,
+                                                            uint w, uint h)
 {
-    CheckBoxDialogResult result;
+	CheckBoxDialogResult result;
 
 	std::unique_ptr<QDialog> dialog(new QDialog);
+	if(!w) w = 650;
+	if(!h) h = 340;
+	dialog->resize(w, h);
     dialog->setWindowTitle(caption);
 	auto loV = new QVBoxLayout(dialog.get());
     auto loH = new QHBoxLayout;

@@ -26,4 +26,6 @@ bool IsUInt(QStringType stringVariable) { bool ok; stringVariable.toUInt(&ok); r
 #define DateTimeFormat "yyyy.MM.dd hh:mm:ss"
 #define DateTimeFormatForFileName "yyyy.MM.dd hh-mm-ss"
 //---------------------------------------------------------------------------
+#define DO_ONCE(code_to_do) static bool did = false; if(!did) { code_to_do; did = true; }
+//---------------------------------------------------------------------------
 #endif
