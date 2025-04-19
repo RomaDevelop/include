@@ -1,6 +1,8 @@
 #ifndef MYQTABLEVIEW_H
 #define MYQTABLEVIEW_H
 
+#include <set>
+
 #include <QDebug>
 #include <QTableView>
 #include <QMessageBox>
@@ -40,13 +42,50 @@ public:
 	///\brief for empty feildsIndexes returns all fields
 	inline std::vector<QStringList> ToTable(std::vector<int> feildsIndexes = {}); // QStringList = row
 
-protected:
+	std::set<int> editableColsIndexes;
+	std::set<QString> editableColsNames;
+
+	void setModel(QAbstractItemModel *model) override
+	{
+		if (selectionModel())
+			disconnect(selectionModel(), &QItemSelectionModel::currentChanged, this, &MyQTableView::ActivateEditableCols);
+
+		QTableView::setModel(model);
+
+		int columnCount = model->columnCount();
+		for (int col = 0; col < columnCount; ++col)
+		{
+			QString colName = model->headerData(col, Qt::Horizontal).toString();
+			if(editableColsNames.count(colName) > 0)
+			{
+				editableColsIndexes.insert(col);
+			}
+		}
+
+		if(selectionModel())
+			connect(selectionModel(), &QItemSelectionModel::currentChanged, this, &MyQTableView::ActivateEditableCols);
+	}
 	inline void keyPressEvent(QKeyEvent* event) override;
-protected:
 	inline void wheelEvent(QWheelEvent* event) override;
 private:
 	inline bool CheckArrows(QKeyEvent* event);
 	inline bool CheckEditTriggers(QKeyEvent* event);
+private slots:
+	void ActivateEditableCols(const QModelIndex &current, const QModelIndex &)
+	{
+		if(editTriggers() != QAbstractItemView::NoEditTriggers) specialEditTriggers = editTriggers();
+
+		if(editableColsIndexes.count(current.column()) == 0)
+		{
+			setEditTriggers(QAbstractItemView::NoEditTriggers);
+		}
+		else
+		{
+			setEditTriggers(specialEditTriggers);
+		}
+	}
+private:
+	EditTriggers specialEditTriggers;
 };
 
 //------------------------------------------------------------------------------------------------------------------------------
@@ -73,6 +112,8 @@ MyQTableView::MyQTableView(QWidget *parent) : QTableView{parent}
 {
 	coloriserDelegate = new ColoriserDelegate(this); // имеет parent, можно new
 	setItemDelegate(coloriserDelegate);
+
+
 }
 
 int MyQTableView::RowsCount(bool do_fetch)
