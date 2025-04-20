@@ -296,8 +296,13 @@ bool MyQTableView::CheckEditTriggers(QKeyEvent *event)
 		else return false;
 	}
 
+	if(currentTriggers & AnyKeyPressed) // если стоят триггеры EditKeyPressed
+	{
+		return true;
+	}
+
 	static bool pritedError = 0;
-	if(!pritedError) qdbg << "unrealesed case MyQTableView::CheckEditTriggers";
+	if(!pritedError) qdbg << "unrealesed case MyQTableView::CheckEditTriggers" << currentTriggers << QSn(key,16);
 
 	return true;
 

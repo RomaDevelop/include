@@ -97,3 +97,14 @@ void PlatformDependent::SetTopMostFlash(QWidget *w)
 	SetTopMost(w, true);
 	SetTopMost(w, false);
 }
+
+void PlatformDependent::ShowPropertiesWindow(const QString &file)
+{
+	SHELLEXECUTEINFO sei = {};
+	sei.cbSize = sizeof(SHELLEXECUTEINFO);
+	sei.fMask = SEE_MASK_INVOKEIDLIST;
+	sei.lpVerb = L"properties";
+	sei.lpFile = reinterpret_cast<LPCWSTR>(file.utf16());
+	sei.nShow = SW_SHOW;
+	ShellExecuteEx(&sei);
+}

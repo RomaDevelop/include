@@ -15,6 +15,8 @@ struct PlatformDependent
 
 	static void SetTopMost(QWidget *w, bool topMost);
 	static void SetTopMostFlash(QWidget *w); // set topMost in true and immitietly sets false
+
+	static void ShowPropertiesWindow(const QString &file);
 };
 
 #endif
