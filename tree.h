@@ -36,10 +36,10 @@ struct node
 	node* next_in_branch(const node *head_node) const
 	{
 		if(!childs.empty()) return childs.front().get();
+		
+		if(head_node == this) return nullptr;
 
 		if(next_sibling) return next_sibling;
-
-		if(head_node == this) return nullptr;
 
 		const node *tmp_node = this;
 		while(tmp_node->parent)
@@ -94,7 +94,8 @@ struct node_tests
 		node11->add_child(112);
 		node11->add_child(113);
 
-		node12->add_child(121);
+		auto node121 = node12->add_child(121);
+		node12->add_child(122);
 
 		node13->add_child(131);
 		node13->add_child(132);
@@ -116,16 +117,27 @@ struct node_tests
 			iter_node = iter_node->next_in_tree();
 		}
 		result.text += '\n';
+
 		iter_node = node11;
 		while(iter_node)
 		{
 			result.text += std::to_string(iter_node->value) + ';';
 			iter_node = iter_node->next_in_branch(node11);
 		}
+		result.text += '\n';
 
-		std::string correctResult = "0;11;111;112;113;12;121;13;131;132;14;\n"
-									"12;121;13;131;132;14;\n"
-									"11;111;112;113;";
+		iter_node = node121;
+		while(iter_node)
+		{
+			result.text += std::to_string(iter_node->value) + ';';
+			iter_node = iter_node->next_in_branch(node121);
+		}
+		result.text += '\n';
+
+		std::string correctResult = "0;11;111;112;113;12;121;122;13;131;132;14;\n"
+													 "12;121;122;13;131;132;14;\n"
+									  "11;111;112;113;\n"
+														"121;\n";
 
 		result.correct = result.text == correctResult;
 		if(!result.correct) result.text += "\nERROR: incorrect result, expected:\n" + correctResult;

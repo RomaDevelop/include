@@ -38,15 +38,15 @@ public:
 	inline static void MenuUnderWidget(QWidget *w, QStringList menuItems, std::vector<std::function<void()>> workers);
 
 	declare_struct_2_fields_move(InputTextRes, QString, text, bool, accepted);
-	inline static InputTextRes InputText(QString captionDialog = "", QString startText = "", uint w = 0, uint h = 0);
-	inline static InputTextRes InputLine(QString captionDialog = "", QString textDialog = "", QString startText = "", uint w = 0);
+	inline static InputTextRes InputText(QString captionDialog = "", QString startText = "", uint w = 640, uint h = 480);
+	inline static InputTextRes InputLine(QString captionDialog = "", QString textDialog = "", QString startText = "", uint w = 640);
 	declare_struct_2_fields_move(InputLineResExt, QString, text, QString, button);
 	inline static InputLineResExt InputLineExt(QString captionDialog = "", QString textDialog = "", QString startText = "",
-											QStringList buttons = {Accept(),Cansel()}, uint w = 0);
+											QStringList buttons = {Accept(),Cansel()}, uint w = 640);
 
 	declare_struct_2_fields_move(ListDialogRes, int, index, QString, choosedText);
-	inline static ListDialogRes ListDialog(QString caption, QStringList valuesList,  uint w = 0, uint h = 0); // returns -1 and empty text if cansel or close
-    inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter, uint w = 0, uint h = 0);
+	inline static ListDialogRes ListDialog(QString caption, QStringList valuesList, uint w = 640, uint h = 480); // returns -1 and empty text if cansel or close
+	inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter, uint w = 640, uint h = 480);
 
 	declare_struct_2_fields_move(CheckBoxDialogItem, QString, text, bool, chekState);
 	declare_struct_4_fields_move(CheckBoxDialogResult,
@@ -59,7 +59,7 @@ public:
                                                       const QStringList &values,
                                                       const std::vector<bool> &startCheched = {},
 	                                                  const std::vector<bool> &enabled = {},
-	                                                  uint w = 0, uint h = 0);
+													  uint w = 640, uint h = 480);
 
 	declare_struct_2_fields_move(TableDialogRes, std::unique_ptr<QTableWidget>, table, bool, accepted);
 	inline static TableDialogRes Table(const QString &caption, const std::vector<QStringList> &rows,
@@ -163,8 +163,6 @@ MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString st
 	hloBtns->addWidget(new QPushButton(Cansel()));
     QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog](){ dialog->close(); });
 
-	if(!w) w = 640;
-	if(!h) h = 480;
     dialog->resize(w, h);
     dialog->exec();
 
@@ -207,7 +205,6 @@ MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QStr
 		});
     }
 
-    if(!w) w = 400;
     dialog->setFixedWidth(w);
     dialog->exec();
 
@@ -218,8 +215,6 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 {
 	ListDialogRes res(-1,"");
     std::unique_ptr<QDialog> dialog(new QDialog);
-    if(!w) w = 650;
-    if(!h) h = 340;
     dialog->resize(w, h);
     dialog->setWindowTitle(caption);
     QVBoxLayout *vloMain  = new QVBoxLayout(dialog.get());
@@ -265,8 +260,6 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	CheckBoxDialogResult result;
 
 	std::unique_ptr<QDialog> dialog(new QDialog);
-	if(!w) w = 650;
-	if(!h) h = 340;
 	dialog->resize(w, h);
     dialog->setWindowTitle(caption);
 	auto loV = new QVBoxLayout(dialog.get());
@@ -359,12 +352,17 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::
 		auto btnAdd = new QPushButton("+");
 		btnAdd->setFixedWidth(23);
 		hlo1->addWidget(btnAdd);
-		btnAdd->connect(btnAdd, &QPushButton::clicked, [table](){ table->insertRow(table->currentRow()); });
+		btnAdd->connect(btnAdd, &QPushButton::clicked, [table](){
+			if(table->currentRow() == -1) table->insertRow(0);
+			else table->insertRow(table->currentRow());
+		});
 
 		auto btnRemove = new QPushButton("-");
 		btnRemove->setFixedWidth(23);
 		hlo1->addWidget(btnRemove);
-		btnRemove->connect(btnRemove, &QPushButton::clicked, [table](){ table->removeRow(table->currentRow()); });
+		btnRemove->connect(btnRemove, &QPushButton::clicked, [table](){
+			if(table->currentRow() != -1) table->removeRow(table->currentRow());
+		});
 
 		hlo1->addStretch();
 	}
@@ -413,6 +411,8 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::
 	if(autoColWidths)
 	{
 		QTimer::singleShot(1,[table](){
+			if(table->columnCount() == 0)
+				return;
 			int oneColWidth = (table->width() - 45) / table->columnCount();
 			for(int col=0; col<table->columnCount(); col++)
 			{
@@ -422,7 +422,12 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::
 	}
 
 	if(horisontalHeader.isEmpty()) table->horizontalHeader()->hide();
-	else table->setHorizontalHeaderLabels(horisontalHeader);
+	else
+	{
+		if(table->columnCount() < horisontalHeader.size())
+			table->setColumnCount(horisontalHeader.size());
+		table->setHorizontalHeaderLabels(horisontalHeader);
+	}
 	if(verticalHeader.isEmpty()) table->verticalHeader()->hide();
 	else table->setVerticalHeaderLabels(verticalHeader);
 
