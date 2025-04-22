@@ -134,9 +134,14 @@ void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<MenuItem> items)
 	menu->exec(w->mapToGlobal(QPoint(0, w->height())));
 }
 
-void MyQDialogs::MenuUnderWidget(QWidget */*w*/, QStringList /*menuItems*/, std::vector<std::function<void ()> > /*workers*/)
+void MyQDialogs::MenuUnderWidget(QWidget *w, QStringList menuItems, std::vector<std::function<void ()> > workers)
 {
-	QMbError("unrealesed");
+	if(menuItems.size() != (int)workers.size()) { QMbError("MenuUnderWidget menuItems and workers different sizes"); return; }
+	std::vector<MenuItem> items;
+	for(int i=0; i<menuItems.size(); i++)
+		items.emplace_back(    std::move(menuItems[i]), std::move(workers[i])    );
+
+	MenuUnderWidget(w, items);
 }
 
 MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString startText,  uint w, uint h)
