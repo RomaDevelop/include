@@ -15,6 +15,9 @@
 //---------------------------------------------------------------------------
 struct MyQFileDir
 {
+	// если имена различнаются только в регистре QFile::rename не переименовывает (для ntfs)
+	inline static QString Rename(QString oldFile, QString newFile, bool forceCaseSensitiveRename); 
+
 	inline static QString GetCurrentFileNameFromRenameError(QString errorStr);
 
 	inline static QFileInfo FindNewest(const QFileInfoList &files);
@@ -51,6 +54,39 @@ private:
 };
 //---------------------------------------------------------------------------
 
+QString MyQFileDir::Rename(QString oldFile, QString newFile, bool forceCaseSensitiveRename)
+{
+	if(forceCaseSensitiveRename)
+	{
+		oldFile = QDir::toNativeSeparators(oldFile);
+		newFile = QDir::toNativeSeparators(newFile);
+		if(oldFile.toLower() == newFile.toLower())
+		{
+			QString tmpNewFile = newFile.chopped(1);
+			for(int i=0; i<10; i++)
+				if(!QFileInfo::exists(tmpNewFile + QChar('0'+i)))
+				{
+					tmpNewFile += QChar('0'+i);
+					break;
+				}
+			if(tmpNewFile.size() != newFile.size())
+				return "Can't create tmp name to forceCaseSensitiveRename\n\n" + oldFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+oldFile;
+
+			if(!QFile::rename(oldFile, tmpNewFile))
+				return "QFile::rename returned false for forceCaseSensitiveRename(step1)\n\n" + oldFile + "\n\nto\n\n" + tmpNewFile + "\n\n"+RenameErrMarker()+oldFile;
+			if(!QFile::rename(tmpNewFile, newFile))
+				return "QFile::rename returned false for forceCaseSensitiveRename(step2)\n\n" + tmpNewFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+tmpNewFile;
+			return "";
+		}
+		else
+		{
+			if(QFile::rename(oldFile, newFile)) return "";
+			else return "QFile::rename returned false for rename\n\n" + oldFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+oldFile;
+		}
+	}
+	if(QFile::rename(oldFile, newFile)) return "";
+	else return "QFile::rename returned false for rename\n\n" + oldFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+oldFile;
+}
 
 QString MyQFileDir::GetCurrentFileNameFromRenameError(QString errorStr)
 {
