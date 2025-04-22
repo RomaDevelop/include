@@ -17,22 +17,28 @@ struct Resource
 	QString GetPathName() const { return pathNameInDistib; }
 
 	inline static QStringList errors;
-	Resource(QString aPathNameOnCompile, const QString &aPathInDistib, bool copyResourcesInDistib)
+	Resource(QString pathStorageInSources, const QString &pathStorageInDistrib, const QString &filename, bool copyResourcesInDistib)
 	{
-		if(aPathNameOnCompile == NotInitedMarker()) return;
-
 		static QString erPrefix = "ERROR Resource creation: ";
+
+		if(pathStorageInSources == NotInitedMarker()) return;
+
+		if(!Resource::CheckFileOrPath(filename))
+		{
+			errors += erPrefix + "bad filename " + filename;
+			return;
+		}
+
+		QString aPathNameOnCompile = pathStorageInSources + "/" + filename;
 		QFileInfo fiOnCompile(aPathNameOnCompile);
-		pathNameInDistib = aPathInDistib;
-		pathNameInDistib.append('/');
-		pathNameInDistib.append(fiOnCompile.fileName());
+		pathNameInDistib = pathStorageInDistrib + "/" + filename;
 		QFileInfo fiOnDistib(pathNameInDistib);
 
 		if(copyResourcesInDistib)
 		{
-			if(!QDir().mkpath(aPathInDistib))
+			if(!QDir().mkpath(pathStorageInDistrib))
 			{
-				errors += erPrefix + "error mkpath resource " + QFileInfo(aPathInDistib).path();
+				errors += erPrefix + "error mkpath " + pathStorageInDistrib;
 				return;
 			}
 
@@ -56,10 +62,32 @@ struct Resource
 	}
 
 	static const QString& NotInitedMarker(){ static QString s = "resources not inited"; return s; }
+
+	static bool CheckFileOrPath(const QString &fileOrPath)
+	{
+		static QString badSymbols = "<>:|?*"
+									"\e\r\t\a\f\b\n";
+
+		int i=0;
+		for(auto &c:fileOrPath)
+		{
+			#ifdef _WIN32
+				if(i==1 && c == ':') continue;
+			#endif
+			if(badSymbols.contains(c))
+			{
+				qdbg << fileOrPath << c;
+				return false;
+			}
+			i++;
+		}
+		return true;
+	}
+
 private:
 	QString pathNameInDistib;
 };
-
+//------------------------------------------------------------------------------------------------------------------------------------------
 class ResourcesTest
 {
 	QString resourcesStoragePathOnCompile;
@@ -69,7 +97,8 @@ class ResourcesTest
 	inline static std::function<void(QString)> errorWorker;
 
 	inline static ResourcesTest *instancePtr = nullptr;
-	inline static Resource forNotInited { Resource::NotInitedMarker(), Resource::NotInitedMarker(), false };
+	inline static Resource forNotInited {	Resource::NotInitedMarker(), Resource::NotInitedMarker(),
+											Resource::NotInitedMarker(), false };
 	inline static Resource& RetNotInited()
 	{
 		if(errorWorker) errorWorker("Resource requested before Init");
@@ -87,6 +116,9 @@ public:
 
 	static void Init(QString aResourcesStoragePathOnCompile, QString aResourcesStoragePathInDistrib, bool aCopyResourcesInDistib)
 	{
+		if(!Resource::CheckFileOrPath(aResourcesStoragePathOnCompile) || !Resource::CheckFileOrPath(aResourcesStoragePathInDistrib))
+			Resource::errors.push_back("ResourcesTest::Init bad storages paths");
+
 		static ResourcesTest instance(std::move(aResourcesStoragePathOnCompile),
 		                              std::move(aResourcesStoragePathInDistrib),
 		                              aCopyResourcesInDistib);
@@ -97,61 +129,65 @@ public:
 		if(!Resource::errors.isEmpty()) if(errorWorker) errorWorker(Resource::errors.join('\n'));
 	}
 
-private: Resource m_copyIco { resourcesStoragePathOnCompile + "/" + "copy.ico", resourcesStoragePathInDistrib, copyResourcesInDistib };
+private: Resource m_copyIco { resourcesStoragePathOnCompile, resourcesStoragePathInDistrib, "copy.ico", copyResourcesInDistib };
 public: static const Resource& copyIco() { if(instancePtr) return instancePtr->m_copyIco; else return RetNotInited(); }
 
-private: Resource m_pasteIco { resourcesStoragePathOnCompile + "/" + "paste.ico", resourcesStoragePathInDistrib, copyResourcesInDistib };
+private: Resource m_pasteIco { resourcesStoragePathOnCompile, resourcesStoragePathInDistrib, "paste.ico", copyResourcesInDistib };
 public: static const Resource& pasteIco() { if(instancePtr) return instancePtr->m_pasteIco; else return RetNotInited(); }
 };
-
 //------------------------------------------------------------------------------------------------------------------------------------------
-#define DECLARE_RESOURCES(ResourecesName)						\
-	class ResourecesName										\
+#define DECLARE_RESOURCES(ResourcesName)						\
+	class ResourcesName											\
 	{															\
 		QString resourcesStoragePathOnCompile;					\
 		QString resourcesStoragePathInDistrib;					\
 		bool copyResourcesInDistib;								\
 																\
-		inline static ResourecesName *instancePtr = nullptr;	\
-		inline static Resource forNotInited { "resources not inited", "resources not inited", false };	\
-	    inline static Resource& RetNotInited()															\
-        {																								\
-	        if(errorWorker) errorWorker("Resource requested before Init");								\
-	        qCritical() << "Resource requested before Init";											\
-	        return forNotInited;																		\
-	    }																								\
-	                                                                                                    \
-	public:																								\
-	    ResourecesName(QString aResourcesStoragePathOnCompile, QString aResourcesStoragePathInDistrib, bool aCopyResourcesInDistib):	\
+		inline static ResourcesName *instancePtr = nullptr;		\
+		inline static Resource forNotInited {	Resource::NotInitedMarker(), Resource::NotInitedMarker(),	\
+												Resource::NotInitedMarker(), false };						\
+		inline static Resource& RetNotInited()																\
+		{																									\
+			if(errorWorker) errorWorker("Resource requested before Init");									\
+			qCritical() << "Resource requested before Init";												\
+			return forNotInited;																			\
+		}																									\
+																											\
+	public:																									\
+		ResourcesName(QString aResourcesStoragePathOnCompile, QString aResourcesStoragePathInDistrib, bool aCopyResourcesInDistib):		\
 	        resourcesStoragePathOnCompile(aResourcesStoragePathOnCompile),																\
 	        resourcesStoragePathInDistrib(aResourcesStoragePathInDistrib),																\
 	        copyResourcesInDistib{aCopyResourcesInDistib}																				\
         {}																																\
 	                                                                                                                                    \
 	    static void Init(QString aResourcesStoragePathOnCompile, QString aResourcesStoragePathInDistrib, bool aCopyResourcesInDistib)	\
-        {																																\
-	        static ResourecesName instance(std::move(aResourcesStoragePathOnCompile),													\
+		{																																\
+			if(!Resource::CheckFileOrPath(aResourcesStoragePathOnCompile) || !Resource::CheckFileOrPath(aResourcesStoragePathInDistrib))\
+				Resource::errors.push_back(#ResourcesName"::Init bad storages paths");													\
+																																		\
+			static ResourcesName instance(std::move(aResourcesStoragePathOnCompile),													\
 	                                  std::move(aResourcesStoragePathInDistrib),														\
 	                                  aCopyResourcesInDistib);																			\
 	        instancePtr = &instance;																									\
-	        if(!aCopyResourcesInDistib) qDebug() << QString("WARNING: ") + #ResourecesName + " Init param copyResourcesInDistib = "		\
+			if(!aCopyResourcesInDistib) qDebug() << QString("WARNING: ") + #ResourcesName + " Init param copyResourcesInDistib = "		\
 	                                                + (aCopyResourcesInDistib ? "true" : "false");										\
 	        if(!Resource::errors.isEmpty()) for(auto &error:Resource::errors) qCritical() << error;										\
 	        if(!Resource::errors.isEmpty()) if(errorWorker) errorWorker(Resource::errors.join('\n'));									\
 	    }
-//------------------------------------------------------------------------------------------------------------------------------------------
-#define END_DECLARE_RESOURCES \
-	};
-//------------------------------------------------------------------------------------------------------------------------------------------
-#define DECLARE_RESOURCE(name, file) \
-	private: Resource m_##name { resourcesStoragePathOnCompile + "/" + file , resourcesStoragePathInDistrib, copyResourcesInDistib };	\
-	public: static const Resource& name() { if(instancePtr) return instancePtr->m_##name; else return RetNotInited(); }
 //------------------------------------------------------------------------------------------------------------------------------------------
 #define SET_ERROR_WORKER(worker) \
 	private: inline static std::function<void(QString)> errorWorker { worker };
 // Exmples:
 // SET_ERROR_WORKER([](QString str){ QMbError(str); })
 // SET_ERROR_WORKER(nullptr)
+//------------------------------------------------------------------------------------------------------------------------------------------
+#define END_DECLARE_RESOURCES \
+	};
+//------------------------------------------------------------------------------------------------------------------------------------------
+#define DECLARE_RESOURCE(name, file) \
+	private: Resource m_##name { resourcesStoragePathOnCompile, resourcesStoragePathInDistrib, file, copyResourcesInDistib };	\
+	public: static const Resource& name() { if(instancePtr) return instancePtr->m_##name; else return RetNotInited(); }
+// нужно указать в file имя файла с которым он хранится в каталоге исходников и будет с таким же в каталоге сборки. Можно указать в подкаталоге
 //------------------------------------------------------------------------------------------------------------------------------------------
 
 #endif

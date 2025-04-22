@@ -12,61 +12,72 @@
 //---------------------------------------------------------------------------
 struct MyQExecute
 {
-    inline static bool Execute(QString file, QStringList args = {});
-    inline static bool OpenDir(QString dir);
-    inline static bool ShowInExplorer(QString fileOrDir);
+	inline static bool Execute(QString file, QStringList args = {});
+	inline static bool OpenDir(QString dir);
+	inline static bool ShowInExplorer(QString fileOrDir);
 };
 //---------------------------------------------------------------------------
 bool MyQExecute::Execute(QString file, QStringList args)
 {
-    QFileInfo fileInfo(file);
-    if(!fileInfo.isSymLink() && fileInfo.isFile())
-    {
-	if(fileInfo.isExecutable()) // Если файл исполняемый
+	QFileInfo fileInfo(file);
+	bool doOpenUrl = false;
+	if(fileInfo.isSymLink())
 	{
-	    return QProcess::startDetached(file, args);
+		doOpenUrl = true;
 	}
-	else
+
+	if(fileInfo.isFile())
 	{
-	    if(!args.isEmpty())
-		qDebug() << "MyQExecute::Execute: файл " + file + " не является исполняемым, аргументы игнорируются";
-
-	    return QDesktopServices::openUrl(QUrl::fromLocalFile(file));
+		if(fileInfo.isExecutable()) // Если файл исполняемый
+		{
+			return QProcess::startDetached(file, args);
+		}
+		else
+		{
+			doOpenUrl = true;
+		}
 	}
-    }
 
-    qDebug() << "MyQExecute::Execute: файл " + file + " не обнаружен";
-    return false;
+	if(doOpenUrl)
+	{
+		if(!args.isEmpty())
+			qDebug() << "MyQExecute::Execute: файл " + file + " не является исполняемым, аргументы игнорируются";
+
+		return QDesktopServices::openUrl(QUrl::fromLocalFile(file));
+	}
+
+	qDebug() << "MyQExecute::Execute: файл " + file + " не обнаружен";
+	return false;
 }
 
 bool MyQExecute::OpenDir(QString dir)
 {
-    QFileInfo fileInfo(dir);
-    if(!fileInfo.isSymLink() && fileInfo.isDir())
-    {
-	QStringList args;
-	args << QDir::toNativeSeparators(dir);
-	return QProcess::startDetached("explorer", args);
-    }
+	QFileInfo fileInfo(dir);
+	if(!fileInfo.isSymLink() && fileInfo.isDir())
+	{
+		QStringList args;
+		args << QDir::toNativeSeparators(dir);
+		return QProcess::startDetached("explorer", args);
+	}
 
-    qDebug() << "MyQExecute::Execute: директория " + dir + " не обнаружена";
-    return false;
+	qDebug() << "MyQExecute::Execute: директория " + dir + " не обнаружена";
+	return false;
 }
 
 bool MyQExecute::ShowInExplorer(QString fileOrDir)
 {
-    QFileInfo fileInfo(fileOrDir);
-    if(!fileInfo.isSymLink() && (fileInfo.isFile() || fileInfo.isDir()))
-    {
-	QStringList args;
-	args << "/select," << QDir::toNativeSeparators(fileOrDir);
-	return QProcess::startDetached("explorer", args);
-    }
-    else
-    {
-	qCritical() << "MyQExecute::Execute: объект " + fileOrDir + " не обнаружен";
-	return false;
-    }
+	QFileInfo fileInfo(fileOrDir);
+	if(!fileInfo.isSymLink() && (fileInfo.isFile() || fileInfo.isDir()))
+	{
+		QStringList args;
+		args << "/select," << QDir::toNativeSeparators(fileOrDir);
+		return QProcess::startDetached("explorer", args);
+	}
+	else
+	{
+		qCritical() << "MyQExecute::Execute: объект " + fileOrDir + " не обнаружен";
+		return false;
+	}
 }
 //---------------------------------------------------------------------------
 #endif
