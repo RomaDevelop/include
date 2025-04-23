@@ -6,6 +6,8 @@
 #include <QFontMetrics>
 #include <QRect>
 
+#include "MyQDifferent.h"
+
 struct MyQString
 {
 	inline static QStringList QStringListSized(int size, const QString &value = "");
@@ -34,6 +36,8 @@ struct MyQString
 		}
 		return result;
 	}
+
+	static QString BytesToString(uint64_t bytesCount) { return MyQDifferent::BytesToString(bytesCount); }
 
 	template<class uint_type>
 	inline static QString ToBincode(uint_type n, int output_width = -1)

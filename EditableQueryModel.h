@@ -17,7 +17,9 @@ class EditableQueryModel : public QSqlQueryModel {
 public:
 	explicit EditableQueryModel(QString /*name*/, QObject *parent = nullptr):
 		QSqlQueryModel(parent)
-	{ }
+	{
+		connect(this, &QAbstractItemModel::modelAboutToBeReset, [this](){ dataCache.clear(); });
+	}
 
 	Qt::ItemFlags flags(const QModelIndex &index) const override {
 		if (!index.isValid())
