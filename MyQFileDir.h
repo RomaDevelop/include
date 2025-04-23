@@ -15,7 +15,7 @@
 //---------------------------------------------------------------------------
 struct MyQFileDir
 {
-	// если имена различнаются только в регистре QFile::rename не переименовывает (для ntfs)
+	// если имена различнаются только в регистре QFile::rename не переименовывает (верно для ntfs)
 	inline static QString Rename(QString oldFile, QString newFile, bool forceCaseSensitiveRename); 
 
 	inline static QString GetCurrentFileNameFromRenameError(QString errorStr);
@@ -62,7 +62,11 @@ QString MyQFileDir::Rename(QString oldFile, QString newFile, bool forceCaseSensi
 		newFile = QDir::toNativeSeparators(newFile);
 		if(oldFile.toLower() == newFile.toLower())
 		{
-			QString tmpNewFile = newFile.chopped(1);
+			QFileInfo fi(oldFile);
+			QString tmpNewFile;
+			if(fi.fileName().size() < 4) tmpNewFile = newFile.chopped(1); // удаление 1 символа в конце для вставки цифры в цикле
+			else /* имя файла >= 4 */ tmpNewFile = newFile.chopped(4) + "tmp"; // удаление 3+1 символов для вставки tmp и цифры в цикле
+			
 			for(int i=0; i<10; i++)
 				if(!QFileInfo::exists(tmpNewFile + QChar('0'+i)))
 				{

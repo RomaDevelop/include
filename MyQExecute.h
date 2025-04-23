@@ -19,34 +19,34 @@ struct MyQExecute
 //---------------------------------------------------------------------------
 bool MyQExecute::Execute(QString file, QStringList args)
 {
+	#define ERROR_PREFIX "MyQExecute::Execute: объект " + file
 	QFileInfo fileInfo(file);
 	bool doOpenUrl = false;
-	if(fileInfo.isSymLink())
-	{
-		doOpenUrl = true;
-	}
 
-	if(fileInfo.isFile())
+	if(!fileInfo.exists()) { qDebug() << ERROR_PREFIX + " не существует"; return false; }
+
+	if(fileInfo.isSymLink()) doOpenUrl = true; // если ярлык - запустим через QDesktopServices
+	else if(fileInfo.isFile())
 	{
 		if(fileInfo.isExecutable()) // Если файл исполняемый
 		{
-			return QProcess::startDetached(file, args);
+			bool startRes = QProcess::startDetached(file, args); // запускем через QProcess
+			qDebug() << ERROR_PREFIX + ": QProcess::startDetached returned false";
+			return startRes;
 		}
-		else
-		{
-			doOpenUrl = true;
-		}
+		else doOpenUrl = true; // если нет - запустим через QDesktopServices
 	}
 
 	if(doOpenUrl)
 	{
-		if(!args.isEmpty())
-			qDebug() << "MyQExecute::Execute: файл " + file + " не является исполняемым, аргументы игнорируются";
+		if(!args.isEmpty()) qDebug() << ERROR_PREFIX + " не является исполняемым, аргументы игнорируются";
 
-		return QDesktopServices::openUrl(QUrl::fromLocalFile(file));
+		bool openRes = QDesktopServices::openUrl(QUrl::fromLocalFile(file));
+		qDebug() << ERROR_PREFIX + ": QDesktopServices::openUrl returned false";
+		return openRes;
 	}
 
-	qDebug() << "MyQExecute::Execute: файл " + file + " не обнаружен";
+	qDebug() << ERROR_PREFIX + " не был запущен, не известный формат";
 	return false;
 }
 
