@@ -5,13 +5,16 @@
 #include <QDateTime>
 #include <QWidget>
 
+#include "declare_struct.h"
+
 struct PlatformDependent
 {
 	static QDateTime GetProcessStartTime(uint processID);
 	static bool IsProcessRunning(uint processID);
 
 	enum CopyMoveFileMode { move, copy };
-	static int CopyMoveFile(QString SourceFile, QString Destination, CopyMoveFileMode Mode); // требуется QT += widgets, работает и в консольном
+	declare_struct_2_fields_no_move(CopyMoveFileRes, bool, success, int, errorCode);
+	static CopyMoveFileRes CopyMoveFile(QString SourceFile, QString Destination, CopyMoveFileMode Mode);
 
 	static void SetTopMost(QWidget *w, bool topMost);
 	static void SetTopMostFlash(QWidget *w); // set topMost in true and immitietly sets false

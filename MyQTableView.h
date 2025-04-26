@@ -39,6 +39,8 @@ public:
 	inline bool Locate(const QString &fieldName, const QString &fieldValue, int columnToSet = -1);
 	inline bool LocateRow(int row, int column = -1); // col = -1 и останется в текущей колонке
 
+	inline QStringList Field(int index);
+
 	///\brief for empty feildsIndexes returns all fields
 	inline std::vector<QStringList> ToTable(std::vector<int> feildsIndexes = {}); // QStringList = row
 
@@ -186,6 +188,15 @@ inline bool MyQTableView::LocateRow(int row, int column)
 	return false;
 }
 
+QStringList MyQTableView::Field(int index)
+{
+	auto table = ToTable({index});
+	QStringList res = MyQString::QStringListSized(table.size());
+	for(uint i=0; i<table.size(); i++)
+		res[i] = std::move(table[i][0]);
+	return res;
+}
+
 std::vector<QStringList> MyQTableView::ToTable(std::vector<int> feildsIndexes)
 {
 	QAbstractItemModel *model = this->model();
@@ -194,39 +205,27 @@ std::vector<QStringList> MyQTableView::ToTable(std::vector<int> feildsIndexes)
 	int colCount = model->columnCount();
 	if(feildsIndexes.empty())
 	{
-		for (int row = 0; row < model->rowCount(); ++row)
-		{
-			auto &retRow = table.emplace_back();
-			for(int column=0; column<colCount; column++)
-			{
-
-				retRow += model->index(row, column).data().toString();
-			}
-
-			// догрузка записей
-			if(row >= model->rowCount()-2 && model->canFetchMore(QModelIndex()))
-				model->fetchMore(QModelIndex());
-		}
+		for(int column=0; column<colCount; column++)
+			feildsIndexes.emplace_back(column);
 	}
-	else
+
+	auto removeRes = std::remove_if(feildsIndexes.begin(),feildsIndexes.end(),[colCount](int n){ return n>=colCount || n<0; });
+	if(removeRes != feildsIndexes.end()) QMbError("Wrong indexes in feildsIndexes ["+MyQString::AsDebug(feildsIndexes)+"]");
+	feildsIndexes.erase(removeRes, feildsIndexes.end());
+	int size = feildsIndexes.size();
+	for (int row = 0; row < model->rowCount(); ++row)
 	{
-		auto removeRes = std::remove_if(feildsIndexes.begin(),feildsIndexes.end(),[colCount](int n){ return n>=colCount || n<0; });
-		if(removeRes != feildsIndexes.end()) QMbError("Wring indexes in feildsIndexes ["+MyQString::AsDebug(feildsIndexes)+"]");
-		feildsIndexes.erase(removeRes, feildsIndexes.end());
-		int size = feildsIndexes.size();
-		for (int row = 0; row < model->rowCount(); ++row)
+		auto &retRow = table.emplace_back();
+		for(int i=0; i<size; i++)
 		{
-			auto &retRow = table.emplace_back();
-			for(int i=0; i<size; i++)
-			{
-				retRow += model->index(row, feildsIndexes[i]).data().toString();
-			}
-
-			// догрузка записей
-			if(row >= model->rowCount()-2 && model->canFetchMore(QModelIndex()))
-				model->fetchMore(QModelIndex());
+			retRow += model->index(row, feildsIndexes[i]).data().toString();
 		}
+
+		// догрузка записей
+		if(row >= model->rowCount()-2 && model->canFetchMore(QModelIndex()))
+			model->fetchMore(QModelIndex());
 	}
+
 	return table;
 }
 

@@ -44,8 +44,9 @@ public:
 	inline static InputLineResExt InputLineExt(QString captionDialog = "", QString textDialog = "", QString startText = "",
 											QStringList buttons = {Accept(),Cansel()}, uint w = 640);
 
-	declare_struct_2_fields_move(ListDialogRes, int, index, QString, choosedText);
-	inline static ListDialogRes ListDialog(QString caption, QStringList valuesList, uint w = 640, uint h = 480); // returns -1 and empty text if cansel or close
+	declare_struct_3_fields_move(ListDialogRes, int, index, QString, choosedText, bool, accepted);
+	// -1 index and empty text if cansel or close
+	inline static ListDialogRes ListDialog(QString caption, QStringList valuesList, uint w = 640, uint h = 480);
 	inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter, uint w = 640, uint h = 480);
 
 	declare_struct_2_fields_move(CheckBoxDialogItem, QString, text, bool, chekState);
@@ -88,11 +89,11 @@ public:
 void MyQDialogs::ShowText(const QString & text, uint w, uint h)
 {
 	std::unique_ptr<QDialog> dialog(new QDialog);
-	QHBoxLayout *all  = new QHBoxLayout(dialog.get());
-    QTextBrowser *tb = new QTextBrowser;
-	tb->setTabStopDistance(40);
-    tb->setPlainText(text);
-    all->addWidget(tb);
+	QHBoxLayout *hlo  = new QHBoxLayout(dialog.get());
+	QTextBrowser *textBrowser = new QTextBrowser;
+	textBrowser->setTabStopDistance(40);
+	textBrowser->setPlainText(text);
+	hlo->addWidget(textBrowser);
 
     if(!w) w = 150;
     if(!h) h = 150;
@@ -149,14 +150,14 @@ MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString st
 	std::unique_ptr<QDialog> dialog(new QDialog);
 	InputTextRes res;
 	dialog->setWindowTitle(captionDialog);
-	QVBoxLayout *all  = new QVBoxLayout(dialog.get());
+	QVBoxLayout *vloAll  = new QVBoxLayout(dialog.get());
 	QTextEdit *textEdit = new QTextEdit;
 	textEdit->setTabStopDistance(40);
 	textEdit->setText(startText);
-	all->addWidget(textEdit);
+	vloAll->addWidget(textEdit);
 
 	auto hloBtns = new QHBoxLayout;
-	all->addLayout(hloBtns);
+	vloAll->addLayout(hloBtns);
 
 	hloBtns->addStretch();
 	hloBtns->addWidget(new QPushButton(Accept()));
@@ -181,23 +182,24 @@ MyQDialogs::InputTextRes MyQDialogs::InputLine(QString captionDialog, QString te
 	else return InputTextRes("", false);
 }
 
-MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QString textDialog, QString startText, QStringList buttons, uint w)
+MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QString textDialog, QString startText,
+                                                     QStringList buttons, uint w)
 {
     std::unique_ptr<QDialog> dialog(new QDialog);
 	InputLineResExt ret;
 	ret.button = Undefined();
     dialog->setWindowTitle(captionDialog);
-    QVBoxLayout *all  = new QVBoxLayout(dialog.get());
+	QVBoxLayout *vloAll  = new QVBoxLayout(dialog.get());
 
     QLabel *label = new QLabel(textDialog);
-    all->addWidget(label);
+	vloAll->addWidget(label);
 
     QLineEdit *lineEdit = new QLineEdit;
     lineEdit->setText(startText);
-    all->addWidget(lineEdit);
+	vloAll->addWidget(lineEdit);
 
     auto hloBtns = new QHBoxLayout;
-    all->addLayout(hloBtns);
+	vloAll->addLayout(hloBtns);
 
     hloBtns->addStretch();
 	for(auto &btnText:buttons)
@@ -218,7 +220,7 @@ MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QStr
 
 MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList valuesList, uint w, uint h)
 {
-	ListDialogRes res(-1,"");
+	ListDialogRes res(-1,"", false);
     std::unique_ptr<QDialog> dialog(new QDialog);
     dialog->resize(w, h);
     dialog->setWindowTitle(caption);
@@ -233,8 +235,10 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
         {
 			res.index = listWidget->currentRow();
 			res.choosedText = item->text();
+			res.accepted = true;
+			dialog->close();
         }
-        dialog->close();
+		else QMbError("Choose value or press cansel or close");
     };
     QObject::connect(listWidget, &QListWidget::itemDoubleClicked, acceptAction);
 
@@ -267,60 +271,65 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	std::unique_ptr<QDialog> dialog(new QDialog);
 	dialog->resize(w, h);
     dialog->setWindowTitle(caption);
-	auto loV = new QVBoxLayout(dialog.get());
-    auto loH = new QHBoxLayout;
-	auto lw = new QListWidget;
-	auto chAl = new QCheckBox;
-	auto chNo = new QCheckBox;
+	auto vloMain = new QVBoxLayout(dialog.get());
+	auto hloHeader = new QHBoxLayout;
+	auto listWidget = new QListWidget;
+	auto chBoxCheckAll = new QCheckBox;
+	auto chBoxCheckNothing = new QCheckBox;
 
-	auto dbb = new QDialogButtonBox;
+	auto hloBottom = new QHBoxLayout;
 	auto btnOk = new QPushButton(Accept());
-	auto btnCa = new QPushButton(Cansel());
+	auto btnCansel = new QPushButton(Cansel());
 	QObject::connect(btnOk,&QPushButton::clicked,[&dialog, &result](){ result.accepted = true; dialog->hide(); });
-	QObject::connect(btnCa,&QPushButton::clicked,[&dialog, &result](){ result.accepted = false; dialog->hide();});
+	QObject::connect(btnCansel,&QPushButton::clicked,[&dialog, &result](){ result.accepted = false; dialog->hide();});
 
-    chAl->setChecked(true);
-    QObject::connect(chAl,&QCheckBox::clicked,[lw, chAl](){
-        chAl->setChecked(true);
-        for(int i=0; i<lw->count(); i++)
-            lw->item(i)->setCheckState(Qt::Checked);
+	chBoxCheckAll->setChecked(true);
+	QObject::connect(chBoxCheckAll,&QCheckBox::clicked,[listWidget, chBoxCheckAll](){
+		chBoxCheckAll->setChecked(true);
+		for(int i=0; i<listWidget->count(); i++)
+			listWidget->item(i)->setCheckState(Qt::Checked);
     });
 
-    chNo->setChecked(false);
-    QObject::connect(chNo,&QCheckBox::clicked,[lw, chNo](){
-        chNo->setChecked(false);
-        for(int i=0; i<lw->count(); i++)
-            lw->item(i)->setCheckState(Qt::Unchecked);
+	chBoxCheckNothing->setChecked(false);
+	QObject::connect(chBoxCheckNothing,&QCheckBox::clicked,[listWidget, chBoxCheckNothing](){
+		chBoxCheckNothing->setChecked(false);
+		for(int i=0; i<listWidget->count(); i++)
+			listWidget->item(i)->setCheckState(Qt::Unchecked);
     });
 
-    loV->addLayout(loH);
-    loH->addWidget(chAl);
-    loH->addWidget(chNo);
-    loH->addStretch();
-    loV->addWidget(lw);
-    loV->addWidget(dbb);
-    dbb->addButton(btnOk,QDialogButtonBox::AcceptRole);
-    dbb->addButton(btnCa,QDialogButtonBox::AcceptRole);
+	vloMain->addLayout(hloHeader);
+	hloHeader->addWidget(chBoxCheckAll);
+	hloHeader->addWidget(chBoxCheckNothing);
+	hloHeader->addStretch();
+	vloMain->addWidget(listWidget);
+	vloMain->addLayout(hloBottom);
+	hloBottom->addStretch();
+	hloBottom->addWidget(btnOk);
+	hloBottom->addWidget(btnCansel);
 
     for(auto str:values)
     {
-        lw->addItem(str);
-        lw->item(lw->count()-1)->setCheckState(Qt::Unchecked);
+		listWidget->addItem(str);
+		listWidget->item(listWidget->count()-1)->setCheckState(Qt::Unchecked);
+		QObject::connect(listWidget, &QListWidget::itemDoubleClicked, [](QListWidgetItem *item){
+			if(item->checkState() == Qt::Checked) item->setCheckState(Qt::Unchecked);
+			else item->setCheckState(Qt::Checked);
+		});
     }
 
-    for(int i=0; i<lw->count() && i<(int)startCheched.size(); i++)
-        if(startCheched[i]) lw->item(i)->setCheckState(Qt::Checked);
+	for(int i=0; i<listWidget->count() && i<(int)startCheched.size(); i++)
+		if(startCheched[i]) listWidget->item(i)->setCheckState(Qt::Checked);
 
-    for(int i=0; i<lw->count() && i<(int)enabled.size(); i++)
-        if(startCheched[i]) lw->item(i)->setFlags(lw->item(i)->flags() ^ Qt::ItemIsEnabled);
+	for(int i=0; i<listWidget->count() && i<(int)enabled.size(); i++)
+		if(startCheched[i]) listWidget->item(i)->setFlags(listWidget->item(i)->flags() ^ Qt::ItemIsEnabled);
 
     dialog->exec();
 
     if(result.accepted)
     {
-        for(int i=0; i<lw->count(); i++)
+		for(int i=0; i<listWidget->count(); i++)
         {
-            result.allItems.emplace_back(lw->item(i)->text(), lw->item(i)->checkState() == Qt::Checked);
+			result.allItems.emplace_back(listWidget->item(i)->text(), listWidget->item(i)->checkState() == Qt::Checked);
             if(result.allItems.back().chekState)
             {
                 result.checkedItems.emplace_back(result.allItems.back());
@@ -332,7 +341,8 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
     return result;
 }
 
-MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::vector<QStringList> &rows, QStringList horisontalHeader, QStringList verticalHeader,
+MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::vector<QStringList> &rows,
+                                             QStringList horisontalHeader, QStringList verticalHeader,
 											 bool autoColWidths, bool readOnly, uint w, uint h)
 {
 	std::unique_ptr<QDialog> dialog(new QDialog);
@@ -458,7 +468,8 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, QString con
 	return Table(caption, rowsTmp, horisontalHeader, verticalHeader, autoColWidths, readOnly, w, h);
 }
 
-MyQDialogs::TableDialogRes MyQDialogs::TableOneCol(const QString &caption, QStringList rows, QStringList horisontalHeader, QStringList verticalHeader,
+MyQDialogs::TableDialogRes MyQDialogs::TableOneCol(const QString &caption, QStringList rows,
+                                                   QStringList horisontalHeader, QStringList verticalHeader,
 												   bool autoColWidths, bool readOnly, uint w, uint h)
 {
 	std::vector<QStringList> rowsTmp;

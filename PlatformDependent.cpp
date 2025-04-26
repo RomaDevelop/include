@@ -63,7 +63,7 @@ bool PlatformDependent::IsProcessRunning(uint processID) {
 	return false; // Процесс не запущен или не может быть открыт
 }
 
-int PlatformDependent::CopyMoveFile(QString S, QString D, CopyMoveFileMode Mode)
+PlatformDependent::CopyMoveFileRes PlatformDependent::CopyMoveFile(QString S, QString D, CopyMoveFileMode Mode)
 {
 	S.replace('/','\\');
 	D.replace('/','\\');
@@ -82,7 +82,11 @@ int PlatformDependent::CopyMoveFile(QString S, QString D, CopyMoveFileMode Mode)
 	fos.pFrom = cFrom;
 	fos.pTo = cTo;
 	fos.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMMKDIR | FOF_SIMPLEPROGRESS;
-	return SHFileOperation(&fos);
+	CopyMoveFileRes res;
+	res.errorCode = SHFileOperation(&fos);
+	if(res.errorCode == 0) res.success = true;
+	else res.success = false;
+	return res;
 }
 
 void PlatformDependent::SetTopMost(QWidget * w, bool topMost)

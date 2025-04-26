@@ -31,7 +31,7 @@ bool MyQExecute::Execute(QString file, QStringList args)
 		if(fileInfo.isExecutable()) // Если файл исполняемый
 		{
 			bool startRes = QProcess::startDetached(file, args); // запускем через QProcess
-			qDebug() << ERROR_PREFIX + ": QProcess::startDetached returned false";
+			if(!startRes) qDebug() << ERROR_PREFIX + ": QProcess::startDetached returned false";
 			return startRes;
 		}
 		else doOpenUrl = true; // если нет - запустим через QDesktopServices
@@ -42,7 +42,7 @@ bool MyQExecute::Execute(QString file, QStringList args)
 		if(!args.isEmpty()) qDebug() << ERROR_PREFIX + " не является исполняемым, аргументы игнорируются";
 
 		bool openRes = QDesktopServices::openUrl(QUrl::fromLocalFile(file));
-		qDebug() << ERROR_PREFIX + ": QDesktopServices::openUrl returned false";
+		if(!openRes) qDebug() << ERROR_PREFIX + ": QDesktopServices::openUrl returned false";
 		return openRes;
 	}
 
