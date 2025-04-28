@@ -29,9 +29,9 @@
 class MyQDialogs
 {
 public:
-    inline static void ShowText(const QString &text, uint w = 800, uint h = 600);
+	inline static void ShowText(const QString &text, uint w = 800, uint h = 600);
 
-    inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
+	inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
 
 	declare_struct_2_fields_move(MenuItem, QString, text, std::function<void()>, worker);
 	inline static void MenuUnderWidget(QWidget *w, std::vector<MenuItem> items);
@@ -42,7 +42,7 @@ public:
 	inline static InputTextRes InputLine(QString captionDialog = "", QString textDialog = "", QString startText = "", uint w = 640);
 	declare_struct_2_fields_move(InputLineResExt, QString, text, QString, button);
 	inline static InputLineResExt InputLineExt(QString captionDialog = "", QString textDialog = "", QString startText = "",
-											QStringList buttons = {Accept(),Cansel()}, uint w = 640);
+											   QStringList buttons = {Accept(),Cansel()}, uint w = 640);
 
 	declare_struct_3_fields_move(ListDialogRes, int, index, QString, choosedText, bool, accepted);
 	// -1 index and empty text if cansel or close
@@ -56,10 +56,10 @@ public:
 								 QStringList, checkedTexts,
 								 bool, accepted);
 
-    inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption,
-                                                      const QStringList &values,
-                                                      const std::vector<bool> &startCheched = {},
-	                                                  const std::vector<bool> &enabled = {},
+	inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption,
+													  const QStringList &values,
+													  const std::vector<bool> &startCheched = {},
+													  const std::vector<bool> &enabled = {},
 													  uint w = 640, uint h = 480);
 
 	declare_struct_2_fields_move(TableDialogRes, std::unique_ptr<QTableWidget>, table, bool, accepted);
@@ -68,13 +68,13 @@ public:
 									   bool autoColWidths = true, bool readOnly = false,
 									   uint w = 800, uint h = 600);
 	inline static TableDialogRes Table(const QString &caption, QString content, QString colSplitter, QString rowSplitter,
-											   QStringList horisontalHeader = {}, QStringList verticalHeader = {},
-											   bool autoColWidths = true, bool readOnly = false,
-                                               uint w = 800, uint h = 600);
+									   QStringList horisontalHeader = {}, QStringList verticalHeader = {},
+									   bool autoColWidths = true, bool readOnly = false,
+									   uint w = 800, uint h = 600);
 	inline static TableDialogRes TableOneCol(const QString &caption, QStringList rows,
-													 QStringList horisontalHeader = {}, QStringList verticalHeader = {},
-													 bool autoColWidths = true, bool readOnly = false,
-                                                     uint w = 800, uint h = 600);
+											 QStringList horisontalHeader = {}, QStringList verticalHeader = {},
+											 bool autoColWidths = true, bool readOnly = false,
+											 uint w = 800, uint h = 600);
 
 	inline static void ShowAllStandartIcons();
 
@@ -95,19 +95,25 @@ void MyQDialogs::ShowText(const QString & text, uint w, uint h)
 	textBrowser->setPlainText(text);
 	hlo->addWidget(textBrowser);
 
-    if(!w) w = 150;
-    if(!h) h = 150;
-    dialog->resize(w, h);
-    dialog->exec();
+	if(!w) w = 150;
+	if(!h) h = 150;
+	dialog->resize(w, h);
+	dialog->exec();
 }
 
 QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList buttons)
 {
-    QMessageBox messageBox(QMessageBox::Question, caption, text);
-    for(auto &btn:buttons)
-        messageBox.addButton(btn,QMessageBox::YesRole);  // Role не имеет значения
-    int desision =  messageBox.exec(); // возвращает 0 1 2 по порядку кнопок
-    return messageBox.buttons()[desision]->text();
+	QMessageBox messageBox(QMessageBox::Question, caption, text);
+	for(auto &btn:buttons)
+	{
+		messageBox.addButton(" " + btn + " ",QMessageBox::YesRole);  // Role не имеет значения
+		// " " + btn + " " потому что setContentsMargins для вн.виджетов, а не текста, а setStyleSheet("padding: 6px;") имеет побочные эффекты
+	}
+	int desision =  messageBox.exec(); // возвращает 0 1 2 по порядку кнопок
+	QString retText = messageBox.buttons()[desision]->text();
+	retText.chop(1);
+	retText.remove(0,1);
+	return retText;
 }
 
 void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<MenuItem> items)
@@ -167,10 +173,10 @@ MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString st
 		dialog->close();
 	});
 	hloBtns->addWidget(new QPushButton(Cansel()));
-    QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog](){ dialog->close(); });
+	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog](){ dialog->close(); });
 
-    dialog->resize(w, h);
-    dialog->exec();
+	dialog->resize(w, h);
+	dialog->exec();
 
 	return res;
 }
@@ -183,74 +189,74 @@ MyQDialogs::InputTextRes MyQDialogs::InputLine(QString captionDialog, QString te
 }
 
 MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QString textDialog, QString startText,
-                                                     QStringList buttons, uint w)
+													 QStringList buttons, uint w)
 {
-    std::unique_ptr<QDialog> dialog(new QDialog);
+	std::unique_ptr<QDialog> dialog(new QDialog);
 	InputLineResExt ret;
 	ret.button = Undefined();
-    dialog->setWindowTitle(captionDialog);
+	dialog->setWindowTitle(captionDialog);
 	QVBoxLayout *vloAll  = new QVBoxLayout(dialog.get());
 
-    QLabel *label = new QLabel(textDialog);
+	QLabel *label = new QLabel(textDialog);
 	vloAll->addWidget(label);
 
-    QLineEdit *lineEdit = new QLineEdit;
-    lineEdit->setText(startText);
+	QLineEdit *lineEdit = new QLineEdit;
+	lineEdit->setText(startText);
 	vloAll->addWidget(lineEdit);
 
-    auto hloBtns = new QHBoxLayout;
+	auto hloBtns = new QHBoxLayout;
 	vloAll->addLayout(hloBtns);
 
-    hloBtns->addStretch();
+	hloBtns->addStretch();
 	for(auto &btnText:buttons)
-    {
+	{
 		hloBtns->addWidget(new QPushButton(btnText));
 		QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog, lineEdit, btnText, &ret](){
 			ret.button = btnText;
 			ret.text = lineEdit->text();
 			dialog->close();
 		});
-    }
+	}
 
-    dialog->setFixedWidth(w);
-    dialog->exec();
+	dialog->setFixedWidth(w);
+	dialog->exec();
 
-    return ret;
+	return ret;
 }
 
 MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList valuesList, uint w, uint h)
 {
 	ListDialogRes res(-1,"", false);
-    std::unique_ptr<QDialog> dialog(new QDialog);
-    dialog->resize(w, h);
-    dialog->setWindowTitle(caption);
-    QVBoxLayout *vloMain  = new QVBoxLayout(dialog.get());
-    QListWidget *listWidget = new QListWidget;
-    listWidget->addItems(valuesList);
-    vloMain->addWidget(listWidget);
+	std::unique_ptr<QDialog> dialog(new QDialog);
+	dialog->resize(w, h);
+	dialog->setWindowTitle(caption);
+	QVBoxLayout *vloMain  = new QVBoxLayout(dialog.get());
+	QListWidget *listWidget = new QListWidget;
+	listWidget->addItems(valuesList);
+	vloMain->addWidget(listWidget);
 
 	auto acceptAction = [&dialog, listWidget, &res]()
-    {
-        if(auto item = listWidget->currentItem())
-        {
+	{
+		if(auto item = listWidget->currentItem())
+		{
 			res.index = listWidget->currentRow();
 			res.choosedText = item->text();
 			res.accepted = true;
 			dialog->close();
-        }
+		}
 		else QMbError("Choose value or press cansel or close");
-    };
-    QObject::connect(listWidget, &QListWidget::itemDoubleClicked, acceptAction);
+	};
+	QObject::connect(listWidget, &QListWidget::itemDoubleClicked, acceptAction);
 
-    auto hloBtns = new QHBoxLayout();
-    vloMain->addLayout(hloBtns);
-    hloBtns->addStretch();
+	auto hloBtns = new QHBoxLayout();
+	vloMain->addLayout(hloBtns);
+	hloBtns->addStretch();
 	hloBtns->addWidget(new QPushButton(Accept()));
-    QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, acceptAction);
+	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, acceptAction);
 	hloBtns->addWidget(new QPushButton(Cansel()));
-    QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog]() { dialog->close(); });
+	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog]() { dialog->close(); });
 
-    dialog->exec();
+	dialog->exec();
 	return res;
 }
 
@@ -261,16 +267,16 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QString values
 }
 
 MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &caption,
-                                                            const QStringList & values,
-                                                            const std::vector<bool> & startCheched,
-                                                            const std::vector<bool> & enabled,
-                                                            uint w, uint h)
+															const QStringList & values,
+															const std::vector<bool> & startCheched,
+															const std::vector<bool> & enabled,
+															uint w, uint h)
 {
 	CheckBoxDialogResult result;
 
 	std::unique_ptr<QDialog> dialog(new QDialog);
 	dialog->resize(w, h);
-    dialog->setWindowTitle(caption);
+	dialog->setWindowTitle(caption);
 	auto vloMain = new QVBoxLayout(dialog.get());
 	auto hloHeader = new QHBoxLayout;
 	auto listWidget = new QListWidget;
@@ -288,14 +294,14 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 		chBoxCheckAll->setChecked(true);
 		for(int i=0; i<listWidget->count(); i++)
 			listWidget->item(i)->setCheckState(Qt::Checked);
-    });
+	});
 
 	chBoxCheckNothing->setChecked(false);
 	QObject::connect(chBoxCheckNothing,&QCheckBox::clicked,[listWidget, chBoxCheckNothing](){
 		chBoxCheckNothing->setChecked(false);
 		for(int i=0; i<listWidget->count(); i++)
 			listWidget->item(i)->setCheckState(Qt::Unchecked);
-    });
+	});
 
 	vloMain->addLayout(hloHeader);
 	hloHeader->addWidget(chBoxCheckAll);
@@ -307,15 +313,15 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	hloBottom->addWidget(btnOk);
 	hloBottom->addWidget(btnCansel);
 
-    for(auto str:values)
-    {
+	for(auto str:values)
+	{
 		listWidget->addItem(str);
 		listWidget->item(listWidget->count()-1)->setCheckState(Qt::Unchecked);
 		QObject::connect(listWidget, &QListWidget::itemDoubleClicked, [](QListWidgetItem *item){
 			if(item->checkState() == Qt::Checked) item->setCheckState(Qt::Unchecked);
 			else item->setCheckState(Qt::Checked);
 		});
-    }
+	}
 
 	for(int i=0; i<listWidget->count() && i<(int)startCheched.size(); i++)
 		if(startCheched[i]) listWidget->item(i)->setCheckState(Qt::Checked);
@@ -323,26 +329,26 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	for(int i=0; i<listWidget->count() && i<(int)enabled.size(); i++)
 		if(startCheched[i]) listWidget->item(i)->setFlags(listWidget->item(i)->flags() ^ Qt::ItemIsEnabled);
 
-    dialog->exec();
+	dialog->exec();
 
-    if(result.accepted)
-    {
+	if(result.accepted)
+	{
 		for(int i=0; i<listWidget->count(); i++)
-        {
+		{
 			result.allItems.emplace_back(listWidget->item(i)->text(), listWidget->item(i)->checkState() == Qt::Checked);
-            if(result.allItems.back().chekState)
-            {
-                result.checkedItems.emplace_back(result.allItems.back());
-                result.checkedTexts += result.allItems.back().text;
-            }
-        }
-    }
+			if(result.allItems.back().chekState)
+			{
+				result.checkedItems.emplace_back(result.allItems.back());
+				result.checkedTexts += result.allItems.back().text;
+			}
+		}
+	}
 
-    return result;
+	return result;
 }
 
 MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::vector<QStringList> &rows,
-                                             QStringList horisontalHeader, QStringList verticalHeader,
+											 QStringList horisontalHeader, QStringList verticalHeader,
 											 bool autoColWidths, bool readOnly, uint w, uint h)
 {
 	std::unique_ptr<QDialog> dialog(new QDialog);
@@ -469,7 +475,7 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, QString con
 }
 
 MyQDialogs::TableDialogRes MyQDialogs::TableOneCol(const QString &caption, QStringList rows,
-                                                   QStringList horisontalHeader, QStringList verticalHeader,
+												   QStringList horisontalHeader, QStringList verticalHeader,
 												   bool autoColWidths, bool readOnly, uint w, uint h)
 {
 	std::vector<QStringList> rowsTmp;

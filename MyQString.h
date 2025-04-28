@@ -8,6 +8,8 @@
 
 #include "MyQDifferent.h"
 
+//------------------------------------------------------------------------------------------------------------------------------
+
 struct MyQString
 {
 	inline static QStringList QStringListSized(int size, const QString &value = "");
@@ -64,6 +66,8 @@ struct MyQString
 		customDebug << obj;
 		return ret;
 	}
+
+	inline static QString Translited(QString str);
 };
 
 //------------------------------------------------------------------------------------------------------------------------------
@@ -75,6 +79,36 @@ QStringList MyQString::QStringListSized(int size, const QString & value)
 	for(int i=0; i<size; i++)
 		ret.append(value);
 	return ret;
+}
+
+QString MyQString::Translited(QString str)
+{
+	static const QString latin = "qwertyuiop[]asdfghjkl;'zxcvbnm,./";
+	static const QString kiril = "йцукенгшщзхъфывапролджэячсмитьбю.";
+	bool mapsInited = false;
+	static std::map<QChar, QChar> toLatin;
+	static std::map<QChar, QChar> toKiril;
+	if(!mapsInited)
+	{
+		for(int i=0; i<latin.size(); i++)
+		{
+			toLatin[kiril[i]] = latin[i];
+			toKiril[latin[i]] = kiril[i];
+		}
+		mapsInited = true;
+	}
+	for(auto &c:str)
+	{
+		if(auto it = toLatin.find(c); it != toLatin.end())
+		{
+			c = it->second;
+		}
+		else if(auto it = toKiril.find(c); it != toKiril.end())
+		{
+			c = it->second;
+		}
+	}
+	return str;
 }
 
 template<class char_type>
