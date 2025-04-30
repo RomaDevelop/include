@@ -13,6 +13,7 @@
 struct MyQString
 {
 	inline static QStringList QStringListSized(int size, const QString &value = "");
+	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 
 	template<typename... Args>
 	inline static void Append(QString& s, const Args&... args) { (s.append(args), ...); }
@@ -79,6 +80,13 @@ QStringList MyQString::QStringListSized(int size, const QString & value)
 	for(int i=0; i<size; i++)
 		ret.append(value);
 	return ret;
+}
+
+QStringList MyQString::ArgsToStrList(int argc, char *argv[])
+{
+	QStringList strList;
+	for(int i=0; i<argc; i++) strList += argv[i];
+	return strList;
 }
 
 QString MyQString::Translited(QString str)
