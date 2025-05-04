@@ -60,6 +60,7 @@ public:
 													  const QStringList &values,
 													  const std::vector<bool> &startCheched = {},
 													  const std::vector<bool> &enabled = {},
+	                                                  bool statrtAllChecked  = false,
 													  uint w = 640, uint h = 480);
 
 	declare_struct_2_fields_move(TableDialogRes, std::unique_ptr<QTableWidget>, table, bool, accepted);
@@ -270,6 +271,7 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 															const QStringList & values,
 															const std::vector<bool> & startCheched,
 															const std::vector<bool> & enabled,
+                                                            bool statrtAllChecked,
 															uint w, uint h)
 {
 	CheckBoxDialogResult result;
@@ -325,6 +327,10 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 
 	for(int i=0; i<listWidget->count() && i<(int)startCheched.size(); i++)
 		if(startCheched[i]) listWidget->item(i)->setCheckState(Qt::Checked);
+
+	if(statrtAllChecked)
+		for(int i=0; i<listWidget->count(); i++)
+			listWidget->item(i)->setCheckState(Qt::Checked);
 
 	for(int i=0; i<listWidget->count() && i<(int)enabled.size(); i++)
 		if(startCheched[i]) listWidget->item(i)->setFlags(listWidget->item(i)->flags() ^ Qt::ItemIsEnabled);

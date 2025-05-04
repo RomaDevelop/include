@@ -22,8 +22,15 @@ public:
 	inline explicit MyQTableView(QWidget *parent = nullptr);
 	inline virtual ~MyQTableView() = default;
 
+	///\brief окрашивает ячейки по правилу и в цвет задаваемые в ColoriserDelegate
+	/// для вызова отрисовки можно использовать tableView->viewport()->update();
+	/// 	или tableView->model()->dataChanged(left, right, {Qt::DisplayRole, Qt::BackgroundRole});
 	ColoriserDelegate *coloriserDelegate;
-	bool keyBoardSearch = true; // обработка происходит в keyPressEvent
+
+	///\brief для отключения стандартного поиска в QTableView при нажатии букв
+	/// обработка происходит в keyPressEvent
+	bool keyBoardSearch = true;
+
 	enum wheelScrollBehaviors { moveScrollBar, moveCurrentIndex };
 	wheelScrollBehaviors wheelScrollBehavior = moveScrollBar; // обработка происходит в wheelEvent
 
@@ -36,6 +43,7 @@ public:
 	inline auto currentRecordData(int col) { return model()->index(currentIndex().row(), col).data(); }
 	inline auto currentRecordDataStr(int col) { return currentRecordData(col).toString(); }
 
+	inline int FindRowByValue(int fieldIndex, const QString &fieldValue);
 	inline bool Locate(const QString &fieldName, const QString &fieldValue, int columnToSet = -1);
 	inline bool LocateRow(int row, int column = -1); // col = -1 и останется в текущей колонке
 
@@ -47,45 +55,16 @@ public:
 	std::set<int> editableColsIndexes;
 	std::set<QString> editableColsNames;
 
-	void setModel(QAbstractItemModel *model) override
-	{
-		if (selectionModel())
-			disconnect(selectionModel(), &QItemSelectionModel::currentChanged, this, &MyQTableView::ActivateEditableCols);
+	///\brief для активации редактируемых колонок
+	inline void setModel(QAbstractItemModel *model) override;
 
-		QTableView::setModel(model);
-
-		int columnCount = model->columnCount();
-		for (int col = 0; col < columnCount; ++col)
-		{
-			QString colName = model->headerData(col, Qt::Horizontal).toString();
-			if(editableColsNames.count(colName) > 0)
-			{
-				editableColsIndexes.insert(col);
-			}
-		}
-
-		if(selectionModel())
-			connect(selectionModel(), &QItemSelectionModel::currentChanged, this, &MyQTableView::ActivateEditableCols);
-	}
 	inline void keyPressEvent(QKeyEvent* event) override;
 	inline void wheelEvent(QWheelEvent* event) override;
 private:
 	inline bool CheckArrows(QKeyEvent* event);
 	inline bool CheckEditTriggers(QKeyEvent* event);
 private slots:
-	void ActivateEditableCols(const QModelIndex &current, const QModelIndex &)
-	{
-		if(editTriggers() != QAbstractItemView::NoEditTriggers) specialEditTriggers = editTriggers();
-
-		if(editableColsIndexes.count(current.column()) == 0)
-		{
-			setEditTriggers(QAbstractItemView::NoEditTriggers);
-		}
-		else
-		{
-			setEditTriggers(specialEditTriggers);
-		}
-	}
+	inline void ActivateEditableCols(const QModelIndex &current, const QModelIndex &);
 private:
 	EditTriggers specialEditTriggers;
 };
@@ -114,8 +93,6 @@ MyQTableView::MyQTableView(QWidget *parent) : QTableView{parent}
 {
 	coloriserDelegate = new ColoriserDelegate(this); // имеет parent, можно new
 	setItemDelegate(coloriserDelegate);
-
-
 }
 
 int MyQTableView::RowsCount(bool do_fetch)
@@ -128,6 +105,26 @@ int MyQTableView::RowsCount(bool do_fetch)
 		}
 	}
 	return model->rowCount();
+}
+
+int MyQTableView::FindRowByValue(int fieldIndex, const QString &fieldValue)
+{
+	QAbstractItemModel *model = this->model();
+	if (!model) return -3;
+
+	if(fieldIndex >= model->columnCount()) return -2;
+
+	for (int row = 0; row < model->rowCount(); ++row)
+	{
+		QModelIndex index = model->index(row, fieldIndex);
+		if(index.data().toString() == fieldValue) return row;
+
+		// догрузка записей
+		if(row >= model->rowCount()-2 && model->canFetchMore(QModelIndex()))
+			model->fetchMore(QModelIndex());
+	}
+
+	return -1;
 }
 
 inline bool MyQTableView::Locate(const QString &fieldName, const QString &fieldValue, int columnToSet)
@@ -150,22 +147,9 @@ inline bool MyQTableView::Locate(const QString &fieldName, const QString &fieldV
 	}
 	if (columnOfField == -1) return false;
 
-	for (int row = 0; row < model->rowCount(); ++row)
-	{
-		QModelIndex index = model->index(row, columnOfField);
-		if(index.data().toString() == fieldValue)
-		{
-			index = model->index(row, columnToSet);
-			this->setCurrentIndex(index);
-			this->scrollTo(index, QAbstractItemView::PositionAtTop);
-			return true;
-		}
-
-		// догрузка записей
-		if(row >= model->rowCount()-2 && model->canFetchMore(QModelIndex()))
-			model->fetchMore(QModelIndex());
-	}
-	return false;
+	int row = FindRowByValue(columnOfField, fieldValue);
+	if(row >= 0) return LocateRow(row, columnToSet);
+	else return false;
 }
 
 inline bool MyQTableView::LocateRow(int row, int column)
@@ -227,6 +211,27 @@ std::vector<QStringList> MyQTableView::ToTable(std::vector<int> feildsIndexes)
 	}
 
 	return table;
+}
+
+void MyQTableView::setModel(QAbstractItemModel *model)
+{
+	if (selectionModel())
+		disconnect(selectionModel(), &QItemSelectionModel::currentChanged, this, &MyQTableView::ActivateEditableCols);
+
+	QTableView::setModel(model);
+
+	int columnCount = model->columnCount();
+	for (int col = 0; col < columnCount; ++col)
+	{
+		QString colName = model->headerData(col, Qt::Horizontal).toString();
+		if(editableColsNames.count(colName) > 0)
+		{
+			editableColsIndexes.insert(col);
+		}
+	}
+
+	if(selectionModel())
+		connect(selectionModel(), &QItemSelectionModel::currentChanged, this, &MyQTableView::ActivateEditableCols);
 }
 
 void MyQTableView::keyPressEvent(QKeyEvent *event)
@@ -337,8 +342,19 @@ bool MyQTableView::CheckEditTriggers(QKeyEvent *event)
 	//		return false;  // Никакой триггер не активирует редактирование
 }
 
+void MyQTableView::ActivateEditableCols(const QModelIndex &current, const QModelIndex &)
+{
+	if(editTriggers() != QAbstractItemView::NoEditTriggers) specialEditTriggers = editTriggers();
 
-
+	if(editableColsIndexes.count(current.column()) == 0)
+	{
+		setEditTriggers(QAbstractItemView::NoEditTriggers);
+	}
+	else
+	{
+		setEditTriggers(specialEditTriggers);
+	}
+}
 
 //------------------------------------------------------------------------------------------------------------------------------
 #endif // MYQTABLEVIEW_H

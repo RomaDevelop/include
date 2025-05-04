@@ -1,7 +1,7 @@
-//---------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------
 #ifndef MYQDIFFERENT_H
 #define MYQDIFFERENT_H
-//---------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------
 #include <direct.h>
 #include <algorithm>
 
@@ -15,7 +15,7 @@
 
 #include "MyQShortings.h"
 #include "MyQFileDir.h"
-//---------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------
 struct MyQDifferent
 {
     inline static QString PathToExe() { return ExePath(); }
@@ -30,9 +30,11 @@ struct MyQDifferent
     inline static bool LoadSettings(QString fileName, std::vector<QWidget*> &widgets, QStringList &stringSettings);
 
     inline static void GetPathName(QString file, QString *path, QString *name);
+
+	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 };
 
-//---------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------------
 
 QString MyQDifferent::ExePath()
 {
@@ -214,6 +216,14 @@ void MyQDifferent::GetPathName(QString file, QString *path, QString *name)
     *name = fi.fileName();
 }
 
+QStringList MyQDifferent::ArgsToStrList(int argc, char *argv[])
+{
+	QStringList args;
+	for(int i=0; i<argc; i++) args += argv[i];
+	return args;
+}
+
+//---------------------------------------------------------------------------------------------------------------------------
 #endif
-//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
 
