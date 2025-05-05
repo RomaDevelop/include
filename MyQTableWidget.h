@@ -1,6 +1,7 @@
+//--------------------------------------------------------------------------------------------------------------------------------
 #ifndef MYQTABLEWIDGET_H
 #define MYQTABLEWIDGET_H
-
+//--------------------------------------------------------------------------------------------------------------------------------
 #include <memory>
 
 #include <QApplication>
@@ -15,10 +16,13 @@
 
 #include "MyQShortings.h"
 
+//--------------------------------------------------------------------------------------------------------------------------------
+
 class MyQTableWidget : public QTableWidget
 {
 	Q_OBJECT
 public:
+	inline static bool SwapRows(QTableWidget *table, int row1, int row2);
 	inline static void SetItemEditableState(QTableWidgetItem *item, bool editableNewState);
 
 public:
@@ -212,6 +216,20 @@ private:
 	inline static std::vector<QString> innerClipboardVerticalHeaderValues {};
 	inline static std::vector<QStringList> innerClipboardAllColums {};
 };
+
+//--------------------------------------------------------------------------------------------------------------------------------
+
+bool MyQTableWidget::SwapRows(QTableWidget *table, int row1, int row2)
+{
+	if(!table || row1 < 0 || row1 >= table->rowCount() || row2 < 0 || row2 >= table->rowCount()) return false;
+	for(int col=0; col<table->columnCount(); col++)
+	{
+		QTableWidgetItem *itemBuf = table->takeItem(row2, col);
+		table->setItem(row2, col, table->takeItem(row1, col));
+		table->setItem(row1, col, itemBuf);
+	}
+	return true;
+}
 
 void MyQTableWidget::SetItemEditableState(QTableWidgetItem * item, bool editableNewState)
 {

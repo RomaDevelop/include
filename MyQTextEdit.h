@@ -6,6 +6,8 @@
 #include <QTextBlock>
 #include <QMimeData>
 
+#include "MyQShortings.h"
+
 //------------------------------------------------------------------------------------------------------------------------------------------
 
 class MyQTextEdit : public QTextEdit
@@ -23,12 +25,19 @@ public:
 	inline static void RemoveCurrentRow(QTextEdit *edit);
 
 public:
-	explicit MyQTextEdit(QWidget *parent = nullptr) : QTextEdit(parent) {}
+	inline explicit MyQTextEdit(QWidget *parent = nullptr) : QTextEdit(parent)
+	{
+
+	}
 	virtual ~MyQTextEdit() = default;
 	bool richTextPaste = true; // если флаг установлен - текст будет вставляться с сохранением его форматирования
 
+	inline QTextCharFormat LetterFormat(int letterIndex) { return LetterFormat(this, letterIndex); }
+
+private:
+
 protected:
-	inline void insertFromMimeData(const QMimeData *source) override; // переопределение вставки текста из буффера обмена для richTextPaste
+	inline virtual void insertFromMimeData(const QMimeData *source) override; // переопределение вставки текста из буффера обмена для richTextPaste
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -128,6 +137,8 @@ void MyQTextEdit::RemoveCurrentRow(QTextEdit *edit)
 	cursor.deleteChar();
 	cursor.endEditBlock();
 }
+
+
 
 void MyQTextEdit::insertFromMimeData(const QMimeData * source)
 {
