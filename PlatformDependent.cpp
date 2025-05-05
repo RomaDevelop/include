@@ -63,14 +63,14 @@ bool PlatformDependent::IsProcessRunning(uint processID) {
 	return false; // Процесс не запущен или не может быть открыт
 }
 
-PlatformDependent::CopyMoveFileRes PlatformDependent::CopyMoveFile(QString S, QString D, CopyMoveFileMode Mode)
+PlatformDependent::CopyMoveFileRes PlatformDependent::CopyMoveFile(QString SourceFile, QString Destination, CopyMoveFileMode Mode)
 {
-	S.replace('/','\\');
-	D.replace('/','\\');
+	SourceFile.replace('/','\\');
+	Destination.replace('/','\\');
 	wchar_t cFrom[MAX_PATH] = {0};
-	wcscpy(cFrom, S.toStdWString().c_str());
+	wcscpy(cFrom, SourceFile.toStdWString().c_str());
 	wchar_t cTo[MAX_PATH] = {0};
-	wcscpy(cTo, D.toStdWString().c_str());
+	wcscpy(cTo, Destination.toStdWString().c_str());
 	SHFILEOPSTRUCT fos;
 	memset(&fos, 0, sizeof(SHFILEOPSTRUCT));
 	if(QApplication::activeWindow())
@@ -82,10 +82,20 @@ PlatformDependent::CopyMoveFileRes PlatformDependent::CopyMoveFile(QString S, QS
 	fos.pFrom = cFrom;
 	fos.pTo = cTo;
 	fos.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMMKDIR | FOF_SIMPLEPROGRESS;
+
 	CopyMoveFileRes res;
 	res.errorCode = SHFileOperation(&fos);
+
 	if(res.errorCode == 0) res.success = true;
-	else res.success = false;
+	else
+	{
+		res.success = false;
+		res.errorText = "Не удалось переместить файл\n\n"+SourceFile+
+				"\n\nв\n\n"+Destination+"!\n\nКод ошибки SHFileOperation: "+ QSn(res.errorCode);
+		if(Mode == copy)
+			res.errorText.replace("переместить", "скопировать");
+	}
+
 	return res;
 }
 

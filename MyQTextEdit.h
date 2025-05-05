@@ -3,6 +3,7 @@
 
 #include <QDebug>
 #include <QTextEdit>
+#include <QTextBlock>
 #include <QMimeData>
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -17,6 +18,9 @@ public:
 	inline void Colorize(QTextEdit *textEdit, int from, int to, const QColor &color);
 
 	inline static QTextCharFormat LetterFormat(QTextEdit *textEdit, int letterIndex);
+	enum direction { up, down };
+	inline static bool MoveCurrentRow(QTextEdit *edit, direction direction);
+	inline static void RemoveCurrentRow(QTextEdit *edit);
 
 public:
 	explicit MyQTextEdit(QWidget *parent = nullptr) : QTextEdit(parent) {}
@@ -77,6 +81,52 @@ QTextCharFormat MyQTextEdit::LetterFormat(QTextEdit *textEdit, int letterIndex)
 	cursor.setPosition(letterIndex, cursor.MoveAnchor);
 	cursor.setPosition(letterIndex+1, cursor.KeepAnchor);
 	return cursor.charFormat();
+}
+
+bool MyQTextEdit::MoveCurrentRow(QTextEdit *edit, direction direction)
+{
+	QTextCursor cursor = edit->textCursor();
+	int curBlockNum = cursor.blockNumber();
+	if (direction == up && curBlockNum == 0) return false;
+	if (direction == down && curBlockNum == edit->document()->blockCount()-1) return false;
+
+	QTextBlock curBlock = cursor.block();
+	QTextBlock otherBlock = direction == up ? curBlock.previous() : curBlock.next();
+	QString otherBlockText = otherBlock.text();
+
+	cursor.beginEditBlock();
+
+	cursor = QTextCursor(otherBlock);
+	cursor.select(QTextCursor::LineUnderCursor);
+	cursor.insertText(curBlock.text());
+
+	cursor = QTextCursor(curBlock);
+	cursor.select(QTextCursor::LineUnderCursor);
+	cursor.insertText(otherBlockText);
+
+	cursor = edit->textCursor();
+	cursor.movePosition(direction == up ? QTextCursor::Up : QTextCursor::Down, QTextCursor::MoveAnchor);
+	edit->setTextCursor(cursor);
+
+	cursor.endEditBlock();
+
+	return true;
+}
+
+void MyQTextEdit::RemoveCurrentRow(QTextEdit *edit)
+{
+	auto cursor = edit->textCursor();
+	cursor.beginEditBlock();
+	if (cursor.blockNumber() == edit->document()->blockCount()-1)
+	{
+		auto cursor = edit->textCursor();
+		cursor.movePosition(cursor.Up);
+		edit->setTextCursor(cursor);
+	}
+	cursor.select(QTextCursor::LineUnderCursor);
+	cursor.removeSelectedText();
+	cursor.deleteChar();
+	cursor.endEditBlock();
 }
 
 void MyQTextEdit::insertFromMimeData(const QMimeData * source)
