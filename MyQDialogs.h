@@ -23,6 +23,7 @@
 
 #include "MyQShortings.h"
 #include "MyQWidget.h"
+#include "MyQTableWidget.h"
 #include "declare_struct.h"
 #include "CodeMarkers.h"
 //---------------------------------------------------------------------------
@@ -377,18 +378,46 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::
 		vlo_main->addLayout(hlo1);
 
 		auto btnAdd = new QPushButton("+");
-		btnAdd->setFixedWidth(23);
+		MyQWidget::SetFontBold(btnAdd, true);
+		btnAdd->setFixedWidth(24);
 		hlo1->addWidget(btnAdd);
 		btnAdd->connect(btnAdd, &QPushButton::clicked, [table](){
+			if(table->columnCount() == 0) table->setColumnCount(1);
+
 			if(table->currentRow() == -1) table->insertRow(0);
 			else table->insertRow(table->currentRow());
 		});
 
 		auto btnRemove = new QPushButton("-");
-		btnRemove->setFixedWidth(23);
+		MyQWidget::SetFontBold(btnRemove, true);
+		btnRemove->setFixedWidth(24);
 		hlo1->addWidget(btnRemove);
 		btnRemove->connect(btnRemove, &QPushButton::clicked, [table](){
 			if(table->currentRow() != -1) table->removeRow(table->currentRow());
+		});
+
+		auto btnUp = new QPushButton("🡅");
+		btnUp->setFixedWidth(24);
+		hlo1->addWidget(btnUp);
+		btnUp->connect(btnUp, &QPushButton::clicked, [table](){
+			int currentRow = table->currentRow();
+			if(currentRow >= 1)
+			{
+				MyQTableWidget::SwapRows(table, currentRow, currentRow-1);
+				table->setCurrentCell(currentRow-1, table->currentColumn());
+			}
+		});
+
+		auto btnDown = new QPushButton("🡇");
+		btnDown->setFixedWidth(24);
+		hlo1->addWidget(btnDown);
+		btnDown->connect(btnDown, &QPushButton::clicked, [table](){
+			int currentRow = table->currentRow();
+			if(currentRow < table->rowCount()-1)
+			{
+				MyQTableWidget::SwapRows(table, currentRow, currentRow+1);
+				table->setCurrentCell(currentRow+1, table->currentColumn());
+			}
 		});
 
 		hlo1->addStretch();
