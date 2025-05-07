@@ -138,8 +138,6 @@ void MyQTextEdit::RemoveCurrentRow(QTextEdit *edit)
 	cursor.endEditBlock();
 }
 
-
-
 void MyQTextEdit::insertFromMimeData(const QMimeData * source)
 {
 	if(richTextPaste) QTextEdit::insertFromMimeData(source);
@@ -150,4 +148,6 @@ void MyQTextEdit::insertFromMimeData(const QMimeData * source)
 	}
 }
 
+//------------------------------------------------------------------------------------------------------------------------------------------
 #endif
+//------------------------------------------------------------------------------------------------------------------------------------------

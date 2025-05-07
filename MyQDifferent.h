@@ -4,6 +4,7 @@
 //--------------------------------------------------------------------------------------------------------------------------------
 #include <direct.h>
 #include <algorithm>
+#include <set>
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -32,6 +33,8 @@ struct MyQDifferent
     inline static void GetPathName(QString file, QString *path, QString *name);
 
 	inline static QStringList ArgsToStrList(int argc, char *argv[]);
+
+	inline static void DoOnce(const QString &id, std::function<void()> action);
 };
 
 //--------------------------------------------------------------------------------------------------------------------------------
@@ -221,6 +224,16 @@ QStringList MyQDifferent::ArgsToStrList(int argc, char *argv[])
 	QStringList args;
 	for(int i=0; i<argc; i++) args += argv[i];
 	return args;
+}
+
+void MyQDifferent::DoOnce(const QString &id, std::function<void ()> action)
+{
+	static std::set<QString> ids;
+	if(ids.count(id) == 0)
+	{
+		action();
+		ids.insert(id);
+	}
 }
 
 //---------------------------------------------------------------------------------------------------------------------------
