@@ -75,7 +75,7 @@ bool MyQExecute::ShowInExplorer(QString fileOrDir)
 	}
 	else
 	{
-		qCritical() << "MyQExecute::Execute: объект " + fileOrDir + " не обнаружен";
+		qCritical() << "MyQExecute::ShowInExplorer: объект " + fileOrDir + " не обнаружен";
 		return false;
 	}
 }
