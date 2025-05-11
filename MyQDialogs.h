@@ -112,6 +112,7 @@ QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList butt
 		// " " + btn + " " потому что setContentsMargins для вн.виджетов, а не текста, а setStyleSheet("padding: 6px;") имеет побочные эффекты
 	}
 	int desision =  messageBox.exec(); // возвращает 0 1 2 по порядку кнопок
+	#error что-то другое возвращает
 	QString retText = messageBox.buttons()[desision]->text();
 	retText.chop(1);
 	retText.remove(0,1);
@@ -120,8 +121,11 @@ QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList butt
 
 void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<MenuItem> items)
 {
-	static std::vector<MenuItem> staticItems;
+	static std::vector<MenuItem> staticItems; 
 	staticItems = std::move(items);
+	// без staticItems меню создано и показано, функция отработота - items уничтожены. Поьзователь жмет кнопку и идет работа с уничтоженным объектом
+	#error будет проблема если показать отдно меню, показать второе, первое не скрылось и нажать в первом
+	#error возможность добавить separator
 
 	QMenu *menu = new QMenu(w);
 	for(auto &item:staticItems)

@@ -2,8 +2,6 @@
 #ifndef MYQDIFFERENT_H
 #define MYQDIFFERENT_H
 //--------------------------------------------------------------------------------------------------------------------------------
-#include <direct.h>
-#include <algorithm>
 #include <set>
 
 #include <QCoreApplication>
