@@ -1,6 +1,6 @@
 #ifndef MYQDIALOGS_H
 #define MYQDIALOGS_H
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 #include <memory>
 
 #include <QApplication>
@@ -26,7 +26,7 @@
 #include "MyQTableWidget.h"
 #include "declare_struct.h"
 #include "CodeMarkers.h"
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 class MyQDialogs
 {
 public:
@@ -36,7 +36,10 @@ public:
 
 	declare_struct_2_fields_move(MenuItem, QString, text, std::function<void()>, worker);
 	inline static void MenuUnderWidget(QWidget *w, std::vector<MenuItem> items);
-	inline static void MenuUnderWidget(QWidget *w, QStringList menuItems, std::vector<std::function<void()>> workers);
+	inline static void MenuUnderWidget(QWidget *w, QStringList texts, std::vector<std::function<void()>> workers);
+	inline static MenuItem SeparatorMenuItem() { return MenuItem("SeparatorMenuItem", nullptr); }
+	inline static MenuItem DisabledItem(QString text) { text+=DisabledItemMarker(); return MenuItem(std::move(text), nullptr);  }
+	inline static const QString& DisabledItemMarker() { static QString str = "[!DisabledItem!]"; return str; }
 
 	declare_struct_2_fields_move(InputTextRes, QString, text, bool, accepted);
 	inline static InputTextRes InputText(QString captionDialog = "", QString startText = "", uint w = 640, uint h = 480);
@@ -87,7 +90,7 @@ public:
 
 	inline static const QString& Undefined() { static QString str = "Undefined"; return str; }
 };
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 void MyQDialogs::ShowText(const QString & text, uint w, uint h)
 {
 	std::unique_ptr<QDialog> dialog(new QDialog);
@@ -111,48 +114,66 @@ QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList butt
 		messageBox.addButton(" " + btn + " ",QMessageBox::YesRole);  // Role не имеет значения
 		// " " + btn + " " потому что setContentsMargins для вн.виджетов, а не текста, а setStyleSheet("padding: 6px;") имеет побочные эффекты
 	}
-	int desision =  messageBox.exec(); // возвращает 0 1 2 по порядку кнопок
-	#error что-то другое возвращает
-	QString retText = messageBox.buttons()[desision]->text();
-	retText.chop(1);
-	retText.remove(0,1);
+	messageBox.exec();
+	QString retText;
+	if(auto button = messageBox.clickedButton(); button)
+	{
+		retText = button->text();
+		retText.chop(1);
+		retText.remove(0,1);
+	}
 	return retText;
 }
 
 void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<MenuItem> items)
 {
-	static std::vector<MenuItem> staticItems; 
-	staticItems = std::move(items);
-	// без staticItems меню создано и показано, функция отработота - items уничтожены. Поьзователь жмет кнопку и идет работа с уничтоженным объектом
-	#error будет проблема если показать отдно меню, показать второе, первое не скрылось и нажать в первом
-	#error возможность добавить separator
+	std::vector<MenuItem> *itemsPtr = new std::vector<MenuItem>;
+	std::vector<MenuItem> &itemsRef = *itemsPtr;
+	itemsRef = std::move(items);
+	// Без itemsPtr = new ... меню создано и показано, функция отработота - items уничтожены.
+	// Поьзователь нажмёт кнопку и будет попытка работы с уничтоженным объектом
 
 	QMenu *menu = new QMenu(w);
-	for(auto &item:staticItems)
+	QObject::connect(menu, &QObject::destroyed, [itemsPtr](){ delete itemsPtr; });
+	auto separator = SeparatorMenuItem();
+	for(auto &item:itemsRef)
 	{
-		QAction *action = new QAction(item.text, menu);
-		menu->addAction(action);
-		QObject::connect(action, &QAction::triggered, [action](){
-			for(uint i=0; i<staticItems.size(); i++)
-			{
-				if(staticItems[i].text == action->text())
-				{
-					staticItems[i].worker();
-					return;
-				}
-			}
-			QMbError("MenuUnderWidget: error, action text not found in texts");
-		});
+		if(item.text == separator.text)
+		{
+			menu->addSeparator();
+		}
+		else if(item.text.contains(DisabledItemMarker()))
+		{
+			item.text.remove(DisabledItemMarker());
+			QAction *action = new QAction(item.text, menu);
+			action->setEnabled(false);
+			menu->addAction(action);
+		}
+		else
+		{
+			if(!item.worker) { QMbError("nullptr worker in action " + item.text); continue; }
+
+			QAction *action = new QAction(item.text, menu);
+			MenuItem *itemPtr = &item;
+			menu->addAction(action);
+			QObject::connect(action, &QAction::triggered, [menu, itemsPtr, itemPtr](){
+				if(itemPtr->worker) itemPtr->worker();
+				else QMbError("nullptr worker executed");
+
+				menu->hide();
+				menu->deleteLater();
+			});
+		}
 	}
 	menu->exec(w->mapToGlobal(QPoint(0, w->height())));
 }
 
-void MyQDialogs::MenuUnderWidget(QWidget *w, QStringList menuItems, std::vector<std::function<void ()> > workers)
+void MyQDialogs::MenuUnderWidget(QWidget *w, QStringList texts, std::vector<std::function<void()>> workers)
 {
-	if(menuItems.size() != (int)workers.size()) { QMbError("MenuUnderWidget menuItems and workers different sizes"); return; }
+	if(texts.size() != (int)workers.size()) { QMbError("MenuUnderWidget menuItems and workers different sizes"); return; }
 	std::vector<MenuItem> items;
-	for(int i=0; i<menuItems.size(); i++)
-		items.emplace_back(    std::move(menuItems[i]), std::move(workers[i])    );
+	for(int i=0; i<texts.size(); i++)
+		items.emplace_back(    std::move(texts[i]), std::move(workers[i])    );
 
 	MenuUnderWidget(w, items);
 }
@@ -578,5 +599,6 @@ void MyQDialogs::ShowAllStandartIcons()
 	w->show();
 }
 
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 #endif // MYQDIALOGS_H
+//------------------------------------------------------------------------------------------------------------------------------------------
