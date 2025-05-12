@@ -1,6 +1,6 @@
 #ifndef SyntaxHighlighters
 #define SyntaxHighlighters
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 #include <QTextEdit>
 #include <QSyntaxHighlighter>
 #include <QTextCharFormat>
@@ -8,13 +8,13 @@
 #include <QDebug>
 
 #include "MyQShortings.h"
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 class ForSyntaxHighlighters
 {
 public:
     inline static QTextCharFormat GetFormatUnderCursor(QTextEdit* textEdit);
 };
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 class XmlHighlighter : public QSyntaxHighlighter {
 
 public:
@@ -36,7 +36,7 @@ private:
     };
     //QVector<HighlightingRule> highlightingRules;
 };
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 QTextCharFormat ForSyntaxHighlighters::GetFormatUnderCursor(QTextEdit * textEdit)
 {
     QTextCursor cursor = textEdit->textCursor();
@@ -53,7 +53,7 @@ QTextCharFormat ForSyntaxHighlighters::GetFormatUnderCursor(QTextEdit * textEdit
     }
     return QTextCharFormat();
 }
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 XmlHighlighter::XmlHighlighter(QTextDocument * parent, QTextCharFormat * tagFormat, QTextCharFormat * attributeFormat, QTextCharFormat * valueFormat) :
     QSyntaxHighlighter(parent)
 {
@@ -141,6 +141,6 @@ void XmlHighlighter::highlightBlock(const QString & text)
 }
 
 
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 #endif
 
