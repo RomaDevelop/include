@@ -7,9 +7,9 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QDateTime>
+#include <QTextCodec>
 #include <QMessageBox>
 #include <QDirIterator>
-#include <QTextCodec>
 
 #include "MyQShortings.h"
 //---------------------------------------------------------------------------
@@ -22,6 +22,10 @@ struct MyQFileDir
 
     enum { modified = 1, read = 2, noSort = 0 };
     inline static QString RemoveOldFiles(QString directory, int remainCount, int sortFlag = MyQFileDir::modified);
+
+    inline static void RemoveOldFiles2(const QString &backupRootDir, int maxDays);
+
+    inline static void RemoveEmptySubcats(const QString &directory);
 
     inline static bool RemoveDirIfEmpty(const QString &dirStr, bool ShowErrorMessage);
 
@@ -131,6 +135,63 @@ QString MyQFileDir::RemoveOldFiles(QString directory, int remainCount, int sortF
     return ret;
 }
 
+void MyQFileDir::RemoveOldFiles2(const QString &backupRootDir, int maxDays)
+{
+    QDir dir(backupRootDir);
+    if (!dir.exists()) {
+	return;
+    }
+
+    QDateTime now = QDateTime::currentDateTime();
+
+    QStringList subDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QString &subDirName : subDirs) {
+	// Парсим имя папки: "yyyy.MM.dd hh-mm-ss_mode"
+	int firstSpace = subDirName.indexOf(' ');
+	if (firstSpace == -1) {
+	    continue;
+	}
+
+	QString datePart = subDirName.left(firstSpace);
+	QString timeAndModePart = subDirName.mid(firstSpace + 1);
+
+	int firstUnderscore = timeAndModePart.indexOf('_');
+	if (firstUnderscore == -1) {
+	    continue;
+	}
+
+	QString timePart = timeAndModePart.left(firstUnderscore);
+	QString dateTimeStr = datePart + " " + timePart;
+
+	QDateTime dirDateTime = QDateTime::fromString(dateTimeStr, "yyyy.MM.dd hh-mm-ss");
+	if (!dirDateTime.isValid()) {
+	    continue;
+	}
+
+	qint64 daysAgo = dirDateTime.daysTo(now);
+	if (daysAgo > maxDays) {
+	    QDir subDirFullPath(dir.filePath(subDirName));
+	    subDirFullPath.removeRecursively();
+	}
+    }
+
+    RemoveEmptySubcats(backupRootDir);
+}
+
+void MyQFileDir::RemoveEmptySubcats(const QString &directory)
+{
+        QDir dir(directory);
+
+	// Рекурсивное обработка поддиректорий
+	const QStringList subDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+	for (const QString &subDir : subDirs) {
+	        RemoveEmptySubcats(dir.filePath(subDir));
+	}
+
+	// Рекурсивное удаление пустых папок
+	dir.rmdir(".");
+}
+
 inline bool MyQFileDir::RemoveDirIfEmpty(const QString &dirStr, bool ShowErrorMessage)
 {
     if(QDir dir(dirStr); dir.isEmpty())
@@ -146,9 +207,9 @@ inline bool MyQFileDir::RemoveDirIfEmpty(const QString &dirStr, bool ShowErrorMe
 
 void MyQFileDir::ReplaceFileWithBackup(const QFileInfo & src, const QFileInfo & dst, const QString & backupPath)
 {
-	QFile fileToReplace(dst.filePath());
-	QString dateFormat = "yyyy.MM.dd hh:mm:ss:zzz";
-	QString backupFile = backupPath + "/" + QDateTime::currentDateTime().toString(dateFormat).replace(':','.') + " " + dst.fileName();
+    QFile fileToReplace(dst.filePath());
+    QString dateFormat = "yyyy.MM.dd hh:mm:ss:zzz";
+    QString backupFile = backupPath + "/" + QDateTime::currentDateTime().toString(dateFormat).replace(':','.') + " " + dst.fileName();
     if(!fileToReplace.copy(backupFile)) QMessageBox::information(nullptr,"Ошибка","Не удалось создать backup-файл" + backupFile);
     else
     {
