@@ -14,7 +14,9 @@
 QDateTime PlatformDependent::GetProcessStartTime(uint processID) {
 	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, (DWORD)processID);
 	if (hProcess == NULL) {
-		std::cerr << "Не удалось открыть процесс с PID " << processID << ". Ошибка: " << GetLastError() << std::endl;
+		auto err = GetLastError();
+		qdbg << "PlatformDependent::GetProcessStartTime: Не удалось открыть процесс с PID "
+				+ QSn(processID) + ". Ошибка: " + QSn(err);
 		return QDateTime(); // Возвращаем пустой QDateTime в случае ошибки
 	}
 
@@ -31,8 +33,12 @@ QDateTime PlatformDependent::GetProcessStartTime(uint processID) {
 		QDateTime startTime = QDateTime::fromMSecsSinceEpoch(ull.QuadPart / 10000 - 11644473600000LL);
 		CloseHandle(hProcess);
 		return startTime;
-	} else {
-		std::cerr << "Не удалось получить время процесса. Ошибка: " << GetLastError() << std::endl;
+	}
+	else
+	{
+		auto err = GetLastError();
+		qdbg << "PlatformDependent::GetProcessStartTime: Не удалось получить время процесса. Ошибка: "
+				+ QSn(err);
 		CloseHandle(hProcess);
 		return QDateTime(); // Возвращаем пустой QDateTime в случае ошибки
 	}
@@ -43,22 +49,23 @@ bool PlatformDependent::IsProcessRunning(uint processID) {
 	if(hProcess != NULL)
 	{
 		DWORD exitCode;
-		// Получаем код завершения процесса
-		if(GetExitCodeProcess(hProcess, &exitCode))
+		if(GetExitCodeProcess(hProcess, &exitCode)) // Получаем код завершения процесса
 		{
 			CloseHandle(hProcess); // Закрываем дескриптор
-			// Если код завершения равен STILL_ACTIVE, процесс все еще работает
-			return (exitCode == STILL_ACTIVE);
+			return (exitCode == STILL_ACTIVE); // Если код завершения равен STILL_ACTIVE, процесс все еще работает
 		}
 		else
 		{
-			std::cerr << "GetExitCodeProcess error: " << GetLastError() << std::endl;
+			auto err = GetLastError();
+			qdbg << "IsProcessRunning::GetExitCodeProcess error: " + QSn(err);
 		}
 		CloseHandle(hProcess); // Закрываем дескриптор в случае ошибки
 	}
 	else
 	{
-		std::cerr << "OpenProcess error: " << GetLastError() << std::endl;
+		auto err = GetLastError();
+		if(err == ERROR_INVALID_PARAMETER) ; // ok, means not running
+		else qdbg << "IsProcessRunning::OpenProcess unknown error " + QSn(err);
 	}
 	return false; // Процесс не запущен или не может быть открыт
 }
@@ -122,3 +129,7 @@ void PlatformDependent::ShowPropertiesWindow(const QString &file)
 	sei.nShow = SW_SHOW;
 	ShellExecuteEx(&sei);
 }
+
+
+
+
