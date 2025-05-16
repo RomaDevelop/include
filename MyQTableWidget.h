@@ -6,6 +6,7 @@
 
 #include <QApplication>
 #include <QTableWidget>
+#include <QScrollBar>
 #include <QClipboard>
 #include <QMenu>
 #include <QAction>
@@ -24,6 +25,7 @@ class MyQTableWidget : public QTableWidget
 public:
 	inline static bool SwapRows(QTableWidget *table, int row1, int row2);
 	inline static void SetItemEditableState(QTableWidgetItem *item, bool editableNewState);
+	inline static void FitColsWidths(QTableWidget *table); // не проверено!!!
 
 public:
 	MyQTableWidget(QWidget *parent = nullptr) : QTableWidget(parent)
@@ -237,6 +239,28 @@ void MyQTableWidget::SetItemEditableState(QTableWidgetItem * item, bool editable
 	auto flags = item->flags();
 	flags.setFlag(Qt::ItemIsEditable, editableNewState);
 	item->setFlags(flags);
+}
+
+void MyQTableWidget::FitColsWidths(QTableWidget *table)
+{
+	if(table->columnCount() == 0) return;
+
+	int tableSpace = table->width();
+	if(table->verticalScrollBar()->isVisible()) tableSpace -= table->verticalScrollBar()->width();
+	tableSpace -= 3;
+
+	if(table->width() < 1) return;
+
+	int currentColsWidth = 0;
+	for(int i=0; i<table->columnCount(); i++) currentColsWidth += table->columnWidth(i);
+
+	if (currentColsWidth == 0) return;
+
+	for(int i=0; i<table->columnCount(); i++)
+	{
+		float persent = (float)table->columnWidth(i) / (float)currentColsWidth;
+		table->setColumnWidth(i, tableSpace*persent);
+	}
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
