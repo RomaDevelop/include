@@ -9,6 +9,7 @@
 #include <QStyledItemDelegate>
 #include <QPainter>
 #include <QKeyEvent>
+#include <QStandardItemModel>
 
 #include "MyQShortings.h"
 #include "MyQString.h"
@@ -45,7 +46,8 @@ public:
 
 	inline int FindRowByValue(int fieldIndex, const QString &fieldValue);
 	inline bool Locate(const QString &fieldName, const QString &fieldValue, int columnToSet = -1);
-	inline bool LocateRow(int row, int column = -1); // col = -1 и останется в текущей колонке
+	inline bool Locate(int fieldIndex, const QString &fieldValue, int columnToSet = -1);
+	inline bool LocateRow(int row, int columnToSet = -1); // col = -1 и останется в текущей колонке
 
 	inline QStringList Field(int index);
 
@@ -61,8 +63,8 @@ public:
 	inline void keyPressEvent(QKeyEvent* event) override;
 	inline void wheelEvent(QWheelEvent* event) override;
 private:
-	inline bool CheckArrows(QKeyEvent* event);
-	inline bool CheckEditTriggers(QKeyEvent* event);
+	inline bool IsKeyArrow(int key);
+	inline bool IsKeyEditTrigger(int key);
 private slots:
 	inline void ActivateEditableCols(const QModelIndex &current, const QModelIndex &);
 private:
@@ -74,14 +76,16 @@ private:
 class ColoriserDelegate : public QStyledItemDelegate
 {
 public:
-	std::function<bool(const QModelIndex &currentIndex)> highliteRule;
-	QColor color;
+	using highliteRule = std::function<QColor(const QModelIndex &currentIndex)>;
+	std::vector<highliteRule> highliteRules;
 
 	ColoriserDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) {}
 
 	void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override {
-		if (highliteRule && highliteRule(index)) // проверка правила
-			painter->fillRect(option.rect, color); // окрашивание
+		for(auto &rule:highliteRules)
+			if(rule)
+				if(auto color = rule(index); color.isValid())
+					painter->fillRect(option.rect, color); // окрашивание
 		// вызов базового метода для отрисовки ячейки
 		QStyledItemDelegate::paint(painter, option, index);
 	}
@@ -132,9 +136,6 @@ inline bool MyQTableView::Locate(const QString &fieldName, const QString &fieldV
 	QAbstractItemModel *model = this->model();
 	if (!model) return false;
 
-	if(columnToSet == -1) columnToSet = this->currentIndex().column();
-	if(columnToSet == -1) columnToSet = 0;
-
 	// определение колонки для этого поля
 	int columnOfField = -1;
 	for (int i = 0; i < model->columnCount(); ++i)
@@ -147,22 +148,33 @@ inline bool MyQTableView::Locate(const QString &fieldName, const QString &fieldV
 	}
 	if (columnOfField == -1) return false;
 
-	int row = FindRowByValue(columnOfField, fieldValue);
-	if(row >= 0) return LocateRow(row, columnToSet);
-	else return false;
+	return Locate(columnOfField, fieldValue, columnToSet);
 }
 
-inline bool MyQTableView::LocateRow(int row, int column)
+bool MyQTableView::Locate(int fieldIndex, const QString &fieldValue, int columnToSet)
 {
 	QAbstractItemModel *model = this->model();
 	if (!model) return false;
 
-	if(column == -1) column = this->currentIndex().column();
-	if(column == -1) column = 0;
+	if(columnToSet == -1) columnToSet = this->currentIndex().column();
+	if(columnToSet == -1) columnToSet = 0;
+
+	int row = FindRowByValue(fieldIndex, fieldValue);
+	if(row >= 0) return LocateRow(row, columnToSet);
+	else return false;
+}
+
+inline bool MyQTableView::LocateRow(int row, int columnToSet)
+{
+	QAbstractItemModel *model = this->model();
+	if (!model) return false;
+
+	if(columnToSet == -1) columnToSet = this->currentIndex().column();
+	if(columnToSet == -1) columnToSet = 0;
 
 	while(row >= model->rowCount() && model->canFetchMore(QModelIndex()))
 		model->fetchMore(QModelIndex());
-	QModelIndex index = model->index(row, column);
+	QModelIndex index = model->index(row, columnToSet);
 	if(index.isValid())
 	{
 		setCurrentIndex(index);
@@ -236,17 +248,40 @@ void MyQTableView::setModel(QAbstractItemModel *model)
 
 void MyQTableView::keyPressEvent(QKeyEvent *event)
 {
-	if(!keyBoardSearch) // если отключен поиск
+	// если это edit trigger
+	if(IsKeyEditTrigger(event->key()))
 	{
-		if(!CheckArrows(event)) // если нажатые клавиши не стрелки
-			if(!CheckEditTriggers(event)) // если нажатые клавиши не активируют редактирование ячейки
-			{
-				event->ignore(); // игнорируем событие
-				//qdbg << "event->ignore()";
+		// если это Enter
+		if((event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) &&
+				state() != QAbstractItemView::EditingState) // и сейчас не редактирование
+		{
+			// Принудительно запускаем редактирование текущей ячейки
+				// потому что с какого-то хера в Qt Enter не запускает редактирование
+			QModelIndex current = currentIndex();
+			if (current.isValid()) {
+				edit(current);
+				event->accept();
 				return;
 			}
+		}
+		// в остальных случаях - отрабатывается как обычно
+		else { QTableView::keyPressEvent(event); return; }
+
 	}
-	QTableView::keyPressEvent(event); // иначе, запускается стандартный обработчик
+
+	// если поиск не отключен - отрабатывается как обычно
+	if(keyBoardSearch) { QTableView::keyPressEvent(event); return; }
+	else
+	{
+		// а вот если поиск отключен, то:
+
+		// если это стрелка - отрабатывается как обычно
+		if(IsKeyArrow(event->key())) { QTableView::keyPressEvent(event); return; }
+
+		// в остальных случаях - игнорирование события
+		event->accept();
+		return;
+	}
 }
 
 void MyQTableView::wheelEvent(QWheelEvent *event) {
@@ -276,70 +311,31 @@ void MyQTableView::wheelEvent(QWheelEvent *event) {
 	}
 }
 
-bool MyQTableView::CheckArrows(QKeyEvent *event)
+bool MyQTableView::IsKeyArrow(int key)
 {
-	int key = event->key();
 	if(key == Qt::Key_Up || key == Qt::Key_Down || key == Qt::Key_Left || key == Qt::Key_Right)
 		return true;
 	return false;
 }
 
-bool MyQTableView::CheckEditTriggers(QKeyEvent *event)
+bool MyQTableView::IsKeyEditTrigger(int key)
 {
 	QAbstractItemView::EditTriggers currentTriggers = editTriggers();
-	if(currentTriggers == NoEditTriggers) // если нет триггеров редактирования
-		return false;
 
-	int key = event->key();
-	//Qt::KeyboardModifiers modifiers = event->modifiers();
+	// если стоят триггеры AllEditTriggers или AnyKeyPressed
+	if(currentTriggers & AllEditTriggers || currentTriggers & AnyKeyPressed)
+	{
+		return true;
+	}
 
 	if(currentTriggers & EditKeyPressed) // если стоят триггеры EditKeyPressed
 	{
 		if(key == Qt::Key_F2 || key == Qt::Key_Enter || key == Qt::Key_Return)
 			return true;
-		else return false;
 	}
 
-	if(currentTriggers & AnyKeyPressed) // если стоят триггеры EditKeyPressed
-	{
-		return true;
-	}
-
-	static bool pritedError = 0;
-	if(!pritedError) qdbg << "unrealesed case MyQTableView::CheckEditTriggers" << currentTriggers << QSn(key,16);
-
-	return true;
-
-	//		// Проверка AnyKeyPressed — любая клавиша без модификаторов (Ctrl, Alt, Meta)
-	//		if (currentTriggers & QAbstractItemView::AnyKeyPressed) {
-	//			// Если клавиша не модификаторная (не Ctrl, Alt, Meta)
-	//			if (!(modifiers & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier))) {
-	//				return true;  // Любая клавиша без модификаторов
-	//			}
-	//		}
-
-	//		// Проверка EditKeyPressed — клавиши, активирующие редактирование
-	//		if (currentTriggers & QAbstractItemView::EditKeyPressed) {
-	//			// Разрешённые клавиши: цифры, буквы, русские буквы (если требуется), спецсимволы
-	//			if ((key >= Qt::Key_0 && key <= Qt::Key_9) ||   // Цифры
-	//				(key >= Qt::Key_A && key <= Qt::Key_Z) ||   // Буквы (латиница)
-	//				//(key >= Qt::Key_А && key <= Qt::Key_Я) ||   // Русские буквы (если актуально)
-	//				key == Qt::Key_Backspace || key == Qt::Key_Delete ||  // Клавиши удаления
-	//				key == Qt::Key_Space || key == Qt::Key_Enter || key == Qt::Key_Return ||  // Пробел, Enter, Return
-	//				key == Qt::Key_Tab ||  // Tab
-	//				key == Qt::Key_Plus || key == Qt::Key_Minus || key == Qt::Key_Asterisk ||  // Операторы
-	//				key == Qt::Key_Slash || key == Qt::Key_Period || key == Qt::Key_Comma ||  // Прочие символы
-	//				key == Qt::Key_Semicolon || key == Qt::Key_Colon) {
-	//				return true;  // Клавиши, активирующие редактирование
-	//			}
-	//		}
-
-	//		// Проверка AllEditTriggers — если все триггеры разрешают редактирование
-	//		if (currentTriggers == QAbstractItemView::AllEditTriggers) {
-	//			return true;
-	//		}
-
-	//		return false;  // Никакой триггер не активирует редактирование
+	//qdbg << "not edit trugger; " << currentTriggers;
+	return false;
 }
 
 void MyQTableView::ActivateEditableCols(const QModelIndex &current, const QModelIndex &)

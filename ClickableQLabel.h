@@ -13,17 +13,16 @@ public:
 		QLabel(parent) {}
 	explicit ClickableQLabel(const QString &text, QWidget *parent=nullptr, Qt::WindowFlags f=Qt::WindowFlags()) :
 		QLabel(text, parent, f) {}
+	virtual ~ClickableQLabel() = default;
 
 signals:
 	void clicked();
 
 protected:
 	void mousePressEvent(QMouseEvent *event) override {
-		// Вызываем базовый класс для обработки других событий
-		QLabel::mousePressEvent(event);
+		if (event->button() == Qt::LeftButton) emit clicked();
 
-		// Испускаем сигнал clicked()
-		emit clicked();
+		QLabel::mousePressEvent(event);
 	}
 };
 

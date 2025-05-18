@@ -26,9 +26,7 @@ public:
 
 public:
 	inline explicit MyQTextEdit(QWidget *parent = nullptr) : QTextEdit(parent)
-	{
-
-	}
+	{ }
 	virtual ~MyQTextEdit() = default;
 	bool richTextPaste = true; // если флаг установлен - текст будет вставляться с сохранением его форматирования
 
@@ -134,6 +132,7 @@ void MyQTextEdit::RemoveCurrentRow(QTextEdit *edit)
 	}
 	cursor.select(QTextCursor::LineUnderCursor);
 	cursor.removeSelectedText();
+	cursor.movePosition(cursor.Left);
 	cursor.deleteChar();
 	cursor.endEditBlock();
 }

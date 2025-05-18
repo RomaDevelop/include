@@ -31,6 +31,7 @@ class MyQDialogs
 {
 public:
 	inline static void ShowText(const QString &text, uint w = 800, uint h = 600);
+	inline static void ShowText(const QStringList &text, uint w = 800, uint h = 600);
 
 	inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
 
@@ -98,6 +99,24 @@ void MyQDialogs::ShowText(const QString & text, uint w, uint h)
 	QTextBrowser *textBrowser = new QTextBrowser;
 	textBrowser->setTabStopDistance(40);
 	textBrowser->setPlainText(text);
+	hlo->addWidget(textBrowser);
+
+	if(!w) w = 150;
+	if(!h) h = 150;
+	dialog->resize(w, h);
+	dialog->exec();
+}
+
+void MyQDialogs::ShowText(const QStringList &text, uint w, uint h)
+{
+	std::unique_ptr<QDialog> dialog(new QDialog);
+	QHBoxLayout *hlo  = new QHBoxLayout(dialog.get());
+	QTextBrowser *textBrowser = new QTextBrowser;
+	textBrowser->setTabStopDistance(40);
+
+	for(auto &row:text) textBrowser->append(row);
+	QTimer::singleShot(0, textBrowser, [textBrowser]() { textBrowser->verticalScrollBar()->setValue(0); });
+
 	hlo->addWidget(textBrowser);
 
 	if(!w) w = 150;
