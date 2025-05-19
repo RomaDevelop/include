@@ -130,7 +130,8 @@ QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList butt
 	QMessageBox messageBox(QMessageBox::Question, caption, text);
 	for(auto &btn:buttons)
 	{
-		messageBox.addButton(" " + btn + " ",QMessageBox::YesRole);  // Role не имеет значения
+		btn.prepend(' ').append(' ');
+		messageBox.addButton(btn, QMessageBox::YesRole);  // Role не имеет значения
 		// " " + btn + " " потому что setContentsMargins для вн.виджетов, а не текста, а setStyleSheet("padding: 6px;") имеет побочные эффекты
 	}
 	messageBox.exec();
@@ -256,9 +257,12 @@ MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QStr
 	hloBtns->addStretch();
 	for(auto &btnText:buttons)
 	{
+		btnText.prepend(' ').append(' ');
 		hloBtns->addWidget(new QPushButton(btnText));
 		QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog, lineEdit, btnText, &ret](){
 			ret.button = btnText;
+			ret.button.chop(1);
+			ret.button.remove(0,1);
 			ret.text = lineEdit->text();
 			dialog->close();
 		});
