@@ -153,7 +153,21 @@ QStringList Code::TextToCommands(const QString &text)
 	for(int i=size-1; i>=0; i--)
 	{
 		Normalize(commands[i]);
-		if(commands[i] == "") { commands.removeAt(i); continue; }
+		if(commands[i] == "") { commands.removeAt(i); continue;
+
+//			QString textToLog = "empty command found in text: ";
+//			textToLog += text.size() < 500 ? text : text.left(500) + "...";
+//			textToLog += "\n\ncommands:\n";
+//			textToLog += commands.join("\n").remove('\r').replace("\n\n", "\n");
+//			Logs::WarningSt(textToLog);
+			/// вывод предупреждений о пустых командах отключен из-за ложных срабатываний
+			/// избежать ложных срабатываний затруднительно, поскольку пустая команда может легально образоваться от:
+			///		комментария после последней ;
+			///		от пробелов после последней ;
+			///		от \n или др. спец.символов после последней ;
+			///		возможно что-то ещё
+			///			можно предусмотреть эти случаи
+		}
 	}
 	return commands;
 }
@@ -805,6 +819,10 @@ bool CodeTests::TestTextToCommands()
 	// тест игнорирования комментария
 	inputsTexts.push_back(					"command1;c2w1 c2w2    c2w3     ;  //  command3;other;\"sdvsdv\";//;\nrow2 /");
 	resultsMustBe.push_back(QStringList({	"command1", "c2w1 c2w2 c2w3","row2 /"}));
+
+	// проверка с пустыми командами
+	inputsTexts.push_back(					"command1;   ;    ;    command3");
+	resultsMustBe.push_back(QStringList({	"command1", "command3"}));
 
 	QStringList errors;
 

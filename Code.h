@@ -99,7 +99,7 @@ class Code
 {
 public:
 	static void Normalize(QString &text);
-	static QStringList TextToCommands(const QString &text); // внутри вызывается Normalize
+	static QStringList TextToCommands(const QString &text); // внутри вызывается Normalize; гарантируется отсутсвие пустых команд в return
 	static QStringList CommandToWords(const QString &command);
 
 	static Statements TextToStatements(const QString &text);  // внутри вызывается Normalize
