@@ -28,22 +28,9 @@ public:
 	inline static void FitColsWidths(QTableWidget *table); // не проверено!!!
 
 public:
-	MyQTableWidget(QWidget *parent = nullptr) : QTableWidget(parent)
-	{
-		setContextMenuPolicy(Qt::CustomContextMenu);
-		connect(this, &QWidget::customContextMenuRequested, this, &MyQTableWidget::showContextMenu);
+	inline explicit MyQTableWidget(QWidget *parent = nullptr);
+	inline void CreateContextMenu();
 
-		setSelectionMode(QAbstractItemView::ContiguousSelection);
-	}
-
-protected:
-	void keyPressEvent(QKeyEvent *event) override
-	{
-		if (event->matches(QKeySequence::Cut)) cut();
-		else if (event->matches(QKeySequence::Copy)) copy();
-		else if (event->matches(QKeySequence::Paste)) paste();
-		QTableWidget::keyPressEvent(event);
-	}
 public: signals:
 	void SignalAfterCut();
 	void SignalAfterPaste();
@@ -60,163 +47,15 @@ public:
 	};
 	std::vector<ItemState> itemStatesBeforePaste;
 	std::vector<ItemState> itemStatesBeforeCut;
-	QString RestoreState(const std::vector<ItemState> &states)
-	{
-		QString errors;
-		for(auto &state:states)
-		{
-			auto changingItem = item(state.itemRow, state.itemCol);
-			if(changingItem)
-			{
-				if(state.text == ItemState::ItemWasNullptr())
-					setItem(state.itemRow, state.itemCol, nullptr);
-				else changingItem->setText(state.text);
-			}
-			else errors += "restoring item ("+QSn(state.itemRow)+","+QSn(state.itemCol)+") is nullptr\n";
-		}
-		return errors;
-	}
+	inline QString RestoreState(const std::vector<ItemState> &states);
 private slots:
-	void showContextMenu(const QPoint &pos)
-	{
-		static QMenu* mPtr = nullptr;
-		if(!mPtr)
-		{
-			mPtr = new QMenu(this);
-			QMenu &menu = *mPtr;
-			QAction *cutAction = menu.addAction("Cut");
-			QAction *copyAction = menu.addAction("Copy");
-			QAction *pasteAction = menu.addAction("Paste");
-			QAction *pasteActionFromOsClip = menu.addAction("Paste from OS clipboard");
-			cutAction->setShortcut(QKeySequence::Cut);
-			copyAction->setShortcut(QKeySequence::Copy);
-			pasteAction->setShortcut(QKeySequence::Paste);
-			connect(cutAction, &QAction::triggered, this, &MyQTableWidget::cut);
-			connect(copyAction, &QAction::triggered, this, &MyQTableWidget::copy);
-			connect(pasteAction, &QAction::triggered, this, &MyQTableWidget::paste);
-			connect(pasteActionFromOsClip, &QAction::triggered, this, &MyQTableWidget::pasteFromOsClip);
-		}
-		mPtr->exec(mapToGlobal(pos));
-	}
-	void cut()
-	{
-		copy();
-		itemStatesBeforeCut.clear();
-		QList<QTableWidgetSelectionRange> ranges = selectedRanges();
-		for (const auto &range : ranges) {
-			for (int row = range.topRow(); row <= range.bottomRow(); ++row) {
-				for (int col = range.leftColumn(); col <= range.rightColumn(); ++col) {
-
-					auto itemToChange = item(row, col);
-					if (itemToChange) {
-						itemStatesBeforeCut.emplace_back(row, col, itemToChange->text());
-						itemToChange->setText("");
-					}
-				}
-			}
-		}
-		emit SignalAfterCut();
-	}
-	void copy()
-	{
-		QItemSelectionModel *selection = selectionModel();
-		if (!selection->hasSelection()) return;
-		innerClipboard.clear();
-		innerClipboard.emplace_back();
-		innerClipboardVerticalHeaderValues.clear();
-		innerClipboardAllColums.clear();
-
-		QString copiedData;
-		QList<QTableWidgetSelectionRange> ranges = selectedRanges();
-		for (const auto &range : ranges) {
-			for (int row = range.topRow(); row <= range.bottomRow(); ++row) {
-
-				auto vHeaderItem = this->verticalHeaderItem(row);
-				if(vHeaderItem) innerClipboardVerticalHeaderValues.emplace_back(vHeaderItem->text());
-				else innerClipboardVerticalHeaderValues.emplace_back();
-
-				innerClipboardAllColums.emplace_back();
-				for (int col = 0; col <= columnCount(); ++col)
-					if (item(row, col)) innerClipboardAllColums.back().push_back(item(row, col)->text());
-					// else ... not need, innerClipboardAllColums.back() is empty by default
-
-				for (int col = range.leftColumn(); col <= range.rightColumn(); ++col) {
-					if (item(row, col))
-					{
-						innerClipboard.back().push_back(item(row, col)->text());
-						copiedData += "\"" + item(row, col)->text() + "\"";
-					}
-					if (col != range.rightColumn()) copiedData += '\t';
-				}
-				innerClipboard.emplace_back();
-				copiedData += '\n';
-			}
-		}
-		QClipboard *clipboard = QApplication::clipboard();
-		clipboard->setText(copiedData);
-	}
-	void paste()
-	{
-		itemStatesBeforePaste.clear();
-		int startRow = currentRow();
-		int startCol = currentColumn();
-		for (uint i = 0; i < innerClipboard.size(); ++i)
-		{
-			QStringList &columns = innerClipboard[i];
-			for (int j = 0; j < columns.size(); ++j) {
-				int row = startRow + i;
-				int col = startCol + j;
-				// Автоматическое добавление строк и столбцов
-				if (row >= rowCount()) insertRow(rowCount());
-				if (col >= columnCount()) insertColumn(columnCount());
-
-				auto itemToChange = item(row, col);
-				if (!itemToChange)
-				{
-					itemToChange = new QTableWidgetItem();
-					setItem(row, col, itemToChange);
-					itemStatesBeforePaste.emplace_back(row, col, ItemState::ItemWasNullptr());
-				}
-				else itemStatesBeforePaste.emplace_back(row, col, itemToChange->text());
-				itemToChange->setText(columns[j]);
-			}
-		}
-		emit SignalAfterPaste();
-	}
-	void pasteFromOsClip()
-	{
-		itemStatesBeforePaste.clear();
-		QClipboard *clipboard = QApplication::clipboard();
-		QString clipboardData = clipboard->text();
-		QStringList rows = clipboardData.split('\n', QString::SkipEmptyParts);
-		int startRow = currentRow();
-		int startCol = currentColumn();
-		for (int i = 0; i < rows.size(); ++i) {
-			QStringList columns = rows[i].split('\t');
-			for (int j = 0; j < columns.size(); ++j) {
-				int row = startRow + i;
-				int col = startCol + j;
-				// Автоматическое добавление строк и столбцов
-				if (row >= rowCount()) insertRow(rowCount());
-				if (col >= columnCount()) insertColumn(columnCount());
-
-
-				auto itemToChange = item(row, col);
-				if (!itemToChange)
-				{
-					itemToChange = new QTableWidgetItem();
-					setItem(row, col, itemToChange);
-					itemStatesBeforePaste.emplace_back(row, col, ItemState::ItemWasNullptr());
-				}
-				else itemStatesBeforePaste.emplace_back(row, col, itemToChange->text());
-				itemToChange->setText(columns[j]);
-			}
-		}
-	}
+	inline void Cut();
+	inline void Copy();
+	inline void Paste();
+	inline void PasteFromOsClip();
 private:
+	QMenu* menu = nullptr;
 	inline static std::vector<QStringList> innerClipboard {};
-	inline static std::vector<QString> innerClipboardVerticalHeaderValues {};
-	inline static std::vector<QStringList> innerClipboardAllColums {};
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -260,6 +99,168 @@ void MyQTableWidget::FitColsWidths(QTableWidget *table)
 	{
 		float persent = (float)table->columnWidth(i) / (float)currentColsWidth;
 		table->setColumnWidth(i, tableSpace*persent);
+	}
+}
+
+MyQTableWidget::MyQTableWidget(QWidget *parent) : QTableWidget(parent)
+{
+	setSelectionMode(QAbstractItemView::ContiguousSelection);
+
+	CreateContextMenu();
+}
+
+void MyQTableWidget::CreateContextMenu()
+{
+	setContextMenuPolicy(Qt::CustomContextMenu);
+	menu = new QMenu(this);
+	QAction *cutAction = menu->addAction("Cut");
+	QAction *copyAction = menu->addAction("Copy");
+	QAction *pasteAction = menu->addAction("Paste");
+	QAction *pasteActionFromOsClip = menu->addAction("Paste from OS clipboard");
+
+	connect(cutAction, &QAction::triggered, this, &MyQTableWidget::Cut);
+	connect(copyAction, &QAction::triggered, this, &MyQTableWidget::Copy);
+	connect(pasteAction, &QAction::triggered, this, &MyQTableWidget::Paste);
+	connect(pasteActionFromOsClip, &QAction::triggered, this, &MyQTableWidget::PasteFromOsClip);
+
+	cutAction->setShortcut(QKeySequence::Cut);
+	copyAction->setShortcut(QKeySequence::Copy);
+	pasteAction->setShortcut(QKeySequence::Paste);
+
+	addAction(cutAction);
+	addAction(copyAction);
+	addAction(pasteAction);
+
+	connect(this, &QWidget::customContextMenuRequested, [this](const QPoint &pos){ menu->exec(mapToGlobal(pos)); });
+}
+
+QString MyQTableWidget::RestoreState(const std::vector<MyQTableWidget::ItemState> &states)
+{
+	QString errors;
+	for(auto &state:states)
+	{
+		auto changingItem = item(state.itemRow, state.itemCol);
+		if(changingItem)
+		{
+			if(state.text == ItemState::ItemWasNullptr())
+				setItem(state.itemRow, state.itemCol, nullptr);
+			else changingItem->setText(state.text);
+		}
+		else errors += "restoring item ("+QSn(state.itemRow)+","+QSn(state.itemCol)+") is nullptr\n";
+	}
+	return errors;
+}
+
+void MyQTableWidget::Cut()
+{
+	Copy();
+	itemStatesBeforeCut.clear();
+	QList<QTableWidgetSelectionRange> ranges = selectedRanges();
+	for (const auto &range : ranges) {
+		for (int row = range.topRow(); row <= range.bottomRow(); ++row) {
+			for (int col = range.leftColumn(); col <= range.rightColumn(); ++col) {
+
+				auto itemToChange = item(row, col);
+				if (itemToChange) {
+					itemStatesBeforeCut.emplace_back(row, col, itemToChange->text());
+					itemToChange->setText("");
+				}
+			}
+		}
+	}
+	emit SignalAfterCut();
+}
+
+void MyQTableWidget::Copy()
+{
+	QItemSelectionModel *selection = selectionModel();
+	if (!selection->hasSelection()) return;
+	innerClipboard.clear();
+	innerClipboard.emplace_back();
+
+	QString copiedData;
+	QList<QTableWidgetSelectionRange> ranges = selectedRanges();
+	for (const auto &range : ranges)
+	{
+		for (int row = range.topRow(); row <= range.bottomRow(); ++row)
+		{
+			for (int col = range.leftColumn(); col <= range.rightColumn(); ++col)
+			{
+				if (item(row, col))
+				{
+					innerClipboard.back().push_back(item(row, col)->text());
+					copiedData += "\"" + item(row, col)->text() + "\"";
+				}
+				if (col != range.rightColumn()) copiedData += '\t';
+			}
+			innerClipboard.emplace_back();
+			copiedData += '\n';
+		}
+	}
+	QClipboard *clipboard = QApplication::clipboard();
+	clipboard->setText(copiedData);
+}
+
+void MyQTableWidget::Paste()
+{
+	itemStatesBeforePaste.clear();
+	int startRow = currentRow();
+	int startCol = currentColumn();
+	for (uint i = 0; i < innerClipboard.size(); ++i)
+	{
+		QStringList &columns = innerClipboard[i];
+		for (int j = 0; j < columns.size(); ++j)
+		{
+			int row = startRow + i;
+			int col = startCol + j;
+			// Автоматическое добавление строк и столбцов
+			if (row >= rowCount()) insertRow(rowCount());
+			if (col >= columnCount()) insertColumn(columnCount());
+
+			auto itemToChange = item(row, col);
+			if (!itemToChange)
+			{
+				itemToChange = new QTableWidgetItem();
+				setItem(row, col, itemToChange);
+				itemStatesBeforePaste.emplace_back(row, col, ItemState::ItemWasNullptr());
+			}
+			else itemStatesBeforePaste.emplace_back(row, col, itemToChange->text());
+			itemToChange->setText(columns[j]);
+		}
+	}
+	emit SignalAfterPaste();
+}
+
+void MyQTableWidget::PasteFromOsClip()
+{
+	itemStatesBeforePaste.clear();
+	QClipboard *clipboard = QApplication::clipboard();
+	QString clipboardData = clipboard->text();
+	QStringList rows = clipboardData.split('\n', QString::SkipEmptyParts);
+	int startRow = currentRow();
+	int startCol = currentColumn();
+	for (int i = 0; i < rows.size(); ++i)
+	{
+		QStringList columns = rows[i].split('\t');
+		for (int j = 0; j < columns.size(); ++j)
+		{
+			int row = startRow + i;
+			int col = startCol + j;
+			// Автоматическое добавление строк и столбцов
+			if (row >= rowCount()) insertRow(rowCount());
+			if (col >= columnCount()) insertColumn(columnCount());
+
+
+			auto itemToChange = item(row, col);
+			if (!itemToChange)
+			{
+				itemToChange = new QTableWidgetItem();
+				setItem(row, col, itemToChange);
+				itemStatesBeforePaste.emplace_back(row, col, ItemState::ItemWasNullptr());
+			}
+			else itemStatesBeforePaste.emplace_back(row, col, itemToChange->text());
+			itemToChange->setText(columns[j]);
+		}
 	}
 }
 

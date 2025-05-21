@@ -25,9 +25,16 @@ public:
 	inline static void RemoveCurrentRow(QTextEdit *edit);
 
 public:
+	enum richTextPasteValue { richTextPasteDisabled = 0, richTextPasteEnabled = 1 };
+
 	inline explicit MyQTextEdit(QWidget *parent = nullptr) : QTextEdit(parent)
 	{ }
+	inline explicit MyQTextEdit(MyQTextEdit::richTextPasteValue aRichTextPaste, QWidget *parent = nullptr) :
+		QTextEdit(parent),
+		richTextPaste{aRichTextPaste == richTextPasteEnabled}
+	{ }
 	virtual ~MyQTextEdit() = default;
+
 	bool richTextPaste = true; // если флаг установлен - текст будет вставляться с сохранением его форматирования
 
 	inline QTextCharFormat LetterFormat(int letterIndex) { return LetterFormat(this, letterIndex); }
