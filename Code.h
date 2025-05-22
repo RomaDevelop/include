@@ -93,7 +93,6 @@ struct Statement
 
 	static QString PrintStatements(std::vector<Statement> statements);
 };
-using Statements = std::vector<Statement>;
 
 class Code
 {
@@ -102,7 +101,7 @@ public:
 	static QStringList TextToCommands(const QString &text); // внутри вызывается Normalize; гарантируется отсутсвие пустых команд в return
 	static QStringList CommandToWords(const QString &command);
 
-	static Statements TextToStatements(const QString &text);  // внутри вызывается Normalize
+	static std::vector<Statement> TextToStatements(const QString &text);  // внутри вызывается Normalize
 
 	static QString GetFirstWord(const QString &text);
 	static QString GetPrevWord(const QString &text, int charIndexInText);

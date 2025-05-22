@@ -210,9 +210,9 @@ QStringList Code::CommandToWords(const QString &command)
 	return retWords;
 }
 
-Statements Code::TextToStatements(const QString &text)
+std::vector<Statement> Code::TextToStatements(const QString &text)
 {
-	Statements statements;
+	std::vector<Statement> statements;
 	Statement* currentStatement = nullptr;
 	bool quats = false;
 	bool block = false;
