@@ -55,7 +55,7 @@ private:
 	volatile bool thread_ended = false;
 	volatile bool m_finish_executed = false;
 
-	std::string errors;
+	//std::string errors;
 
 	thread_box(const thread_box &) = delete;
 	thread_box(thread_box &&) = delete;
@@ -86,19 +86,13 @@ private:
 
 thread_box::~thread_box()
 {
-	if(m_finish_policy == no_checks_in_destructor) return;
-
 	if(m_finish_policy == smart_policy)
 	{
 		if(thread_was_started && !thread_ended)
 			if(!finish(3000))
 				std::cerr << "thread "+m_name+" smart_policy can't finish thread\n";
-
-		if(!errors.empty()) std::cerr << "thread "+m_name+" errors: " + errors + "\n";
-		return;
 	}
-
-	if(m_finish_policy == user_must_call_finish)
+	else if(m_finish_policy == user_must_call_finish)
 	{
 		if(thread_was_started && !thread_ended)
 		{
@@ -115,10 +109,9 @@ thread_box::~thread_box()
 			if(finish(3000)) std::cerr << "thread "+m_name+" now finish did successful\n";
 			else std::cerr << "thread "+m_name+" call finish(3000) unsuccessfully\n";
 		}
-
-		if(!errors.empty()) std::cerr << "thread "+m_name+" errors: " + errors + "\n";
-		return;
 	}
+	else if(m_finish_policy == no_checks_in_destructor) { }
+	else std::cerr << "thread "+m_name+" wrong policy " << m_finish_policy << "\n";
 }
 
 void thread_box::start(std::function<void ()> task)
@@ -140,10 +133,12 @@ void thread_box::start(std::function<void ()> task)
 
 bool thread_box::finish(uint wait_for_milliseconds)
 {
+	m_finish_executed = true;
+
 	if(thread_was_started == false)
 	{
-		errors += "thread "+m_name+" finish executed, but thread was not started\n";
-		return errors.empty();
+		std::cerr << "thread "+m_name+" finish executed, but thread was not started\n";
+		return false;
 	}
 
 	stopper = true;
@@ -159,13 +154,17 @@ bool thread_box::finish(uint wait_for_milliseconds)
 		one_wait += add;
 		add < 10 ? add += 1 : add < 100 ? add += 10 : add += 30;
 	}
-	std::cout << m_name << " " << "waited " << wait_fakt << " milliseconds for finish\n";
 
-	if(!thread_ended)
-		errors += "thread "+m_name+" was not finished after waiting " + std::to_string(wait_for_milliseconds) + " milliseconds\n";
-
-	m_finish_executed = true;
-	return errors.empty();
+	if(thread_ended)
+	{
+		std::cout << "thread " << m_name << " " << "waited " << wait_fakt << " milliseconds for finish and finished\n";
+		return true;
+	}
+	else
+	{
+		std::cerr << "thread "+m_name+" was not finished after waiting " + std::to_string(wait_fakt) + " milliseconds\n";
+		return false;
+	}
 }
 
 void thread_box::test_thread_box(std::string name, std::string description, bool doFinish, std::function<void ()> task)
@@ -176,7 +175,7 @@ void thread_box::test_thread_box(std::string name, std::string description, bool
 	box.start(task);
 	if(doFinish)
 	{
-		if(!box.finish()) std::cout << "finish error" << box.errors.c_str() << std::endl;
+		if(!box.finish()) std::cout << "finish error" << std::endl;
 	}
 
 	std::this_thread::sleep_for(std::chrono::milliseconds(3000));
