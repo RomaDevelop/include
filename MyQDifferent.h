@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QWidget>
+#include <QLineEdit>
 #include <QDir>
 #include <QDateTime>
 
@@ -33,6 +34,8 @@ struct MyQDifferent
 	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 
 	inline static void DoOnce(const QString &id, std::function<void()> action);
+	
+	inline static void SetSelectedText(QLineEdit *lineEdit, const QString &newText);
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -233,6 +236,16 @@ void MyQDifferent::DoOnce(const QString &id, std::function<void ()> action)
 		action();
 		ids.insert(id);
 	}
+}
+
+void MyQDifferent::SetSelectedText(QLineEdit *lineEdit, const QString &newText)
+{
+	if (!lineEdit->hasSelectedText()) return;
+	QString currentText = lineEdit->text();
+	int start = lineEdit->selectionStart();
+	currentText.replace(start, lineEdit->selectionLength(), newText);
+	lineEdit->setText(currentText);
+	lineEdit->setSelection(start, newText.length());
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------

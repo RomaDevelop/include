@@ -20,8 +20,6 @@ struct MyQWidget
 	inline static void SetFontBold(QAction *obj, bool enable);
 	/* Можно сделать шаблонную функцию, но тогда копилятор будет создавать функции для каждого наследника QWidget, а их очень много
 	 * Когда перейдем на С++ 20, попробовать через концепты этого избежать */
-
-	inline static void SetWindowFlag(QWidget *widget, Qt::WindowType flag, bool on);
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -60,13 +58,6 @@ void MyQWidget::SetFontBold(QAction *obj, bool enable)
 	auto font = obj->font();
 	font.setBold(enable);
 	obj->setFont(font);
-}
-
-void MyQWidget::SetWindowFlag(QWidget *widget, Qt::WindowType flag, bool on)
-{
-	auto flags = widget->windowFlags();
-	flags.setFlag(flag, on);
-	widget->setWindowFlags(flags);
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
