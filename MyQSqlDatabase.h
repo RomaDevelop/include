@@ -32,10 +32,10 @@ struct BaseData
 
 	BaseData() = default;
 	BaseData(QString baseName, QString baseFilePathName, QString storagePath):
-		baseName{baseName},
-		baseFilePathName{baseFilePathName},
-		pathDataBase{ QFileInfo(baseFilePathName).path() },
-		pathBackup{ QFileInfo(baseFilePathName).path() + "/backup" },
+	    baseName{baseName},
+	    baseFilePathName{baseFilePathName},
+	    pathDataBase{ QFileInfo(baseFilePathName).path() },
+	    pathBackup{ QFileInfo(baseFilePathName).path() + "/backup" },
 	    storagePath{storagePath}
 	{
 		this->baseFilePathName = QDir::toNativeSeparators(this->baseFilePathName);
@@ -68,17 +68,17 @@ public:
 	inline static logWorkerFunction errorWorker;
 
 	inline static QSqlQuery DoSqlQuery(const QString &strQuery, const QStringPairVector &binds = {},
-									   bool doNextAfterExec = false, bool showErrorIfNextNotDid = false);
+	                                   bool doNextAfterExec = false, bool showErrorIfNextNotDid = false);
 	declare_struct_2_fields_move(DoSqlQueryRes, QSqlQuery, query, QString, errors);
 	inline static DoSqlQueryRes DoSqlQueryExt(const QString &strQuery, const QStringPairVector &binds = {},
-	                                       bool doNextAfterExec = false, bool showErrorIfNextNotDid = false);
+	                                          bool doNextAfterExec = false, bool showErrorIfNextNotDid = false);
 	inline static QString DoSqlQueryGetFirstCell(const QString &strQuery, const QStringPairVector &binds = {},
-												 bool showErrorIfEmptyQuery = true);
+	                                             bool showErrorIfEmptyQuery = true);
 	inline static QStringList DoSqlQueryGetFirstRec(const QString &strQuery, const QStringPairVector &binds = {});
 	inline static QStringList DoSqlQueryGetFirstField(const QString &strQuery, const QStringPairVector &binds = {});
 	inline static std::set<QString> DoSqlQueryGetFirstFieldAsSet(const QString &strQuery, const QStringPairVector &binds = {});
 	inline static std::map<QString,QString> DoSqlQueryAndMakeMap(const QString &strQuery, const QStringPairVector &binds = {},
-																 int filedIndexForKey = 0, int filedIndexForValue = 1);
+	                                                             int filedIndexForKey = 0, int filedIndexForValue = 1);
 	///\brief QStringList = row
 	inline static std::vector<QStringList> DoSqlQueryGetTable(const QString &strQuery, const QStringPairVector &binds = {});
 
@@ -90,6 +90,8 @@ public:
 	                                                                      std::vector<QString> values,
 	                                                                      std::vector<QStringRefWr_c> whereFields,
 	                                                                      std::vector<QString> whereValues);
+	inline static std::pair<QString, QStringPairVector> MakeUpdateRequestOneField(QString table, QStringRefWr_c field, QString value,
+	                                                                              QStringRefWr_c whereFields, QString whereValue);
 
 	///\brief for empty feildsIndexes return all fields
 	/// QStringList = row
@@ -118,14 +120,15 @@ void MyQSqlDatabase::Init(BaseData mainBase_, std::vector<BaseData> additionalBa
 	baseDataAddBases = std::move(additionalBases_);
 
 	QSqlDbMain = QSqlDatabase::addDatabase("QODBC");
-	QSqlDbMain.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ="+baseDataMain.baseFilePathName+";");
+	QSqlDbMain.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ="+baseDataCurrent->baseFilePathName+";");
 	currentQSqlDb = &QSqlDbMain;
 
 	if (!QSqlDbMain.isOpen() && !QSqlDbMain.open())
 	{
-		Error("MyQSqlDatabase::Init error: " + QSqlDbMain.lastError().text() + "\n(base: "+baseDataMain.baseFilePathName+")");
+		Error("MyQSqlDatabase::Init error: " + QSqlDbMain.lastError().text() + "\n(base: "+baseDataCurrent->baseFilePathName+")");
 		return;
 	}
+	else Log("MyQSqlDatabase::Init " + baseDataCurrent->baseName + " success");
 }
 
 QSqlQuery MyQSqlDatabase::DoSqlQuery(const QString &strQuery, const QStringPairVector &binds,
@@ -211,7 +214,7 @@ std::set<QString> MyQSqlDatabase::DoSqlQueryGetFirstFieldAsSet(const QString &st
 }
 
 std::map<QString, QString> MyQSqlDatabase::DoSqlQueryAndMakeMap(const QString &strQuery, const QStringPairVector &binds,
-                                                          int filedIndexForKey, int filedIndexForValue)
+                                                                int filedIndexForKey, int filedIndexForValue)
 {
 	auto query = MyQSqlDatabase::DoSqlQuery(strQuery, binds);
 	return MyQSqlDatabase::MapFromQuery(query, filedIndexForKey, filedIndexForValue);
@@ -256,7 +259,7 @@ std::pair<QString, QStringPairVector> MyQSqlDatabase::MakeInsertRequest(QString 
 }
 
 std::pair<QString, QStringPairVector> MyQSqlDatabase::MakeUpdateRequest(QString table, std::vector<QStringRefWr_c> fields, std::vector<QString> values,
-                                                                            std::vector<QStringRefWr_c> whereFields, std::vector<QString> whereValues)
+                                                                        std::vector<QStringRefWr_c> whereFields, std::vector<QString> whereValues)
 {
 	if(fields.size() != values.size()) { Error("MakeUpdateRequest fields values sizes differ"); return {}; }
 	if(whereFields.size() != whereValues.size()) { Error("MakeUpdateRequest whereFields whereValues sizes differ"); return {}; }
@@ -267,20 +270,28 @@ std::pair<QString, QStringPairVector> MyQSqlDatabase::MakeUpdateRequest(QString 
 	for(uint i=0; i<fields.size(); i++)
 	{
 		QStringRefWr_c &field = fields[i];
-		sql.append(field).append(" = :").append(field);
+		sql.append(field).append(" = :").append(field).append(", ");
 		binds.emplace_back(std::pair(":" + field, std::move(values[i])));
 	}
+	if(!fields.empty()) sql.chop(2);
 	if(!whereFields.empty())
 	{
 		sql.append("\nwhere ");
 		for(uint i=0; i<whereFields.size(); i++)
 		{
 			QStringRefWr_c &wereField = whereFields[i];
-			sql.append(wereField).append(" = :").append(wereField);
+			sql.append(wereField).append(" = :").append(wereField).append(" and ");
 			binds.emplace_back(std::pair(":" + wereField, std::move(whereValues[i])));
 		}
+		if(!whereFields.empty()) sql.chop(5);
 	}
 	return {std::move(sql), std::move(binds)};
+}
+
+std::pair<QString, QStringPairVector> MyQSqlDatabase::MakeUpdateRequestOneField(QString table, QStringRefWr_c field, QString value,
+                                                                                QStringRefWr_c whereFields, QString whereValue)
+{
+	return MakeUpdateRequest(std::move(table), {std::move(field)}, {std::move(value)}, {std::move(whereFields)}, {std::move(whereValue)});
 }
 
 std::vector<QStringList> MyQSqlDatabase::QuetyToTable(QSqlQuery &query, std::vector<int> feildsIndexes)
@@ -301,7 +312,7 @@ std::vector<QStringList> MyQSqlDatabase::QuetyToTable(QSqlQuery &query, std::vec
 	else
 	{
 		auto removeRes = std::remove_if(feildsIndexes.begin(),feildsIndexes.end(),[colCount](int n){ return n>=colCount || n<0; });
-		if(removeRes != feildsIndexes.end()) Error("Wring indexes in feildsIndexes ["+MyQString::AsDebug(feildsIndexes)+"]");
+		if(removeRes != feildsIndexes.end()) Error("Wrong indexes in feildsIndexes ["+MyQString::AsDebug(feildsIndexes)+"]");
 		feildsIndexes.erase(removeRes, feildsIndexes.end());
 		int size = feildsIndexes.size();
 		while(query.next())
