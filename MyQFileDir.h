@@ -27,7 +27,7 @@ struct MyQFileDir
 
 	inline static void RemoveOldFiles2(const QString &directory, int maxDays);
 
-    inline static void RemoveEmptySubcats(const QString &directory);
+	inline static void RemoveEmptySubcats(const QString &directory);
 
 	inline static bool RemoveDirIfEmpty(const QString &dirStr, bool ShowErrorMessage);
 
@@ -163,60 +163,41 @@ QString MyQFileDir::RemoveOldFiles(QString directory, int remainCount, SortFlags
 
 void MyQFileDir::RemoveOldFiles2(const QString &directory, int maxDays)
 {
-	QDir dir(directory);
-	if (!dir.exists()) {
-		return;
+    QDir dir(directory);
+    if (!dir.exists())
+    {
+	return;
+    }
+
+    QDateTime currentDate = QDateTime::currentDateTime();
+
+    QDirIterator it(directory, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+    while(it.hasNext()) {
+	it.next();
+	QFileInfo fileInfo = it.fileInfo();
+	QDateTime lastModified = fileInfo.lastModified();
+	qint64 daysDiffrence = lastModified.daysTo(currentDate);
+
+	if(daysDiffrence > maxDays)
+	{
+	    QFile::remove(fileInfo.absoluteFilePath());
 	}
+    }
 
-	QDateTime now = QDateTime::currentDateTime();
-
-	QStringList subDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-	for (const QString &subDirName : subDirs) {
-		// Парсим имя папки: "yyyy.MM.dd hh-mm-ss_mode"
-		int firstSpace = subDirName.indexOf(' ');
-		if (firstSpace == -1) {
-			continue;
-		}
-
-		QString datePart = subDirName.left(firstSpace);
-		QString timeAndModePart = subDirName.mid(firstSpace + 1);
-
-		int firstUnderscore = timeAndModePart.indexOf('_');
-		if (firstUnderscore == -1) {
-			continue;
-		}
-
-		QString timePart = timeAndModePart.left(firstUnderscore);
-		QString dateTimeStr = datePart + " " + timePart;
-
-		QDateTime dirDateTime = QDateTime::fromString(dateTimeStr, "yyyy.MM.dd hh-mm-ss");
-		if (!dirDateTime.isValid()) {
-			continue;
-		}
-
-		qint64 daysAgo = dirDateTime.daysTo(now);
-		if (daysAgo > maxDays) {
-			QDir subDirFullPath(dir.filePath(subDirName));
-			subDirFullPath.removeRecursively();
-		}
-	}
-
-	RemoveEmptySubcats(directory);
+    RemoveEmptySubcats(directory);
 }
 
 void MyQFileDir::RemoveEmptySubcats(const QString &directory)
 {
-	QDir dir(directory);
+    QDir dir(directory);
+    const QStringList subDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QString &subDir : subDirs)
+    {
+	RemoveEmptySubcats(dir.filePath(subDir));
+    }
 
-	// Рекурсивное обработка поддиректорий
-	const QStringList subDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-	for (const QString &subDir : subDirs) {
-		RemoveEmptySubcats(dir.filePath(subDir));
-	}
-
-	// удаление пустой папки
-	if(dir.isEmpty())
-		dir.rmdir(".");
+    if(dir.isEmpty())
+	dir.rmdir(".");
 }
 
 inline bool MyQFileDir::RemoveDirIfEmpty(const QString &dirStr, bool ShowErrorMessage)
