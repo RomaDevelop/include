@@ -3,10 +3,17 @@
 
 #include <QDebug>
 #include <QStringList>
+#include <QFontMetrics>
+#include <QRect>
+
+#include "MyQDifferent.h"
+
+//------------------------------------------------------------------------------------------------------------------------------------------
 
 struct MyQString
 {
 	inline static QStringList QStringListSized(int size, const QString &value = "");
+	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 
 	template<typename... Args>
 	inline static void Append(QString& s, const Args&... args) { (s.append(args), ...); }
@@ -15,17 +22,25 @@ struct MyQString
 	template<class char_type>
 	inline static QString& LeftJistifie(QString &str_to_justifie, int width, char_type fill = ' ', bool trunc = false);
 
-        template<class int_type>
-        inline static QString AsNumberDigits(int_type n, QChar separator = ' ')
-        {
-            static_assert(std::is_integral<int_type>::value, "AsNumberDigits accepts only integral type");
-            QString result = QString::number(n);
-            for(int i=result.size()-1, j=1; i>=0; i--, j++)
-            {
-                if(j%3 == 0) result.insert(i, separator);
-            }
-            return result;
-        }
+	template<class QWidgetWithText>
+	inline static int TextWidthInWidget(QWidgetWithText *widget)
+	{
+		return QFontMetrics(widget->font()).boundingRect(widget->text()).width();
+	}
+
+	template<class int_type>
+	inline static QString AsNumberDigits(int_type n, QChar separator = ' ')
+	{
+		static_assert(std::is_integral<int_type>::value, "AsNumberDigits accepts only integral type");
+		QString result = QString::number(n);
+		for(int i=result.size()-1, j=1; i>=0; i--, j++)
+		{
+			if(j%3 == 0) result.insert(i, separator);
+		}
+		return result;
+	}
+
+	static QString BytesToString(uint64_t bytesCount) { return MyQDifferent::BytesToString(bytesCount); }
 
 	template<class uint_type>
 	inline static QString ToBincode(uint_type n, int output_width = -1)
@@ -52,7 +67,11 @@ struct MyQString
 		customDebug << obj;
 		return ret;
 	}
+
+	inline static QString Translited(QString str);
 };
+
+//------------------------------------------------------------------------------------------------------------------------------------------
 
 QStringList MyQString::QStringListSized(int size, const QString & value)
 {
@@ -63,11 +82,48 @@ QStringList MyQString::QStringListSized(int size, const QString & value)
 	return ret;
 }
 
+QStringList MyQString::ArgsToStrList(int argc, char *argv[])
+{
+	QStringList strList;
+	for(int i=0; i<argc; i++) strList += argv[i];
+	return strList;
+}
+
+QString MyQString::Translited(QString str)
+{
+	static const QString latin = "qwertyuiop[]asdfghjkl;'zxcvbnm,./";
+	static const QString kiril = "йцукенгшщзхъфывапролджэячсмитьбю.";
+	bool mapsInited = false;
+	static std::map<QChar, QChar> toLatin;
+	static std::map<QChar, QChar> toKiril;
+	if(!mapsInited)
+	{
+		for(int i=0; i<latin.size(); i++)
+		{
+			toLatin[kiril[i]] = latin[i];
+			toKiril[latin[i]] = kiril[i];
+		}
+		mapsInited = true;
+	}
+	for(auto &c:str)
+	{
+		if(auto it = toLatin.find(c); it != toLatin.end())
+		{
+			c = it->second;
+		}
+		else if(auto it = toKiril.find(c); it != toKiril.end())
+		{
+			c = it->second;
+		}
+	}
+	return str;
+}
+
 template<class char_type>
 QString & MyQString::RightJistifie(QString & str_to_justifie, int width, char_type fill, bool trunc)
 {
 	static_assert(std::is_same<char_type, char>::value || std::is_same<char_type, QChar>::value,
-					  "RightJistifie accepts only char or QChar on arg fill");
+			"RightJistifie accepts only char or QChar on arg fill");
 
 	int size = str_to_justifie.size();
 	if(size > width)
@@ -88,7 +144,7 @@ template<class char_type>
 QString & MyQString::LeftJistifie(QString & str_to_justifie, int width, char_type fill, bool trunc)
 {
 	static_assert(std::is_same<char_type, char>::value || std::is_same<char_type, QChar>::value,
-					  "LeftJistifie accepts only char or QChar on arg fill");
+			"LeftJistifie accepts only char or QChar on arg fill");
 
 	int size = str_to_justifie.size();
 	if(size > width)

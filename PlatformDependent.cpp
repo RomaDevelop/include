@@ -14,27 +14,33 @@
 QDateTime PlatformDependent::GetProcessStartTime(uint processID) {
 	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, (DWORD)processID);
 	if (hProcess == NULL) {
-	std::cerr << "Не удалось открыть процесс с PID " << processID << ". Ошибка: " << GetLastError() << std::endl;
-	return QDateTime(); // Возвращаем пустой QDateTime в случае ошибки
+		auto err = GetLastError();
+		qdbg << "PlatformDependent::GetProcessStartTime: Не удалось открыть процесс с PID "
+				+ QSn(processID) + ". Ошибка: " + QSn(err);
+		return QDateTime(); // Возвращаем пустой QDateTime в случае ошибки
 	}
 
 	FILETIME creationTime, exitTime, kernelTime, userTime;
 
 	if (GetProcessTimes(hProcess, &creationTime, &exitTime, &kernelTime, &userTime)) {
-	// Преобразуем FILETIME в QDateTime
-	ULARGE_INTEGER ull;
-	ull.LowPart = creationTime.dwLowDateTime;
-	ull.HighPart = creationTime.dwHighDateTime;
+		// Преобразуем FILETIME в QDateTime
+		ULARGE_INTEGER ull;
+		ull.LowPart = creationTime.dwLowDateTime;
+		ull.HighPart = creationTime.dwHighDateTime;
 
-	// FILETIME представляет время в 100-наносекундных интервалах с 1 января 1601 года
-	// Преобразуем в QDateTime
-	QDateTime startTime = QDateTime::fromMSecsSinceEpoch(ull.QuadPart / 10000 - 11644473600000LL);
-	CloseHandle(hProcess);
-	return startTime;
-	} else {
-	std::cerr << "Не удалось получить время процесса. Ошибка: " << GetLastError() << std::endl;
-	CloseHandle(hProcess);
-	return QDateTime(); // Возвращаем пустой QDateTime в случае ошибки
+		// FILETIME представляет время в 100-наносекундных интервалах с 1 января 1601 года
+		// Преобразуем в QDateTime
+		QDateTime startTime = QDateTime::fromMSecsSinceEpoch(ull.QuadPart / 10000 - 11644473600000LL);
+		CloseHandle(hProcess);
+		return startTime;
+	}
+	else
+	{
+		auto err = GetLastError();
+		qdbg << "PlatformDependent::GetProcessStartTime: Не удалось получить время процесса. Ошибка: "
+				+ QSn(err);
+		CloseHandle(hProcess);
+		return QDateTime(); // Возвращаем пустой QDateTime в случае ошибки
 	}
 }
 
@@ -43,34 +49,35 @@ bool PlatformDependent::IsProcessRunning(uint processID) {
 	if(hProcess != NULL)
 	{
 		DWORD exitCode;
-		// Получаем код завершения процесса
-		if(GetExitCodeProcess(hProcess, &exitCode))
+		if(GetExitCodeProcess(hProcess, &exitCode)) // Получаем код завершения процесса
 		{
 			CloseHandle(hProcess); // Закрываем дескриптор
-			// Если код завершения равен STILL_ACTIVE, процесс все еще работает
-			return (exitCode == STILL_ACTIVE);
+			return (exitCode == STILL_ACTIVE); // Если код завершения равен STILL_ACTIVE, процесс все еще работает
 		}
 		else
 		{
-			std::cerr << "GetExitCodeProcess error: " << GetLastError() << std::endl;
+			auto err = GetLastError();
+			qdbg << "IsProcessRunning::GetExitCodeProcess error: " + QSn(err);
 		}
 		CloseHandle(hProcess); // Закрываем дескриптор в случае ошибки
 	}
 	else
 	{
-		std::cerr << "OpenProcess error: " << GetLastError() << std::endl;
+		auto err = GetLastError();
+		if(err == ERROR_INVALID_PARAMETER) ; // ok, means not running
+		else qdbg << "IsProcessRunning::OpenProcess unknown error " + QSn(err);
 	}
 	return false; // Процесс не запущен или не может быть открыт
 }
 
-int PlatformDependent::CopyMoveFile(QString S, QString D, CopyMoveFileMode Mode)
+PlatformDependent::CopyMoveFileRes PlatformDependent::CopyMoveFile(QString SourceFile, QString Destination, CopyMoveFileMode Mode)
 {
-	S.replace('/','\\');
-	D.replace('/','\\');
+	SourceFile.replace('/','\\');
+	Destination.replace('/','\\');
 	wchar_t cFrom[MAX_PATH] = {0};
-	wcscpy(cFrom, S.toStdWString().c_str());
+	wcscpy(cFrom, SourceFile.toStdWString().c_str());
 	wchar_t cTo[MAX_PATH] = {0};
-	wcscpy(cTo, D.toStdWString().c_str());
+	wcscpy(cTo, Destination.toStdWString().c_str());
 	SHFILEOPSTRUCT fos;
 	memset(&fos, 0, sizeof(SHFILEOPSTRUCT));
 	if(QApplication::activeWindow())
@@ -82,7 +89,21 @@ int PlatformDependent::CopyMoveFile(QString S, QString D, CopyMoveFileMode Mode)
 	fos.pFrom = cFrom;
 	fos.pTo = cTo;
 	fos.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMMKDIR | FOF_SIMPLEPROGRESS;
-	return SHFileOperation(&fos);
+
+	CopyMoveFileRes res;
+	res.errorCode = SHFileOperation(&fos);
+
+	if(res.errorCode == 0) res.success = true;
+	else
+	{
+		res.success = false;
+		res.errorText = "Не удалось переместить файл\n\n"+SourceFile+
+				"\n\nв\n\n"+Destination+"!\n\nКод ошибки SHFileOperation: "+ QSn(res.errorCode);
+		if(Mode == copy)
+			res.errorText.replace("переместить", "скопировать");
+	}
+
+	return res;
 }
 
 void PlatformDependent::SetTopMost(QWidget * w, bool topMost)
@@ -91,3 +112,24 @@ void PlatformDependent::SetTopMost(QWidget * w, bool topMost)
 	SetWindowPos(hwnd, topMost ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0,
 				 SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 }
+
+void PlatformDependent::SetTopMostFlash(QWidget *w)
+{
+	SetTopMost(w, true);
+	SetTopMost(w, false);
+}
+
+void PlatformDependent::ShowPropertiesWindow(const QString &file)
+{
+	SHELLEXECUTEINFO sei = {};
+	sei.cbSize = sizeof(SHELLEXECUTEINFO);
+	sei.fMask = SEE_MASK_INVOKEIDLIST;
+	sei.lpVerb = L"properties";
+	sei.lpFile = reinterpret_cast<LPCWSTR>(file.utf16());
+	sei.nShow = SW_SHOW;
+	ShellExecuteEx(&sei);
+}
+
+
+
+

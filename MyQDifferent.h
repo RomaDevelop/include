@@ -1,21 +1,21 @@
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 #ifndef MYQDIFFERENT_H
 #define MYQDIFFERENT_H
-//---------------------------------------------------------------------------
-#include <direct.h>
-#include <algorithm>
+//------------------------------------------------------------------------------------------------------------------------------------------
+#include <set>
 
 #include <QCoreApplication>
 #include <QDebug>
 #include <QFile>
 #include <QFileInfo>
 #include <QWidget>
+#include <QLineEdit>
 #include <QDir>
 #include <QDateTime>
 
 #include "MyQShortings.h"
 #include "MyQFileDir.h"
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 struct MyQDifferent
 {
     inline static QString PathToExe() { return ExePath(); }
@@ -30,13 +30,20 @@ struct MyQDifferent
     inline static bool LoadSettings(QString fileName, std::vector<QWidget*> &widgets, QStringList &stringSettings);
 
     inline static void GetPathName(QString file, QString *path, QString *name);
+
+	inline static QStringList ArgsToStrList(int argc, char *argv[]);
+
+	inline static void DoOnce(const QString &id, std::function<void()> action);
+	
+	inline static void SetSelectedText(QLineEdit *lineEdit, const QString &newText);
 };
 
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 
 QString MyQDifferent::ExePath()
 {
-    static QString path = QFileInfo(QCoreApplication::applicationFilePath()).path(); // альтернатива QDir::currentPath(), но если программа запущена из Qt игнорирует /debug
+    static QString path = QFileInfo(QCoreApplication::applicationFilePath()).path(); 
+		// альтернативой applicationFilePath() является QDir::currentPath(), но если программа запущена из Qt игнорирует /debug
     return path;
 }
 
@@ -214,6 +221,34 @@ void MyQDifferent::GetPathName(QString file, QString *path, QString *name)
     *name = fi.fileName();
 }
 
+QStringList MyQDifferent::ArgsToStrList(int argc, char *argv[])
+{
+	QStringList args;
+	for(int i=0; i<argc; i++) args += argv[i];
+	return args;
+}
+
+void MyQDifferent::DoOnce(const QString &id, std::function<void ()> action)
+{
+	static std::set<QString> ids;
+	if(ids.count(id) == 0)
+	{
+		action();
+		ids.insert(id);
+	}
+}
+
+void MyQDifferent::SetSelectedText(QLineEdit *lineEdit, const QString &newText)
+{
+	if (!lineEdit->hasSelectedText()) return;
+	QString currentText = lineEdit->text();
+	int start = lineEdit->selectionStart();
+	currentText.replace(start, lineEdit->selectionLength(), newText);
+	lineEdit->setText(currentText);
+	lineEdit->setSelection(start, newText.length());
+}
+
+//------------------------------------------------------------------------------------------------------------------------------------------
 #endif
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------
 
