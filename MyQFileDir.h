@@ -25,7 +25,9 @@ struct MyQFileDir
 	enum SortFlags { noSort, name, modified, read };
 	inline static QString RemoveOldFiles(QString directory, int remainCount, SortFlags sortFlag = MyQFileDir::modified);
 
-	inline static void RemoveOldFiles2(const QString &directory, int maxDays);
+	///\brief removes in all subcategories
+	inline static void RemoveOldFilesByDaysThreshold(const QString &directory, int daysThresholdToRemove, bool removeEmptySubcats,
+									   SortFlags daysThresholdType = modified);
 
 	inline static void RemoveEmptySubcats(const QString &directory);
 
@@ -161,30 +163,34 @@ QString MyQFileDir::RemoveOldFiles(QString directory, int remainCount, SortFlags
 	return ret;
 }
 
-void MyQFileDir::RemoveOldFiles2(const QString &directory, int maxDays)
+void MyQFileDir::RemoveOldFilesByDaysThreshold(const QString &directory, int daysThresholdToRemove,
+											   bool removeEmptySubcats, SortFlags daysThresholdType)
 {
-    QDir dir(directory);
-    if (!dir.exists())
-    {
-	return;
-    }
+	QDir dir(directory);
+	if (!dir.exists()) return;
 
-    QDateTime currentDate = QDateTime::currentDateTime();
+	QDateTime currentDate = QDateTime::currentDateTime();
 
-    QDirIterator it(directory, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-    while(it.hasNext()) {
-	it.next();
-	QFileInfo fileInfo = it.fileInfo();
-	QDateTime lastModified = fileInfo.lastModified();
-	qint64 daysDiffrence = lastModified.daysTo(currentDate);
-
-	if(daysDiffrence > maxDays)
+	QDirIterator it(directory, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	while(it.hasNext())
 	{
-	    QFile::remove(fileInfo.absoluteFilePath());
-	}
-    }
+		it.next();
+		QFileInfo fileInfo = it.fileInfo();
+		QDateTime dateTimeOfFile = fileInfo.lastModified();
 
-    RemoveEmptySubcats(directory);
+		if(daysThresholdType == modified) dateTimeOfFile = fileInfo.lastModified();
+		else if(daysThresholdType == read) dateTimeOfFile = fileInfo.lastRead();
+		else qdbg << "RemoveOldFiles2: error, wrong daysThresholdType " + QSn(daysThresholdType);
+
+		qint64 daysDiffrence = dateTimeOfFile.daysTo(currentDate);
+
+		if(daysDiffrence > daysThresholdToRemove)
+		{
+			QFile::remove(fileInfo.absoluteFilePath());
+		}
+	}
+
+	if(removeEmptySubcats) RemoveEmptySubcats(directory);
 }
 
 void MyQFileDir::RemoveEmptySubcats(const QString &directory)
