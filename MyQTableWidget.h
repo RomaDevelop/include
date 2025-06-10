@@ -30,6 +30,7 @@ public:
 public:
 	inline explicit MyQTableWidget(QWidget *parent = nullptr);
 	inline void CreateContextMenu();
+	virtual ~MyQTableWidget() {}
 
 public: signals:
 	void SignalAfterCut();
@@ -126,6 +127,10 @@ void MyQTableWidget::CreateContextMenu()
 	cutAction->setShortcut(QKeySequence::Cut);
 	copyAction->setShortcut(QKeySequence::Copy);
 	pasteAction->setShortcut(QKeySequence::Paste);
+
+	cutAction->setShortcutContext(Qt::WidgetShortcut);
+	copyAction->setShortcutContext(Qt::WidgetShortcut);		// пришлось добавить чтобы не перехватывал Ctrl+C из ReadOnly QTextEdit-а
+	pasteAction->setShortcutContext(Qt::WidgetShortcut);
 
 	addAction(cutAction);
 	addAction(copyAction);
