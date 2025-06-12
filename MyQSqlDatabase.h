@@ -19,6 +19,7 @@
 
 using QStringPair = std::pair<QString,QString>;
 using QStringPairVector = std::vector<QStringPair>;
+using QStringListVector = std::vector<QStringList>;
 using QStringRefWr_c = std::reference_wrapper<const QString>;
 
 struct BaseData

@@ -54,18 +54,19 @@ public:
 	inline static ListDialogRes ListDialog(QString caption, QStringList valuesList, uint w = 640, uint h = 480);
 	inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter, uint w = 640, uint h = 480);
 
-	declare_struct_2_fields_move(CheckBoxDialogItem, QString, text, bool, chekState);
+	declare_struct_3_fields_move(CheckBoxDialogItem, QString, text, bool, checkState, bool, enabled);
 	declare_struct_4_fields_move(CheckBoxDialogResult,
 								 std::vector<CheckBoxDialogItem>, allItems,
 								 std::vector<CheckBoxDialogItem>, checkedItems,
 								 QStringList, checkedTexts,
 								 bool, accepted);
 
+	inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption, std::vector<CheckBoxDialogItem> items, uint w=640, uint h=480);
 	inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption,
 													  const QStringList &values,
-													  const std::vector<bool> &startCheched = {},
+	                                                  const std::vector<bool> &startChecked = {},
 													  const std::vector<bool> &enabled = {},
-	                                                  bool statrtAllChecked  = false,
+	                                                  bool startAllChecked  = false,
 													  uint w = 640, uint h = 480);
 
 	declare_struct_2_fields_move(TableDialogRes, std::unique_ptr<QTableWidget>, table, bool, accepted);
@@ -316,11 +317,26 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QString values
 	return ListDialog(caption, valuesList.split(splitter), w, h);
 }
 
+MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &caption, std::vector<CheckBoxDialogItem> items, uint w, uint h)
+{
+	QStringList values;
+	std::vector<bool> startCheched;
+	std::vector<bool> enabled;
+	for(auto &item : items)
+	{
+		values += "";
+		values.back() = std::move(item.text);
+		startCheched.emplace_back(item.checkState);
+		enabled.emplace_back(item.enabled);
+	}
+	return CheckBoxDialog(caption, values, startCheched, enabled, false, w, h);
+}
+
 MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &caption,
-															const QStringList & values,
-															const std::vector<bool> & startCheched,
+                                                            const QStringList & values,
+                                                            const std::vector<bool> & startChecked,
 															const std::vector<bool> & enabled,
-                                                            bool statrtAllChecked,
+                                                            bool startAllChecked,
 															uint w, uint h)
 {
 	CheckBoxDialogResult result;
@@ -341,17 +357,21 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	QObject::connect(btnCansel,&QPushButton::clicked,[&dialog, &result](){ result.accepted = false; dialog->hide();});
 
 	chBoxCheckAll->setChecked(true);
-	QObject::connect(chBoxCheckAll,&QCheckBox::clicked,[listWidget, chBoxCheckAll](){
-		chBoxCheckAll->setChecked(true);
+	QObject::connect(chBoxCheckAll, &QCheckBox::clicked,[listWidget, chBoxCheckAll](){
 		for(int i=0; i<listWidget->count(); i++)
-			listWidget->item(i)->setCheckState(Qt::Checked);
+		{
+			if(listWidget->item(i)->flags().testFlag(Qt::ItemIsEnabled))
+				listWidget->item(i)->setCheckState(Qt::Checked);
+		}
 	});
 
 	chBoxCheckNothing->setChecked(false);
-	QObject::connect(chBoxCheckNothing,&QCheckBox::clicked,[listWidget, chBoxCheckNothing](){
-		chBoxCheckNothing->setChecked(false);
+	QObject::connect(chBoxCheckNothing, &QCheckBox::clicked,[listWidget, chBoxCheckNothing](){
 		for(int i=0; i<listWidget->count(); i++)
-			listWidget->item(i)->setCheckState(Qt::Unchecked);
+		{
+			if(listWidget->item(i)->flags().testFlag(Qt::ItemIsEnabled))
+				listWidget->item(i)->setCheckState(Qt::Unchecked);
+		}
 	});
 
 	vloMain->addLayout(hloHeader);
@@ -368,21 +388,21 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	{
 		listWidget->addItem(str);
 		listWidget->item(listWidget->count()-1)->setCheckState(Qt::Unchecked);
-		QObject::connect(listWidget, &QListWidget::itemDoubleClicked, [](QListWidgetItem *item){
-			if(item->checkState() == Qt::Checked) item->setCheckState(Qt::Unchecked);
-			else item->setCheckState(Qt::Checked);
-		});
 	}
+	QObject::connect(listWidget, &QListWidget::itemDoubleClicked, [](QListWidgetItem *item){
+		if(item->checkState() == Qt::Checked) item->setCheckState(Qt::Unchecked);
+		else item->setCheckState(Qt::Checked);
+	});
 
-	for(int i=0; i<listWidget->count() && i<(int)startCheched.size(); i++)
-		if(startCheched[i]) listWidget->item(i)->setCheckState(Qt::Checked);
+	for(int i=0; i<listWidget->count() && i<(int)startChecked.size(); i++)
+		if(startChecked[i]) listWidget->item(i)->setCheckState(Qt::Checked);
 
-	if(statrtAllChecked)
+	if(startAllChecked)
 		for(int i=0; i<listWidget->count(); i++)
 			listWidget->item(i)->setCheckState(Qt::Checked);
 
 	for(int i=0; i<listWidget->count() && i<(int)enabled.size(); i++)
-		if(startCheched[i]) listWidget->item(i)->setFlags(listWidget->item(i)->flags() ^ Qt::ItemIsEnabled);
+		if(!enabled[i]) listWidget->item(i)->setFlags(listWidget->item(i)->flags() ^ Qt::ItemIsEnabled);
 
 	dialog->exec();
 
@@ -390,8 +410,10 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	{
 		for(int i=0; i<listWidget->count(); i++)
 		{
-			result.allItems.emplace_back(listWidget->item(i)->text(), listWidget->item(i)->checkState() == Qt::Checked);
-			if(result.allItems.back().chekState)
+			result.allItems.emplace_back(listWidget->item(i)->text(),
+			                             listWidget->item(i)->checkState() == Qt::Checked,
+			                             listWidget->item(i)->flags().testFlag(Qt::ItemIsEnabled));
+			if(result.allItems.back().checkState)
 			{
 				result.checkedItems.emplace_back(result.allItems.back());
 				result.checkedTexts += result.allItems.back().text;
