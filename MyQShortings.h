@@ -28,10 +28,11 @@ bool IsUInt(QStringType stringVariable) { bool ok; stringVariable.toUInt(&ok); r
 #define DateTimeFormatForFileName "yyyy.MM.dd hh-mm-ss"
 #define DateTimeFormatForFileName_ms "yyyy.MM.dd hh-mm-ss-zzz"
 //------------------------------------------------------------------------------------------------------------------------------------------
-#define DO_ONCE(code_to_do) static bool did = false; if(!did) { code_to_do; did = true; }
+#define DO_ONCE(code_to_do) { static bool did = false; if(!did) { code_to_do; did = true; } }
 //------------------------------------------------------------------------------------------------------------------------------------------
 #define DECLARE_TIME_MARKER(marker_identtificator) auto marker_identtificator = QDateTime::currentDateTime();
 #define CALC_MILLISECONDS(time_maker) time_maker.msecsTo(QDateTime::currentDateTime())
-#define TIME_CALC_TO_QString(prefix_str, time_maker) QString(  QString(prefix_str) + " " + QString::number(CALC_MILLISECONDS(time_maker)) + " milliseconds")
+#define TIME_CALC_TO_QString(prefix_str, time_maker) \
+	QString(  QString(prefix_str) + " " + QString::number(CALC_MILLISECONDS(time_maker)) + " milliseconds")
 //------------------------------------------------------------------------------------------------------------------------------------------
 #endif

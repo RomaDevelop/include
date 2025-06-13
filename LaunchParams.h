@@ -14,7 +14,7 @@
 
 ///\brief определение параметров запуска
 struct LaunchParams {
-	declare_struct_4_fields_move(DeveloperData, QString, userName, QString, hostName, QString, sourcesPath, QString, buildPath);
+	declare_struct_4_fields_move(DeveloperData, QString, devName, QString, hostName, QString, sourcesPath, QString, buildPath);
 
 	inline static void Init(std::vector<DeveloperData> developersData);
 
