@@ -68,6 +68,8 @@ AdditionalTrayIcon::AdditionalTrayIcon(const QIcon &icon, QPoint globalPos, QWid
 	setWindowFlag(Qt::WindowDoesNotAcceptFocus);
 	setWindowFlag(Qt::NoDropShadowWindowHint);
 
+	setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+
 	QLabel *label = new QLabel(this);
 	label->setPixmap(icon.pixmap(24, 24));
 	QVBoxLayout *layout = new QVBoxLayout(this);
@@ -84,9 +86,9 @@ AdditionalTrayIcon::AdditionalTrayIcon(const QIcon &icon, QPoint globalPos, QWid
 
 	connect(this, &ClickableQWidget::clicked, [this](){ QTimer::singleShot(0,[this](){ PlatformDependent::SetTopMost(this,true); }); });
 
-	QTimer *timerTopmoster = new QTimer(this);
-	connect(timerTopmoster, &QTimer::timeout, [this](){ PlatformDependent::SetTopMost(this,true); });
-	timerTopmoster->start(1000);
+	//QTimer *timerTopmoster = new QTimer(this);
+	//connect(timerTopmoster, &QTimer::timeout, [this](){ PlatformDependent::SetTopMost(this,true); });
+	//timerTopmoster->start(1000);
 
 	existingIcons.insert(this);
 }
