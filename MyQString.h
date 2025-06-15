@@ -13,6 +13,8 @@
 struct MyQString
 {
 	inline static QStringList QStringListSized(int size, const QString &value = "");
+	inline static QStringList SizedQStringList(int size, const QString &value = "") { return QStringListSized(size, value); }
+
 	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 
 	template<typename... Args>
@@ -79,6 +81,7 @@ QStringList MyQString::QStringListSized(int size, const QString & value)
 	ret.reserve(size);
 	for(int i=0; i<size; i++)
 		ret.append(value);
+	/// тут цикл!!! нельзя делать ret[i] = std::move(value)
 	return ret;
 }
 
