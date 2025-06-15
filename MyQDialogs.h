@@ -36,7 +36,7 @@ public:
 	inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
 
 	declare_struct_2_fields_move(MenuItem, QString, text, std::function<void()>, worker);
-	inline static void MenuUnderWidget(QWidget *w, std::vector<MenuItem> items);
+	inline static void MenuUnderWidget(QWidget *w, std::vector<MenuItem> &&items);
 	inline static void MenuUnderWidget(QWidget *w, QStringList texts, std::vector<std::function<void()>> workers);
 	inline static MenuItem SeparatorMenuItem() { return MenuItem("SeparatorMenuItem", nullptr); }
 	inline static MenuItem DisabledItem(QString text) { text+=DisabledItemMarker(); return MenuItem(std::move(text), nullptr);  }
@@ -146,13 +146,13 @@ QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList butt
 	return retText;
 }
 
-void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<MenuItem> items)
+void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<MenuItem> &&items)
 {
 	std::vector<MenuItem> *itemsPtr = new std::vector<MenuItem>;
 	std::vector<MenuItem> &itemsRef = *itemsPtr;
 	itemsRef = std::move(items);
 	// Без itemsPtr = new ... меню создано и показано, функция отработота - items уничтожены.
-	// Поьзователь нажмёт кнопку и будет попытка работы с уничтоженным объектом
+	// Пользователь нажмёт кнопку и будет попытка работы с уничтоженным объектом
 
 	QMenu *menu = new QMenu(w);
 	QObject::connect(menu, &QObject::destroyed, [itemsPtr](){ delete itemsPtr; });
@@ -196,7 +196,7 @@ void MyQDialogs::MenuUnderWidget(QWidget *w, QStringList texts, std::vector<std:
 	for(int i=0; i<texts.size(); i++)
 		items.emplace_back(    std::move(texts[i]), std::move(workers[i])    );
 
-	MenuUnderWidget(w, items);
+	MenuUnderWidget(w, std::move(items));
 }
 
 MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString startText,  uint w, uint h)
