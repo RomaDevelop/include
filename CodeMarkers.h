@@ -12,6 +12,7 @@ struct CodeMarkers
 
     static void to_do(QString) {}
 	static void to_do_with_cpp20(QString) {}
+	static void to_do_afterwards(QString) {}
     static void can_be_optimized(QString) {}
     static void need_optimisation(QString) {}
 
