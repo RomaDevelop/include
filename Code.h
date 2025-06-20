@@ -10,7 +10,7 @@
 #include "CodeMarkers.h"
 #include "MyQShortings.h"
 
-#include "logs.h"
+//#include "logs.h"
 
 namespace CodeKeyWords
 {
@@ -93,6 +93,27 @@ struct Statement
 
 	static QString PrintStatements(std::vector<Statement> statements);
 };
+struct Statement2
+{
+	bool singleInstruction = false;
+	QString header;
+	std::vector<Statement2> nestedStatements;
+	Statement2() = default;
+	explicit Statement2(QString header, std::vector<Statement2> nestedStatements): header{header}, nestedStatements{nestedStatements} {}
+	explicit Statement2(QString singleInstruction_)
+	{
+		singleInstruction = true;
+		header = std::move(singleInstruction_);
+	}
+	explicit Statement2(QString header, QStringList blockSingleInstructions): header{header} {
+		for(auto &instruction:blockSingleInstructions)
+		{
+			nestedStatements.emplace_back(Statement2(std::move(instruction)));
+		}
+	}
+
+	static QString PrintStatements(std::vector<Statement2> statements, const QString &indent = {});
+};
 
 class Code
 {
@@ -102,6 +123,7 @@ public:
 	static QStringList CommandToWords(const QString &command);
 
 	static std::vector<Statement> TextToStatements(const QString &text);  // внутри вызывается Normalize
+	static std::vector<Statement2> TextToStatements2(const QString &text, int nestedBlockParsingStart = -1, int *nestedBlockFinish = {});
 
 	static QString GetFirstWord(const QString &text);
 	static QString GetPrevWord(const QString &text, int charIndexInText);
@@ -131,6 +153,25 @@ struct CodeTests
 	static bool TestNormalize();
 	static bool TestTextToCommands();
 	static bool TestTextToStatements();
+	static bool TestTextToStatements2();
+};
+
+struct CodeLogs
+{
+private:
+	static std::function<void(const QString& logText)> logFucnction;
+	static std::function<void(const QString& errorText)> errorLogFucnction;
+
+public:
+	static void SetLogFunction(std::function<void(const QString& logText)> &&logFucnction);
+	static void SetErrorLogFunction(std::function<void(const QString& errorText)> &&errorLogFucnction);
+
+	static void Log(const QString& logText) { logFucnction(logText); }
+	static void Error(const QString& errorText) { errorLogFucnction(errorText); }
+
+	inline static int errorsTestCount;
+	inline static std::list<QString> errorsTestList;
+	static void ActivateTestMode(bool active, bool callNativeLogInTestMode);
 };
 
 #endif // CODE_H
