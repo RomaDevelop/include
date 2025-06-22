@@ -266,7 +266,6 @@ void MyQTableView::keyPressEvent(QKeyEvent *event)
 		}
 		// в остальных случаях - отрабатывается как обычно
 		else { QTableView::keyPressEvent(event); return; }
-
 	}
 
 	// если поиск не отключен - отрабатывается как обычно
@@ -323,8 +322,9 @@ bool MyQTableView::IsKeyEditTrigger(int key)
 	QAbstractItemView::EditTriggers currentTriggers = editTriggers();
 
 	// если стоят триггеры AllEditTriggers или AnyKeyPressed
-	if(currentTriggers & AllEditTriggers || currentTriggers & AnyKeyPressed)
+	if(currentTriggers == AllEditTriggers || currentTriggers & AnyKeyPressed)
 	{
+		// нужно именно  == AllEditTriggers потому что если & AllEditTriggers любой триггер будет выдавать true
 		return true;
 	}
 
