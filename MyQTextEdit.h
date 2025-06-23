@@ -24,6 +24,9 @@ public:
 	inline static bool MoveCurrentRow(QTextEdit *edit, direction direction);
 	inline static void RemoveCurrentRow(QTextEdit *edit);
 
+	inline static void SelectText(QTextEdit *textEdit, int row, int indexInRow, int length);
+	inline static void SelectText(QTextEdit *textEdit, int index, int length);
+
 public:
 	enum richTextPasteValue { richTextPasteDisabled = 0, richTextPasteEnabled = 1 };
 
@@ -39,7 +42,8 @@ public:
 
 	inline QTextCharFormat LetterFormat(int letterIndex) { return LetterFormat(this, letterIndex); }
 
-private:
+	inline void SelectText(int row, int indexInRow, int length) { SelectText(this, row, indexInRow, length); }
+	inline void SelectText(int index, int length) { SelectText(this, index, length); }
 
 protected:
 	inline virtual void insertFromMimeData(const QMimeData *source) override; // переопределение вставки текста из буффера обмена для richTextPaste
@@ -142,6 +146,24 @@ void MyQTextEdit::RemoveCurrentRow(QTextEdit *edit)
 	cursor.movePosition(cursor.Left);
 	cursor.deleteChar();
 	cursor.endEditBlock();
+}
+
+void MyQTextEdit::SelectText(QTextEdit *textEdit, int row, int indexInRow, int length)
+{
+	auto cursor = textEdit->textCursor();
+	cursor.setPosition(0);
+	cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, row);
+	cursor.movePosition(QTextCursor::NextCharacter, QTextCursor::MoveAnchor, indexInRow);
+	cursor.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor, length);
+	textEdit->setTextCursor(cursor);
+}
+
+void MyQTextEdit::SelectText(QTextEdit *textEdit, int index, int length)
+{
+	auto cursor = textEdit->textCursor();
+	cursor.setPosition(index);
+	cursor.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor, length);
+	textEdit->setTextCursor(cursor);
 }
 
 void MyQTextEdit::insertFromMimeData(const QMimeData * source)
