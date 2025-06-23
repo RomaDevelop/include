@@ -17,6 +17,9 @@ struct MyQString
 
 	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 
+
+	inline static QString GetRowOfLetter(const QString& str, int letterIndex);
+
 	template<typename... Args>
 	inline static void Append(QString& s, const Args&... args) { (s.append(args), ...); }
 	template<class char_type>
@@ -90,6 +93,21 @@ QStringList MyQString::ArgsToStrList(int argc, char *argv[])
 	QStringList strList;
 	for(int i=0; i<argc; i++) strList += argv[i];
 	return strList;
+}
+
+QString MyQString::GetRowOfLetter(const QString &str, int letterIndex)
+{
+	if (letterIndex >= str.length() || letterIndex < 0) { return ""; }
+
+	int start = letterIndex;
+
+	while (start > 0 && str[start - 1] != '\n') { start--; }
+
+	int end = str.indexOf('\n', start + 1);
+
+	if (end == -1) { end = str.length(); }
+
+	return str.mid(start, end - start).trimmed();
 }
 
 QString MyQString::Translited(QString str)
