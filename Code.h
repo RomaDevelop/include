@@ -92,27 +92,28 @@ struct Statement
 	Statement(QString header, QStringList blockInstructions): header{header}, blockInstructions{blockInstructions} {}
 
 	static QString PrintStatements(std::vector<Statement> statements);
+	static bool CmpStatements(std::vector<Statement> &lhs, std::vector<Statement> &rhs);
 };
+
 struct Statement2
 {
-	bool singleInstruction = false;
+	using StatementOrQString = std::variant<Statement2, QString>;
+	using VectorStatementOrQString = std::vector<StatementOrQString>;
+
 	QString header;
-	std::vector<Statement2> nestedStatements;
+	VectorStatementOrQString nestedStatements;
+
 	Statement2() = default;
-	explicit Statement2(QString header, std::vector<Statement2> nestedStatements): header{header}, nestedStatements{nestedStatements} {}
-	explicit Statement2(QString singleInstruction_)
-	{
-		singleInstruction = true;
-		header = std::move(singleInstruction_);
-	}
-	explicit Statement2(QString header, QStringList blockSingleInstructions): header{header} {
-		for(auto &instruction:blockSingleInstructions)
-		{
-			nestedStatements.emplace_back(Statement2(std::move(instruction)));
-		}
-	}
+	explicit Statement2(QString header, VectorStatementOrQString nestedStatements): header{header}, nestedStatements{nestedStatements} {}
+	explicit Statement2(QString singleInstruction_);
+	explicit Statement2(QString header, QStringList blockSingleInstructions);
 
 	static QString PrintStatements(std::vector<Statement2> statements, const QString &indent = {});
+	QString PrintStatement(const QString &indent = {});
+
+	static bool CmpStatement2(const Statement2 &lhs, const Statement2 &rhs, QString *resultDetails);
+
+	static bool CmpStatements2(std::vector<Statement2> &lhs, std::vector<Statement2> &rhs);
 };
 
 class Code
@@ -123,7 +124,7 @@ public:
 	static QStringList CommandToWords(const QString &command);
 
 	static std::vector<Statement> TextToStatements(const QString &text);  // внутри вызывается Normalize
-	static std::vector<Statement2> TextToStatements2(const QString &text, int nestedBlockParsingStart = -1, int *nestedBlockFinish = {});
+	static Statement2 TextToStatements2(const QString &text, int nestedBlockParsingStart = -1, int *nestedBlockFinish = {});
 
 	static QString GetFirstWord(const QString &text);
 	static QString GetPrevWord(const QString &text, int charIndexInText);

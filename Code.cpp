@@ -297,12 +297,11 @@ std::vector<Statement> Code::TextToStatements(const QString &text)
 	return statements;
 }
 
-std::vector<Statement2> Code::TextToStatements2(const QString &text, int nestedBlockOpener, int *nestedBlockCloser)
+Statement2 Code::TextToStatements2(const QString &text, int nestedBlockOpener, int *nestedBlockCloser)
 {
-	std::vector<Statement2> statements;
-	Statement2* currentStatement = nullptr;
+	Statement2 statement;
+	Statement2* currentStatement = &statement;
 	bool quats = false;
-	bool block = false;
 	bool commented = false;
 	QChar currQuats = CodeKeyWords::quatsSymbol1;
 	QString current;
@@ -329,63 +328,31 @@ std::vector<Statement2> Code::TextToStatements2(const QString &text, int nestedB
 		if(!quats && text[i] == CodeKeyWords::blockOpener)
 		{
 			Normalize(current);
-			if(block)
-			{
-				auto &nestedStatement = currentStatement->nestedStatements.emplace_back();
-				nestedStatement.nestedStatements = TextToStatements2(text, i, &i);
-				nestedStatement.header = std::move(current);
-				current.clear();
-				continue;
-			}
-			else
-			{
-				block = true;
-				currentStatement = &statements.emplace_back();
-				currentStatement->header = std::move(current);
-				current.clear();
-				continue;
-			}
+
+			auto &nestedStatementVar = currentStatement->nestedStatements.emplace_back(Statement2());
+			auto &nestedStatement = *std::get_if<Statement2>(&nestedStatementVar);
+
+			nestedStatement.header = std::move(current);
+
+			auto tmpNestedStatements = TextToStatements2(text, i, &i);
+			for(auto &tns:tmpNestedStatements.nestedStatements)
+					nestedStatement.nestedStatements.emplace_back(std::move(tns));
+
+			current.clear();
+			continue;
 		}
 
 		// завершение одиночной команды
 		if(!quats && text[i] == CodeKeyWords::commandSplitter)
 		{
 			Normalize(current);
-			//без блока
-			if(!block)
-			{
-				auto &newStatement = statements.emplace_back();
-				newStatement.singleInstruction = true;
-				newStatement.header = std::move(current);
-				current.clear();
-				continue;
-			}
-			// в блоке
-			else
-			{
-				currentStatement->nestedStatements.emplace_back(std::move(current));
-				current.clear();
-				continue;
-			}
-		}
-
-		// завершение блока
-		if(!quats && block && text[i] == CodeKeyWords::blockCloser)
-		{
-			Normalize(current);
-
-			if(!current.isEmpty())
-			{
-				CodeLogs::Error("Not finished text ("+current+") found; text: " + text);
-				current.clear();
-			}
-
-			block = false;
+			currentStatement->nestedStatements.emplace_back(std::move(current));
+			current.clear();
 			continue;
 		}
 
-		// завершение блока при обработке вложенного блока
-		if(!quats && nestedBlockCloser && text[i] == CodeKeyWords::blockCloser)
+		// завершение блока
+		if(!quats && text[i] == CodeKeyWords::blockCloser)
 		{
 			Normalize(current);
 
@@ -395,8 +362,10 @@ std::vector<Statement2> Code::TextToStatements2(const QString &text, int nestedB
 				current.clear();
 			}
 
-			*nestedBlockCloser = i;
-			return statements;
+			if(nestedBlockCloser) *nestedBlockCloser = i;
+			else CodeLogs::Error("Block closing, but nestedBlockCloser invalid");
+
+			return statement;
 		}
 
 		current += text[i];
@@ -407,20 +376,21 @@ std::vector<Statement2> Code::TextToStatements2(const QString &text, int nestedB
 
 	if(current.size())
 	{
-		if(block) CodeLogs::Error("missing ending symbol; text: " + text);
+		if(0/*block*/) CodeLogs::Error("missing ending symbol; text: " + text);
 		else
 		{
 			Normalize(current);
 			if(!current.isEmpty())
 			{
-				auto &newStatement = statements.emplace_back();
-				newStatement.singleInstruction = true;
-				newStatement.header = std::move(current);
+				auto &newStatementVar = statement.nestedStatements.emplace_back(QString());
+				auto &newStatement = *std::get_if<QString>(&newStatementVar);
+				newStatement = std::move(current);
+				current.clear();
 			}
 		}
 	}
 
-	return statements;
+	return statement;
 }
 
 QString Code::GetFirstWord(const QString &text)
@@ -973,43 +943,6 @@ bool CodeTests::TestTextToCommands()
 	return correct;
 }
 
-bool CmpStatements(std::vector<Statement> &lhs, std::vector<Statement> &rhs)
-{
-	if(lhs.size() != rhs.size()) return false;
-	for(auto itl = lhs.begin(), itr = rhs.begin(); itl!=lhs.end(); ++itl, ++itr)
-		if(itl->header != itr->header || itl->blockInstructions != itr->blockInstructions)
-			return false;
-	return true;
-}
-
-
-bool CmpStatement2 (const Statement2 &lhs, const Statement2 &rhs)
-{
-	if(lhs.singleInstruction != rhs.singleInstruction
-			|| lhs.header != rhs.header
-			|| lhs.nestedStatements.size() != rhs.nestedStatements.size())
-		return false;
-	for(auto itl = lhs.nestedStatements.begin(), itr = rhs.nestedStatements.begin(); itl!=lhs.nestedStatements.end(); ++itl, ++itr)
-	{
-		if(!CmpStatement2(*itl, *itr))
-			return false;
-	}
-	return true;
-}
-
-bool CmpStatements2(std::vector<Statement2> &lhs, std::vector<Statement2> &rhs)
-{
-	if(lhs.size() != rhs.size())
-		return false;
-	for(auto itl = lhs.begin(), itr = rhs.begin(); itl!=lhs.end(); ++itl, ++itr)
-	{
-		if(!CmpStatement2(*itl, *itr))
-			return false;
-	}
-	return true;
-}
-
-
 bool CodeTests::TestTextToStatements()
 {
 	std::vector<QString> inputsTexts;
@@ -1042,7 +975,7 @@ bool CodeTests::TestTextToStatements()
 		}
 		CodeLogs::ActivateTestMode(false, false);
 
-		if(!CmpStatements(result, resultMustBe))
+		if(!Statement::CmpStatements(result, resultMustBe))
 		{
 			correct = false;
 			errors += "Тест i"+QSn(i)+" TestTextToStatements(\""+text+"\") выдал ошибку!"
@@ -1092,13 +1025,14 @@ bool CodeTests::TestTextToStatements()
 bool CodeTests::TestTextToStatements2()
 {
 	std::vector<QString> inputsTexts;
-	std::vector<std::vector<Statement2>> resultsMustBe;
+	std::vector<Statement2> resultsMustBe;
 	bool correct = true;
 	bool printResAlwause = false;
 	//printResAlwause = true;
 
 	QStringList errorsAllTests;
-	auto test = [&correct, &errorsAllTests, &printResAlwause](int i, QString &text, std::vector<Statement2> &resultMustBe, int countErrorsMustBe, bool resultShouldBe = true)
+	auto test = [&correct, &errorsAllTests, &printResAlwause]
+			(int i, QString &text, Statement2 &resultMustBe, int countErrorsMustBe, bool resultShouldBe = true)
 	{
 		QStringList errorsThisTest;
 		CodeLogs::ActivateTestMode(true, false);
@@ -1121,17 +1055,22 @@ bool CodeTests::TestTextToStatements2()
 		}
 		CodeLogs::ActivateTestMode(false, false);
 
-		if(CmpStatements2(result, resultMustBe) != resultShouldBe)
+		QString resultCmpDetails;
+		if(Statement2::CmpStatement2(result, resultMustBe, &resultCmpDetails) != resultShouldBe)
 		{
 			correct = false;
 			if(!errorsThisTest.isEmpty()) errorsThisTest +=	"============================================================================";
 			errorsThisTest += "Тест i"+QSn(i)+" TestTextToStatements(\""+text+"\") выдал ошибку!"
-					+"\nрезультат <\n" + Statement2::PrintStatements(result)
-					+ ">\nа ожидается <\n" + Statement2::PrintStatements(resultMustBe)+ ">";
+					+"\nрезультат <\n" + result.PrintStatement()
+					+ ">\nа ожидается <\n" + resultMustBe.PrintStatement()+ ">";
+
+			if(resultCmpDetails.isEmpty()) errorsThisTest += "resultCmpDetails.isEmpty";
+			else errorsThisTest += "resultCmpDetails: " + resultCmpDetails;
+
 			CodeLogs::Error(errorsThisTest.join("\n"));
 		}
 		else if(printResAlwause) CodeLogs::Log("Тест TestTextToStatements(\""+text+"\") "
-											 +"выдал ожидаемый результат <" + Statement2::PrintStatements(result) + ">");
+											 +"выдал ожидаемый результат <" + result.PrintStatement() + ">");
 
 		if(!errorsThisTest.isEmpty())
 		{
@@ -1144,69 +1083,71 @@ bool CodeTests::TestTextToStatements2()
 
 	// 0 простой тест 1
 	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;   command3");
-	resultsMustBe.push_back({ Statement2("command1"), Statement2("c2w1 c2w2 c2w3"), Statement2("command3") });
+	resultsMustBe.emplace_back("", Statement2::VectorStatementOrQString{"command1", "c2w1 c2w2 c2w3", "command3"});
 	test(0, inputsTexts.back(), resultsMustBe.back(), 0);
 
 	// 1 простой тест 2
 	inputsTexts.push_back("if(a==5) FIVE(); next   command;");
-	resultsMustBe.push_back({ Statement2("if ( a == 5 ) FIVE ( )"), Statement2("next command") });
+	resultsMustBe.emplace_back("", Statement2::VectorStatementOrQString{"if ( a == 5 ) FIVE ( )", "next command"});
 	test(1, inputsTexts.back(), resultsMustBe.back(), 0);
 
 	// 11 простой тест 2 - проверка ложно-положительного
 	inputsTexts.push_back("if(a==5) FIVE(); next   command;");
-	resultsMustBe.push_back({ Statement2("if (a==5) FIVE ( )"), Statement2("next command") });
+	resultsMustBe.emplace_back("", Statement2::VectorStatementOrQString{"if ( a==5 ) FIVE ( )", "next command"});
 	test(11, inputsTexts.back(), resultsMustBe.back(), 0, false);
 
 	// 12 простой тест 2 - проверка ложно-положительного 2
 	inputsTexts.push_back("if(a==5) FIVE(); next   command;");
-	resultsMustBe.push_back({ Statement2("if ( a == 5 ) FIVE ( )"), Statement2("next coOmmand") });
+	resultsMustBe.emplace_back("", Statement2::VectorStatementOrQString{"if ( a == 5 ) FIVE ( )", "next coOmmand"});
 	test(12, inputsTexts.back(), resultsMustBe.back(), 0, false);
 
 	// 2 простой тест + тест игнорирования комментария
 	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;  //  command3;other;\"sdvsdv\";//;\nrow2 /");
-	resultsMustBe.push_back({ Statement2("command1"), Statement2("c2w1 c2w2 c2w3"), Statement2("row2 /") });
+	resultsMustBe.emplace_back("", Statement2::VectorStatementOrQString{"command1", "c2w1 c2w2 c2w3", "row2 /"});
 	test(2, inputsTexts.back(), resultsMustBe.back(), 0);
 
 	// 3 тест с блоком команд
 	inputsTexts.push_back("if(a==5) { a=10; next command; cmd3 1 2 34; }");
-	resultsMustBe.push_back({ Statement2("if ( a == 5 )", {"a = 10","next command","cmd3 1 2 34"}) });
+	resultsMustBe.emplace_back("", Statement2::VectorStatementOrQString{Statement2{"if ( a == 5 )", Statement2::VectorStatementOrQString{
+												"a = 10", "next command", "cmd3 1 2 34"}}});
 	test(3, inputsTexts.back(), resultsMustBe.back(), 0);
-
-	// 4 тест с блоком команд и вложенным блоком
-	inputsTexts.push_back("if(a==5) { FIVE(); if(b==5) { nested block; \n\t} }");
-	resultsMustBe.push_back({ Statement2("if ( a == 5 )", {Statement2("FIVE ( )"), Statement2("if ( b == 5 )", {"nested block"})}) });
-	test(4, inputsTexts.back(), resultsMustBe.back(), 0);
-
-	// 41 тест с блоком команд и вложенным блоком - с ошибкой, отсутсвующ точка с запятой
-	inputsTexts.push_back("if(a==5) { FIVE(); if(b==5) { nested block \n\t} }");
-	resultsMustBe.push_back({ Statement2("if ( a == 5 )", {Statement2("FIVE ( )"), Statement2("if ( b == 5 )", std::vector<Statement2>())}) });
-	test(41, inputsTexts.back(), resultsMustBe.back(), 1);
 
 	// 5 тест с блоком команд и вложенным блоком 2
 	inputsTexts.push_back("if(a==5) { FIVE(); Six(); if(b==5) { nested block; } }");
-	resultsMustBe.push_back({ Statement2("if ( a == 5 )", {Statement2("FIVE ( )"), Statement2("Six ( )"), Statement2("if ( b == 5 )", {"nested block"})}) });
+	resultsMustBe.emplace_back("", Statement2::VectorStatementOrQString{Statement2{"if ( a == 5 )", Statement2::VectorStatementOrQString{
+												"FIVE ( )", "Six ( )",
+												Statement2("if ( b == 5 )", Statement2::VectorStatementOrQString{"nested block"})
+												}}});
 	test(5, inputsTexts.back(), resultsMustBe.back(), 0);
 
 	// 51 тест с блоком команд и вложенным блоком 2 - с ошибкой, отсутсвующ точка с запятой
-	inputsTexts.push_back("if(a==5) { FIVE(); Six(); if(b==5) { nested block; } }");
-	resultsMustBe.push_back({ Statement2("if ( a == 5 )", {Statement2("FIVE ( )"), Statement2("Six ( )"), Statement2("if ( b == 5 )", {"nested block"})}) });
-	test(51, inputsTexts.back(), resultsMustBe.back(), 0);
+	inputsTexts.push_back("if(a==5) { FIVE(); Six(); if(b==5) { nested block } }");
+	resultsMustBe.emplace_back("", Statement2::VectorStatementOrQString{Statement2{"if ( a == 5 )", Statement2::VectorStatementOrQString{
+												"FIVE ( )", "Six ( )",
+												Statement2("if ( b == 5 )", Statement2::VectorStatementOrQString{})
+												}}});
+	test(51, inputsTexts.back(), resultsMustBe.back(), 1);
 
-	// 52 тест с блоком команд и вложенным блоком 2 - с ошибкой, отсутсвующ точка с запятой перед if
-	inputsTexts.push_back("if(a==5) { FIVE(); Six() if(b==5) { nested block } }");
-	resultsMustBe.push_back({ Statement2("if ( a == 5 )", {Statement2("FIVE ( )"), Statement2("Six ( )"), Statement2("if ( b == 5 )", std::vector<Statement2>())}) });
-	test(52, inputsTexts.back(), resultsMustBe.back(), 2);
+	// 52 тест с блоком команд и вложенным блоком 2 - с ошибкой, отсутсвующ точка с запятой перед if и отсутсвующ точка с запятой в блоке
+/// данная проверка должна происходить уже при распознавании слов инструкции
+//	inputsTexts.push_back("if(a==5) { FIVE(); Six() if(b==5) { nested block } }");
+//	resultsMustBe.push_back({ Statement2("if ( a == 5 )", {Statement2("FIVE ( )"), Statement2("Six ( )"),
+//		Statement2("if ( b == 5 )", std::vector<Statement2>())}) });
+//	test(52, inputsTexts.back(), resultsMustBe.back(), 2);
 
 	// 6 тест с блоком команд и вложенным блоком, командами до и после
-	inputsTexts.push_back("pred op; if(a==5) { FIVE(); Six(); if(b==5) { nested op1; nested op2; } end command in a == 5; } after op;");
-	resultsMustBe.push_back({ Statement2("pred op"),
-							  Statement2("if ( a == 5 )", {Statement2("FIVE ( )"),
-														   Statement2("Six ( )"),
-														   Statement2("if ( b == 5 )", QStringList{"nested op1", "nested op2"}),
-														   Statement2("end command in a == 5")}
-										),
-							  Statement2("after op")
-							});
+	inputsTexts.push_back("pred op; if(a==5) { FIVE(); Six(); if(b==5) { nested op1; nested op2; } end command in a== 5; } after op;");
+	resultsMustBe.emplace_back("", Statement2::VectorStatementOrQString{
+			 "pred op",
+			 Statement2("if ( a == 5 )", Statement2::VectorStatementOrQString{
+							   "FIVE ( )",
+							   "Six ( )",
+							   Statement2("if ( b == 5 )", Statement2::VectorStatementOrQString{"nested op1", "nested op2"}),
+							   "end command in a == 5"
+						}),
+			 "after op"
+			});
+
 	test(6, inputsTexts.back(), resultsMustBe.back(), 0);
 
 
@@ -1228,27 +1169,131 @@ QString Statement::PrintStatements(std::vector<Statement> statements)
 	return str;
 }
 
+bool Statement::CmpStatements(std::vector<Statement> &lhs, std::vector<Statement> &rhs)
+{
+	if(lhs.size() != rhs.size()) return false;
+	for(auto itl = lhs.begin(), itr = rhs.begin(); itl!=lhs.end(); ++itl, ++itr)
+		if(itl->header != itr->header || itl->blockInstructions != itr->blockInstructions)
+			return false;
+	return true;
+}
+
+Statement2::Statement2(QString singleInstruction_)
+{
+	nestedStatements.emplace_back(std::move(singleInstruction_));
+}
+
+Statement2::Statement2(QString header, QStringList blockSingleInstructions): header{header} {
+	for(auto &instruction:blockSingleInstructions)
+	{
+		nestedStatements.emplace_back(std::move(instruction));
+	}
+}
+
 QString Statement2::PrintStatements(std::vector<Statement2> statements, const QString &indent)
 {
 	QString str;
 	for(auto &s:statements)
 	{
-		if(s.singleInstruction)
+		str += s.PrintStatement(indent);
+	}
+	return str;
+}
+
+QString Statement2::PrintStatement(const QString &indent)
+{
+	QString str;
+	if(header.isEmpty()) str += indent + "// empty header\n";
+	else str += indent + header+"\t\t// header\n";
+
+	if(nestedStatements.empty()) str += indent +"    // empty body\n";
+
+	if(nestedStatements.size() > 1)
+		str += indent + "{\t\t// opener\n";
+
+	QString nestedIndent;
+	if(nestedStatements.size() == 1 && header.isEmpty())
+		nestedIndent = indent;
+	else nestedIndent = indent+"    ";
+
+	for(auto &nestedS:nestedStatements)
+	{
+		if(auto pInstruction = std::get_if<QString>(&nestedS))
 		{
-			str += indent + s.header + "\t\t// single instruction\n";
+			str += nestedIndent + *pInstruction + "\t\t// single instruction\n";
 		}
 		else
 		{
-			if(s.header.isEmpty()) str += indent + "\t\t// empty header\n";
-			else str += indent + s.header+"\t\t// header\n";
 
-			str += indent + "{\t\t// opener\n";
-			QString nestedIndent = indent+"    ";
-			str += PrintStatements(s.nestedStatements, nestedIndent);
-			str += indent + "}\t\t// closer\n";
+			if(auto pNestedS = std::get_if<Statement2>(&nestedS))
+				str += pNestedS->PrintStatement(nestedIndent);
+			else CodeLogs::Error("nestedStatement is not QString or Statement");
 		}
 	}
+
+	if(nestedStatements.size() > 1)
+		str += indent + "}\t\t// closer\n";
+
 	return str;
+}
+
+bool Statement2::CmpStatement2(const Statement2 &lhs, const Statement2 &rhs, QString *resultDetails)
+{
+	if(lhs.header != rhs.header)
+	{
+		if(resultDetails) *resultDetails = "CmpStatement2: different headers: ["+lhs.header+" != "+rhs.header+"]";
+		return false;
+	}
+	if(lhs.nestedStatements.size() != rhs.nestedStatements.size())
+	{
+		if(resultDetails)
+			*resultDetails = "CmpStatement2: different size: ["+QSn(lhs.nestedStatements.size())+" != "+QSn(rhs.nestedStatements.size())+"]";
+		return false;
+	}
+	for(auto itl = lhs.nestedStatements.begin(), itr = rhs.nestedStatements.begin(); itl!=lhs.nestedStatements.end(); ++itl, ++itr)
+	{
+		auto &stOrStrL = *itl;
+		auto &stOrStrR = *itr;
+		auto stringPtrL = std::get_if<QString>(&stOrStrL);
+		auto stringPtrR = std::get_if<QString>(&stOrStrR);
+		if(stringPtrL && stringPtrR)
+		{
+			if(*stringPtrL != *stringPtrR)
+			{
+				if(resultDetails) *resultDetails = "CmpStatement2: different commands: ["+*stringPtrL+" != "+*stringPtrR+"]";
+				return false;
+			}
+			else continue;
+		}
+		auto statementPtrL = std::get_if<Statement2>(&stOrStrL);
+		auto statementPtrR = std::get_if<Statement2>(&stOrStrR);
+		if(statementPtrL && statementPtrR)
+		{
+			if(!CmpStatement2(*statementPtrL, *statementPtrR, resultDetails))
+			{
+				return false;
+			}
+			else continue;
+		}
+
+		if(resultDetails)
+			*resultDetails = QString("CmpStatement2: different type nested statements: [")
+				+(stringPtrL?"QString":"Statement")+" and "+(stringPtrR?"QString":"Statement")+"]";
+		return false;
+	}
+	return true;
+}
+
+bool Statement2::CmpStatements2(std::vector<Statement2> &lhs, std::vector<Statement2> &rhs)
+{
+	if(lhs.size() != rhs.size())
+		return false;
+	for(auto itl = lhs.begin(), itr = rhs.begin(); itl!=lhs.end(); ++itl, ++itr)
+	{
+		if(!CmpStatement2(*itl, *itr, nullptr))
+			return false;
+	}
+	return true;
 }
 
 std::function<void(const QString& logText)> CodeLogs::logFucnction = [](const QString& logText){
