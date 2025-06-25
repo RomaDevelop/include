@@ -84,16 +84,16 @@ struct AllIndexesOld
 	std::vector<int> secnd;
 };
 
-struct Statement
-{
-	QString header;
-	QStringList blockInstructions;
-	Statement() = default;
-	Statement(QString header, QStringList blockInstructions): header{header}, blockInstructions{blockInstructions} {}
+//struct Statement
+//{
+//	QString header;
+//	QStringList blockInstructions;
+//	Statement() = default;
+//	Statement(QString header, QStringList blockInstructions): header{header}, blockInstructions{blockInstructions} {}
 
-	static QString PrintStatements(std::vector<Statement> statements);
-	static bool CmpStatements(std::vector<Statement> &lhs, std::vector<Statement> &rhs);
-};
+//	static QString PrintStatements(std::vector<Statement> statements);
+//	static bool CmpStatements(std::vector<Statement> &lhs, std::vector<Statement> &rhs);
+//};
 
 struct Statement2
 {
@@ -110,6 +110,9 @@ struct Statement2
 
 	static QString PrintStatements(std::vector<Statement2> statements, const QString &indent = {});
 	QString PrintStatement(const QString &indent = {});
+	void ForEach(const std::function<void(std::pair<Statement2*,QString*>)> &function, bool &breakFlag, bool &returnFlag);
+	void Remove_child_if(const std::function<bool(std::pair<Statement2*,QString*>)> &condition);
+
 
 	static bool CmpStatement2(const Statement2 &lhs, const Statement2 &rhs, QString *resultDetails);
 
@@ -123,7 +126,9 @@ public:
 	static QStringList TextToCommands(const QString &text); // внутри вызывается Normalize; гарантируется отсутсвие пустых команд в return
 	static QStringList CommandToWords(const QString &command);
 
-	static std::vector<Statement> TextToStatements(const QString &text);  // внутри вызывается Normalize
+	/// внутри вызывается Normalize
+	//static std::vector<Statement> TextToStatements(const QString &text);
+	/// внутри вызывается Normalize
 	static Statement2 TextToStatements2(const QString &text, int nestedBlockParsingStart = -1, int *nestedBlockFinish = {});
 
 	static QString GetFirstWord(const QString &text);

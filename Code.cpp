@@ -212,90 +212,90 @@ QStringList Code::CommandToWords(const QString &command)
 	return retWords;
 }
 
-std::vector<Statement> Code::TextToStatements(const QString &text)
-{
-	std::vector<Statement> statements;
-	Statement* currentStatement = nullptr;
-	bool quats = false;
-	bool block = false;
-	bool commented = false;
-	QChar currQuats = CodeKeyWords::quatsSymbol1;
-	QString current;
-	int sizeText = text.size();
-	for(int i = 0; i<sizeText; i++)
-	{
-		// логика игнорирования комментария
-		if(commented)  // если сейчас комментарий
-		{
-			if(text[i] == '\n') // если встретили перенос на сл.строку - прекращаем игнорировать
-				commented = false;
-			else
-				continue;  // продолжаем игнорировать
-		}
-		// определяем, что встретили маркер закомментированного
-		else if(!quats && text[i] == CodeKeyWords::commentMarker[0] && i+1 < sizeText && text[i+1] == CodeKeyWords::commentMarker[1])
-		{
-			commented = true;
-			continue;
-		}
-		// конец логики игнорирования комментария
+//std::vector<Statement> Code::TextToStatements(const QString &text)
+//{
+//	std::vector<Statement> statements;
+//	Statement* currentStatement = nullptr;
+//	bool quats = false;
+//	bool block = false;
+//	bool commented = false;
+//	QChar currQuats = CodeKeyWords::quatsSymbol1;
+//	QString current;
+//	int sizeText = text.size();
+//	for(int i = 0; i<sizeText; i++)
+//	{
+//		// логика игнорирования комментария
+//		if(commented)  // если сейчас комментарий
+//		{
+//			if(text[i] == '\n') // если встретили перенос на сл.строку - прекращаем игнорировать
+//				commented = false;
+//			else
+//				continue;  // продолжаем игнорировать
+//		}
+//		// определяем, что встретили маркер закомментированного
+//		else if(!quats && text[i] == CodeKeyWords::commentMarker[0] && i+1 < sizeText && text[i+1] == CodeKeyWords::commentMarker[1])
+//		{
+//			commented = true;
+//			continue;
+//		}
+//		// конец логики игнорирования комментария
 
-		// начало блока
-		if(!quats && text[i] == CodeKeyWords::blockOpener)
-		{
-			if(block) { CodeLogs::Error("nested blocks are forbidden, text: " + text); current.clear(); break; }
+//		// начало блока
+//		if(!quats && text[i] == CodeKeyWords::blockOpener)
+//		{
+//			if(block) { CodeLogs::Error("nested blocks are forbidden, text: " + text); current.clear(); break; }
 
-			block = true;
-			Normalize(current);
-			currentStatement = &statements.emplace_back();
-			currentStatement->header = std::move(current);
-			current.clear();
-			continue;
-		}
+//			block = true;
+//			Normalize(current);
+//			currentStatement = &statements.emplace_back();
+//			currentStatement->header = std::move(current);
+//			current.clear();
+//			continue;
+//		}
 
-		// завершение одиночной команды без блока
-		if(!quats && !block && text[i] == CodeKeyWords::commandSplitter)
-		{
-			Normalize(current);
-			statements.emplace_back();
-			statements.back().blockInstructions += std::move(current);
-			current.clear();
-			continue;
-		}
+//		// завершение одиночной команды без блока
+//		if(!quats && !block && text[i] == CodeKeyWords::commandSplitter)
+//		{
+//			Normalize(current);
+//			statements.emplace_back();
+//			statements.back().blockInstructions += std::move(current);
+//			current.clear();
+//			continue;
+//		}
 
-		// завершение блока
-		if(!quats && block && text[i] == CodeKeyWords::blockCloser)
-		{
-			currentStatement->blockInstructions = Code::TextToCommands(current);
-			currentStatement = nullptr;
-			current.clear();
+//		// завершение блока
+//		if(!quats && block && text[i] == CodeKeyWords::blockCloser)
+//		{
+//			currentStatement->blockInstructions = Code::TextToCommands(current);
+//			currentStatement = nullptr;
+//			current.clear();
 
-			block = false;
-			continue;
-		}
+//			block = false;
+//			continue;
+//		}
 
-		current += text[i];
+//		current += text[i];
 
-		if(!quats && TextConstant::IsItQuatsSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
-		if(text[i] == currQuats && quats) { quats = false; continue; }
-	}
+//		if(!quats && TextConstant::IsItQuatsSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
+//		if(text[i] == currQuats && quats) { quats = false; continue; }
+//	}
 
-	if(current.size())
-	{
-		if(block) CodeLogs::Error("missing ending symbol; text: " + text);
-		else
-		{
-			Normalize(current);
-			if(!current.isEmpty())
-			{
-				statements.emplace_back();
-				statements.back().blockInstructions += std::move(current);
-			}
-		}
-	}
+//	if(current.size())
+//	{
+//		if(block) CodeLogs::Error("missing ending symbol; text: " + text);
+//		else
+//		{
+//			Normalize(current);
+//			if(!current.isEmpty())
+//			{
+//				statements.emplace_back();
+//				statements.back().blockInstructions += std::move(current);
+//			}
+//		}
+//	}
 
-	return statements;
-}
+//	return statements;
+//}
 
 Statement2 Code::TextToStatements2(const QString &text, int nestedBlockOpener, int *nestedBlockCloser)
 {
@@ -945,79 +945,79 @@ bool CodeTests::TestTextToCommands()
 
 bool CodeTests::TestTextToStatements()
 {
-	std::vector<QString> inputsTexts;
-	std::vector<std::vector<Statement>> resultsMustBe;
 	bool correct = true;
-	bool printResAlwause = false;
-	//printResAlwause = true;
+//	std::vector<QString> inputsTexts;
+//	std::vector<std::vector<Statement>> resultsMustBe;
+//	bool printResAlwause = false;
+//	//printResAlwause = true;
 
-	QStringList errors;
-	auto test = [&correct, &errors, &printResAlwause](int i, QString &text, std::vector<Statement> &resultMustBe, int countErrorsMustBe)
-	{
-		int countErrorsOutputsBefore = errors.size();
-		CodeLogs::ActivateTestMode(true, false);
-		int countErrInLogBefore = CodeLogs::errorsTestCount;
-		auto result = Code::TextToStatements(text);
-		int eggorsGetedCountFromTest = CodeLogs::errorsTestCount - countErrInLogBefore;
-		if(eggorsGetedCountFromTest != countErrorsMustBe)
-		{
-			correct = false;
-			errors += "Тест i"+QSn(i)+" TestTextToStatements(\""+text+"\") wrong countErrors!\n"
-						+ "ошибок <" + QSn(CodeLogs::errorsTestCount - countErrInLogBefore) + "> а ожидается <" + QSn(countErrorsMustBe) + ">";
+//	QStringList errors;
+//	auto test = [&correct, &errors, &printResAlwause](int i, QString &text, std::vector<Statement> &resultMustBe, int countErrorsMustBe)
+//	{
+//		int countErrorsOutputsBefore = errors.size();
+//		CodeLogs::ActivateTestMode(true, false);
+//		int countErrInLogBefore = CodeLogs::errorsTestCount;
+//		auto result = Code::TextToStatements(text);
+//		int eggorsGetedCountFromTest = CodeLogs::errorsTestCount - countErrInLogBefore;
+//		if(eggorsGetedCountFromTest != countErrorsMustBe)
+//		{
+//			correct = false;
+//			errors += "Тест i"+QSn(i)+" TestTextToStatements(\""+text+"\") wrong countErrors!\n"
+//						+ "ошибок <" + QSn(CodeLogs::errorsTestCount - countErrInLogBefore) + "> а ожидается <" + QSn(countErrorsMustBe) + ">";
 
-			if(eggorsGetedCountFromTest != 0) errors += "Errors:";
-			auto it = CodeLogs::errorsTestList.end();
-			for(int i=0; i<eggorsGetedCountFromTest; i++) --it;
-			for (int i = 0; i < eggorsGetedCountFromTest; ++i) {
-				errors += *it;
-				++it;
-			}
-		}
-		CodeLogs::ActivateTestMode(false, false);
+//			if(eggorsGetedCountFromTest != 0) errors += "Errors:";
+//			auto it = CodeLogs::errorsTestList.end();
+//			for(int i=0; i<eggorsGetedCountFromTest; i++) --it;
+//			for (int i = 0; i < eggorsGetedCountFromTest; ++i) {
+//				errors += *it;
+//				++it;
+//			}
+//		}
+//		CodeLogs::ActivateTestMode(false, false);
 
-		if(!Statement::CmpStatements(result, resultMustBe))
-		{
-			correct = false;
-			errors += "Тест i"+QSn(i)+" TestTextToStatements(\""+text+"\") выдал ошибку!"
-					+"\nрезультат <\n" + Statement::PrintStatements(result)
-					+ ">\nа ожидается <\n" + Statement::PrintStatements(resultMustBe)+ ">";
-			CodeLogs::Error(errors.back());
-		}
-		else if(printResAlwause) CodeLogs::Log("Тест TestTextToStatements(\""+text+"\") "
-											 +"выдал ожидаемый результат <" + Statement::PrintStatements(result) + ">");
+//		if(!Statement::CmpStatements(result, resultMustBe))
+//		{
+//			correct = false;
+//			errors += "Тест i"+QSn(i)+" TestTextToStatements(\""+text+"\") выдал ошибку!"
+//					+"\nрезультат <\n" + Statement::PrintStatements(result)
+//					+ ">\nа ожидается <\n" + Statement::PrintStatements(resultMustBe)+ ">";
+//			CodeLogs::Error(errors.back());
+//		}
+//		else if(printResAlwause) CodeLogs::Log("Тест TestTextToStatements(\""+text+"\") "
+//											 +"выдал ожидаемый результат <" + Statement::PrintStatements(result) + ">");
 
-		if(countErrorsOutputsBefore != errors.size())
-			errors += "";
-	};
+//		if(countErrorsOutputsBefore != errors.size())
+//			errors += "";
+//	};
 
-	// 0 простой тест 1
-	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;   command3");
-	//resultsMustBe.push_back({ Statement2("",""), Statement2(), Statement2() });
-	resultsMustBe.push_back({ Statement("",{"command1"}), Statement("",{"c2w1 c2w2 c2w3"}), Statement("",{"command3"}) });
-	test(0, inputsTexts.back(), resultsMustBe.back(), 0);
+//	// 0 простой тест 1
+//	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;   command3");
+//	//resultsMustBe.push_back({ Statement2("",""), Statement2(), Statement2() });
+//	resultsMustBe.push_back({ Statement("",{"command1"}), Statement("",{"c2w1 c2w2 c2w3"}), Statement("",{"command3"}) });
+//	test(0, inputsTexts.back(), resultsMustBe.back(), 0);
 
-	// 1 простой тест 2
-	inputsTexts.push_back("if(a==5) FIVE(); next   command;");
-	resultsMustBe.push_back({ Statement("",{"if ( a == 5 ) FIVE ( )"}), Statement("",{"next command"}) });
-	test(1, inputsTexts.back(), resultsMustBe.back(), 0);
+//	// 1 простой тест 2
+//	inputsTexts.push_back("if(a==5) FIVE(); next   command;");
+//	resultsMustBe.push_back({ Statement("",{"if ( a == 5 ) FIVE ( )"}), Statement("",{"next command"}) });
+//	test(1, inputsTexts.back(), resultsMustBe.back(), 0);
 
-	// 2 простой тест + тест игнорирования комментария
-	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;  //  command3;other;\"sdvsdv\";//;\nrow2 /");
-	resultsMustBe.push_back({ Statement("",{"command1"}), Statement("",{"c2w1 c2w2 c2w3"}), Statement("",{"row2 /"}) });
-	test(2, inputsTexts.back(), resultsMustBe.back(), 0);
+//	// 2 простой тест + тест игнорирования комментария
+//	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;  //  command3;other;\"sdvsdv\";//;\nrow2 /");
+//	resultsMustBe.push_back({ Statement("",{"command1"}), Statement("",{"c2w1 c2w2 c2w3"}), Statement("",{"row2 /"}) });
+//	test(2, inputsTexts.back(), resultsMustBe.back(), 0);
 
-	// 3 тест с блоком команд
-	inputsTexts.push_back("if(a==5) { a=10; next command; cmd3 1 2 34; }");
-	resultsMustBe.push_back({ Statement("if ( a == 5 )", {"a = 10","next command","cmd3 1 2 34"}) });
-	test(3, inputsTexts.back(), resultsMustBe.back(), 0);
+//	// 3 тест с блоком команд
+//	inputsTexts.push_back("if(a==5) { a=10; next command; cmd3 1 2 34; }");
+//	resultsMustBe.push_back({ Statement("if ( a == 5 )", {"a = 10","next command","cmd3 1 2 34"}) });
+//	test(3, inputsTexts.back(), resultsMustBe.back(), 0);
 
-	// 4 тест с блоком команд и вложенным блоком
-	inputsTexts.push_back("if(a==5) { FIVE(); if(b==5) { next command } }");
-	resultsMustBe.push_back({ Statement("if ( a == 5 )", {}) });
-	test(4, inputsTexts.back(), resultsMustBe.back(), 1);
+//	// 4 тест с блоком команд и вложенным блоком
+//	inputsTexts.push_back("if(a==5) { FIVE(); if(b==5) { next command } }");
+//	resultsMustBe.push_back({ Statement("if ( a == 5 )", {}) });
+//	test(4, inputsTexts.back(), resultsMustBe.back(), 1);
 
-	if(!errors.isEmpty()) QMbInfo(errors.join('\n'));
-	//else QMbInfo("TestTextToStatements ok");
+//	if(!errors.isEmpty()) QMbInfo(errors.join('\n'));
+//	//else QMbInfo("TestTextToStatements ok");
 
 	return correct;
 }
@@ -1150,33 +1150,45 @@ bool CodeTests::TestTextToStatements2()
 
 	test(6, inputsTexts.back(), resultsMustBe.back(), 0);
 
+	bool b=0, r=0;
+	resultsMustBe.back().ForEach([](std::pair<Statement2*,QString*> item){
+		if(item.first) item.first->header.append("sss");
+		if(item.first) qdbg << "statement; header: " + item.first->header;
+		else qdbg << "string: " + *item.second;
+	}, b, r);
+
+	resultsMustBe.back().Remove_child_if([](std::pair<Statement2*,QString*> item){
+		if(item.second and item.second->contains("FIVE")) return true;
+		if(item.first and item.first->header.contains("a == 5")) return true;
+		return false;
+	});
 
 	if(!errorsAllTests.isEmpty()) MyQDialogs::ShowText(errorsAllTests);
 
 	return correct;
 }
 
-QString Statement::PrintStatements(std::vector<Statement> statements)
-{
-	QString str;
-	for(auto &s:statements)
-	{
-		if(s.header.isEmpty()) str += "empty header\n";
-		else str += s.header+"  // header\n";
+//QString Statement::PrintStatements(std::vector<Statement> statements)
+//{
+//	QString str;
+//	for(auto &s:statements)
+//	{
+//		if(s.header.isEmpty()) str += "empty header\n";
+//		else str += s.header+"  // header\n";
 
-		str += "{\n\t"+s.blockInstructions.join("\n\t")+"\n} // end block\n\n";
-	}
-	return str;
-}
+//		str += "{\n\t"+s.blockInstructions.join("\n\t")+"\n} // end block\n\n";
+//	}
+//	return str;
+//}
 
-bool Statement::CmpStatements(std::vector<Statement> &lhs, std::vector<Statement> &rhs)
-{
-	if(lhs.size() != rhs.size()) return false;
-	for(auto itl = lhs.begin(), itr = rhs.begin(); itl!=lhs.end(); ++itl, ++itr)
-		if(itl->header != itr->header || itl->blockInstructions != itr->blockInstructions)
-			return false;
-	return true;
-}
+//bool Statement::CmpStatements(std::vector<Statement> &lhs, std::vector<Statement> &rhs)
+//{
+//	if(lhs.size() != rhs.size()) return false;
+//	for(auto itl = lhs.begin(), itr = rhs.begin(); itl!=lhs.end(); ++itl, ++itr)
+//		if(itl->header != itr->header || itl->blockInstructions != itr->blockInstructions)
+//			return false;
+//	return true;
+//}
 
 Statement2::Statement2(QString singleInstruction_)
 {
@@ -1235,6 +1247,43 @@ QString Statement2::PrintStatement(const QString &indent)
 		str += indent + "}\t\t// closer\n";
 
 	return str;
+}
+
+void Statement2::ForEach(const std::function<void(std::pair<Statement2*,QString*>)> &function, bool &breakFlag, bool &returnFlag)
+{
+	if(returnFlag) { breakFlag=true; return; }
+
+	function({this,nullptr});
+	if(breakFlag) { if(!returnFlag) breakFlag=false; return; }
+	if(returnFlag) { breakFlag=true; return; }
+	for(auto &nestedS:nestedStatements)
+	{
+		auto stmntPt = std::get_if<Statement2>(&nestedS);
+		auto strPt = std::get_if<QString>(&nestedS);
+		if(stmntPt) stmntPt->ForEach(function, breakFlag, returnFlag);
+		else
+		{
+			function({nullptr, strPt});
+			if(breakFlag) { if(!returnFlag) breakFlag=false; return; }
+			if(returnFlag) { breakFlag=true; return; }
+		}
+	}
+}
+
+void Statement2::Remove_child_if(const std::function<bool (std::pair<Statement2 *, QString *>)> &condition)
+{
+	for(auto it=nestedStatements.begin(); it!=nestedStatements.end();)
+	{
+		auto &var = *it;
+		std::pair p { std::get_if<Statement2>(&var), std::get_if<QString>(&var) };
+		if(condition(p))
+			nestedStatements.erase(it);
+		else
+		{
+			if(p.first) p.first->Remove_child_if(condition);
+			++it;
+		}
+	}
 }
 
 bool Statement2::CmpStatement2(const Statement2 &lhs, const Statement2 &rhs, QString *resultDetails)
