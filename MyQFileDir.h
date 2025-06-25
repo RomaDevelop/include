@@ -36,7 +36,9 @@ struct MyQFileDir
 	inline static void ReplaceFileWithBackup(const QFileInfo &src, const QFileInfo &dst, const QString &backupPath);
 	inline static void ReplaceFilesWithBackup(const QFileInfoList &filesToReplace, const QFileInfo &fileSrc, const QString &backupPath);
 
-	inline static QStringList GetAllNestedDirs(QString path);
+	inline static QStringList GetAllNestedDirs(QString path,
+											   QDir::Filters filters = QDir::Dirs | QDir::NoDotAndDotDot,
+											   QDir::SortFlag sort = QDir::NoSort);
 	inline static QFileInfoList GetAllFilesIncludeSubcats(QString path, const QStringList &extFilter = {});
 
 	inline static QStringList FileInfoListToStrList(const QFileInfoList &fileInfoList);
@@ -256,14 +258,16 @@ void MyQFileDir::ReplaceFilesWithBackup(const QFileInfoList & filesToReplace, co
 	}
 }
 
-QStringList MyQFileDir::GetAllNestedDirs(QString path)
+QStringList MyQFileDir::GetAllNestedDirs(QString path, QDir::Filters filters, QDir::SortFlag sort)
 {
+	if(!(filters & QDir::Dirs)) DO_ONCE(qdbg << "MyQFileDir::GetAllNestedDirs called without dir filter, files can be in output");
+
 	QDir dir(path);
 	QStringList res;
-	QStringList subdirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+	QStringList subdirs = dir.entryList(filters, sort);
 	for (const auto &subdir : subdirs) {
 		res << path + "/" + subdir;
-		res += GetAllNestedDirs(path + "/" + subdir);
+		res += GetAllNestedDirs(path + "/" + subdir, filters, sort);
 	}
 	return res;
 }
