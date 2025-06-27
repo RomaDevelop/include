@@ -84,39 +84,25 @@ struct AllIndexesOld
 	std::vector<int> secnd;
 };
 
-//struct Statement
-//{
-//	QString header;
-//	QStringList blockInstructions;
-//	Statement() = default;
-//	Statement(QString header, QStringList blockInstructions): header{header}, blockInstructions{blockInstructions} {}
-
-//	static QString PrintStatements(std::vector<Statement> statements);
-//	static bool CmpStatements(std::vector<Statement> &lhs, std::vector<Statement> &rhs);
-//};
-
-struct Statement2
+struct Statement
 {
-	using StatementOrQString = std::variant<Statement2, QString>;
+	using StatementOrQString = std::variant<Statement, QString>;
 	using VectorStatementOrQString = std::vector<StatementOrQString>;
 
 	QString header;
 	VectorStatementOrQString nestedStatements;
 
-	Statement2() = default;
-	explicit Statement2(QString header, VectorStatementOrQString nestedStatements): header{header}, nestedStatements{nestedStatements} {}
-	explicit Statement2(QString singleInstruction_);
-	explicit Statement2(QString header, QStringList blockSingleInstructions);
+	Statement() = default;
+	explicit Statement(QString header, VectorStatementOrQString nestedStatements);
+	explicit Statement(QString singleInstruction_);
+	explicit Statement(QString header, QStringList blockSingleInstructions);
 
-	static QString PrintStatements(std::vector<Statement2> statements, const QString &indent = {});
+	static QString PrintStatements(std::vector<Statement> statements, const QString &indent = {});
 	QString PrintStatement(const QString &indent = {});
-	void ForEach(const std::function<void(std::pair<Statement2*,QString*>)> &function, bool &breakFlag, bool &returnFlag);
-	void Remove_child_if(const std::function<bool(std::pair<Statement2*,QString*>)> &condition);
+	void ForEach(const std::function<void(std::pair<Statement*,QString*>)> &function, bool &statementExitFlag, bool &returnFlag);
+	void Remove_child_if(const std::function<bool(std::pair<Statement*,QString*>)> &condition);
 
-
-	static bool CmpStatement2(const Statement2 &lhs, const Statement2 &rhs, QString *resultDetails);
-
-	static bool CmpStatements2(std::vector<Statement2> &lhs, std::vector<Statement2> &rhs);
+	static bool CmpStatement(const Statement &lhs, const Statement &rhs, QString *resultDetails);
 };
 
 class Code
@@ -127,9 +113,7 @@ public:
 	static QStringList CommandToWords(const QString &command);
 
 	/// внутри вызывается Normalize
-	//static std::vector<Statement> TextToStatements(const QString &text);
-	/// внутри вызывается Normalize
-	static Statement2 TextToStatements2(const QString &text, int nestedBlockParsingStart = -1, int *nestedBlockFinish = {});
+	static Statement TextToStatements(const QString &text, int nestedBlockParsingStart = -1, int *nestedBlockFinish = {});
 
 	static QString GetFirstWord(const QString &text);
 	static QString GetPrevWord(const QString &text, int charIndexInText);
@@ -159,7 +143,6 @@ struct CodeTests
 	static bool TestNormalize();
 	static bool TestTextToCommands();
 	static bool TestTextToStatements();
-	static bool TestTextToStatements2();
 };
 
 struct CodeLogs
@@ -170,7 +153,7 @@ private:
 
 public:
 	static void SetLogFunction(std::function<void(const QString& logText)> &&logFucnction);
-	static void SetErrorLogFunction(std::function<void(const QString& errorText)> &&errorLogFucnction);
+	static void SetErrorFunction(std::function<void(const QString& errorText)> &&errorLogFucnction);
 
 	static void Log(const QString& logText) { logFucnction(logText); }
 	static void Error(const QString& errorText) { errorLogFucnction(errorText); }
