@@ -1,14 +1,14 @@
 //==================================================================================================
 /*
  * ### Добавление в проект:
- * Разместить в папке проекта cleanerthread.cpp и cleanerthread.h
- * Указать их в .pro в секциях SOURCES и HEADERS
+ * Добавить этот файл в .pro
  *
  * ### Применение в проекте:
- * std::shared_ptr <CleanerThread> cleanerThread1;								// в объекте-владельце CleanerThread (или глобально)
- * cleanerThread1 = make_shared<CleanerThread>(ui->textBrowser, maxRowsCount);	// в конструкторе объекта-владельца CleanerThread (или в начале программы)
+ * textEdit = new QTextEdit;
+ * new TextEditCleaner(textEdit, 1000, textEdit);
+ * тут textEdit передается и как объект для очистки, и как родитель, чтобы textEditCleaner уничтожился перед уничтожением textEdit
 */
-//==================================================================================================
+//==========================================================================================================================================
 #ifndef TextEditCleaner_HPP
 #define TextEditCleaner_HPP
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -19,21 +19,21 @@
 #include <QObject>
 #include <QTextEdit>
 //------------------------------------------------------------------------------------------------------------------------------------------
-class CleanerThread : public QObject
+class TextEditCleaner : public QObject
 {
 public:
 
 	///\brief connect SignalNeedClean -> SlotClean
-	inline explicit CleanerThread(QObject *parent = nullptr);
+	inline explicit TextEditCleaner(QObject *parent = nullptr);
 	///\brief CleanerThread() and StartCleanObject(...)
-	inline explicit CleanerThread(QTextEdit  *objToClean_, unsigned int linesThreshold, QObject *parent = nullptr);
+	inline explicit TextEditCleaner(QTextEdit  *objToClean_, unsigned int linesThreshold, QObject *parent = nullptr);
 	///\brief Вызывает StopClean()
-	inline ~CleanerThread();
+	inline ~TextEditCleaner();
 
-	CleanerThread(const CleanerThread & src) = delete;
-	CleanerThread(CleanerThread && src) = delete;
-	CleanerThread& operator= (const CleanerThread & src) = delete;
-	CleanerThread& operator= (CleanerThread && src) = delete;
+	TextEditCleaner(const TextEditCleaner & src) = delete;
+	TextEditCleaner(TextEditCleaner && src) = delete;
+	TextEditCleaner& operator= (const TextEditCleaner & src) = delete;
+	TextEditCleaner& operator= (TextEditCleaner && src) = delete;
 
 	///\brief Запуск потока очистки
 	/// если был забущен ранее - перед запуском вызывает StopClean()
@@ -78,24 +78,24 @@ private:
 	bool doClean = true;
 };
 
-CleanerThread::CleanerThread(QObject * parent):
+TextEditCleaner::TextEditCleaner(QObject * parent):
 	QObject(parent)
 {
-	connect(this, &CleanerThread::SignalNeedClean, this, &CleanerThread::SlotClean);
+	connect(this, &TextEditCleaner::SignalNeedClean, this, &TextEditCleaner::SlotClean);
 }
 
-CleanerThread::CleanerThread(QTextEdit * objToClean_, unsigned int linesThreshold, QObject * parent):
-	CleanerThread(parent)
+TextEditCleaner::TextEditCleaner(QTextEdit * objToClean_, unsigned int linesThreshold, QObject * parent):
+	TextEditCleaner(parent)
 {
 	StartClean(objToClean_, linesThreshold);
 }
 
-CleanerThread::~CleanerThread()
+TextEditCleaner::~TextEditCleaner()
 {
 	StopClean();
 }
 
-void CleanerThread::StartClean(QTextEdit * objToClean_, unsigned int linesThreshold_)
+void TextEditCleaner::StartClean(QTextEdit * objToClean_, unsigned int linesThreshold_)
 {
 	objToClean = objToClean_;
 	stopClean = false;
@@ -122,7 +122,7 @@ void CleanerThread::StartClean(QTextEdit * objToClean_, unsigned int linesThresh
 	});
 }
 
-void CleanerThread::StopClean() // если поток существует, то он останавливается и удаляется
+void TextEditCleaner::StopClean() // если поток существует, то он останавливается и удаляется
 {
 	if(threadCleaner)
 	{
@@ -133,27 +133,27 @@ void CleanerThread::StopClean() // если поток существует, т�
 	}
 }
 
-void CleanerThread::SuspendClean()
+void TextEditCleaner::SuspendClean()
 {
 	doClean = false;
 }
 
-void CleanerThread::ContinueClean()
+void TextEditCleaner::ContinueClean()
 {
 	doClean = true;
 }
 
-void CleanerThread::SetLinesThreshold(unsigned int linesThreshold_)
+void TextEditCleaner::SetLinesThreshold(unsigned int linesThreshold_)
 {
 	linesThreshold = linesThreshold_;
 }
 
-unsigned int CleanerThread::GetLinesThreshold()
+unsigned int TextEditCleaner::GetLinesThreshold()
 {
 	return linesThreshold;
 }
 
-void CleanerThread::SlotClean(int count)
+void TextEditCleaner::SlotClean(int count)
 {
 	QTextCursor cursor = objToClean->textCursor();
 	cursor.setPosition(0);
