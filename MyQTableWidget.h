@@ -3,6 +3,7 @@
 #define MYQTABLEWIDGET_H
 //------------------------------------------------------------------------------------------------------------------------------------------
 #include <memory>
+#include <set>
 
 #include <QApplication>
 #include <QTableWidget>
@@ -26,6 +27,7 @@ public:
 	inline static bool SwapRows(QTableWidget *table, int row1, int row2);
 	inline static void SetItemEditableState(QTableWidgetItem *item, bool editableNewState);
 	inline static void FitColsWidths(QTableWidget *table); // не проверено!!!
+	inline static std::set<int> SelectedRows(QTableWidget *table);
 
 public:
 	inline explicit MyQTableWidget(QWidget *parent = nullptr);
@@ -101,6 +103,18 @@ void MyQTableWidget::FitColsWidths(QTableWidget *table)
 		float persent = (float)table->columnWidth(i) / (float)currentColsWidth;
 		table->setColumnWidth(i, tableSpace*persent);
 	}
+}
+
+std::set<int> MyQTableWidget::SelectedRows(QTableWidget *table)
+{
+	std::set<int> rows;
+	auto ranges = table->selectedRanges();
+	for(auto &range:ranges)
+	{
+		for(int r=range.topRow(); r<=range.bottomRow(); r++)
+			rows.insert(r);
+	}
+	return rows;
 }
 
 MyQTableWidget::MyQTableWidget(QWidget *parent) : QTableWidget(parent)
