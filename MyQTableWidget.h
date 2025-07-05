@@ -24,6 +24,8 @@ class MyQTableWidget : public QTableWidget
 {
 	Q_OBJECT
 public:
+	/// SwapRows doesn't support cellWidgets because of idiotic QTableWidget work with them.
+	/// You can't just take or move cellWidget correct. Even with crutches: try create buf row or even buf QTableWidget.
 	inline static bool SwapRows(QTableWidget *table, int row1, int row2);
 	inline static void SetItemEditableState(QTableWidgetItem *item, bool editableNewState);
 	inline static void FitColsWidths(QTableWidget *table); // не проверено!!!
@@ -68,6 +70,9 @@ bool MyQTableWidget::SwapRows(QTableWidget *table, int row1, int row2)
 	if(!table || row1 < 0 || row1 >= table->rowCount() || row2 < 0 || row2 >= table->rowCount()) return false;
 	for(int col=0; col<table->columnCount(); col++)
 	{
+		if(table->cellWidget(row1, col) || table->cellWidget(row2, col))
+			qCritical() << "MyQTableWidget::SwapRows: there are widgets in cells, but cellWidgetsSupport disabled";
+
 		QTableWidgetItem *itemBuf = table->takeItem(row2, col);
 		table->setItem(row2, col, table->takeItem(row1, col));
 		table->setItem(row1, col, itemBuf);
