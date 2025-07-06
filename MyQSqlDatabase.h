@@ -77,6 +77,7 @@ public:
 	                                             bool showErrorIfEmptyQuery = true);
 	inline static QStringList DoSqlQueryGetFirstRec(const QString &strQuery, const QStringPairVector &binds = {});
 	inline static QStringList DoSqlQueryGetFirstField(const QString &strQuery, const QStringPairVector &binds = {});
+	inline static QStringPairVector DoSqlQueryGetFirstTwoFields(const QString &strQuery, const QStringPairVector &binds = {});
 	inline static std::set<QString> DoSqlQueryGetFirstFieldAsSet(const QString &strQuery, const QStringPairVector &binds = {});
 	inline static std::map<QString,QString> DoSqlQueryAndMakeMap(const QString &strQuery, const QStringPairVector &binds = {},
 	                                                             int filedIndexForKey = 0, int filedIndexForValue = 1);
@@ -206,6 +207,18 @@ QStringList MyQSqlDatabase::DoSqlQueryGetFirstField(const QString &strQuery, con
 {
 	auto query = MyQSqlDatabase::DoSqlQuery(strQuery, binds);
 	return MyQSqlDatabase::FieldFromQuery(query, 0);
+}
+
+QStringPairVector MyQSqlDatabase::DoSqlQueryGetFirstTwoFields(const QString &strQuery, const QStringPairVector &binds)
+{
+	auto query = MyQSqlDatabase::DoSqlQuery(strQuery, binds);
+	if(query.record().count() < 2) { Error("DoSqlQueryGetFirstTwoFields: fields in query < 2 ("+strQuery+")"); return {}; }
+	QStringPairVector twoFields;
+	while(query.next())
+	{
+		twoFields.emplace_back(query.value(0).toString(), query.value(1).toString());
+	}
+	return twoFields;
 }
 
 std::set<QString> MyQSqlDatabase::DoSqlQueryGetFirstFieldAsSet(const QString &strQuery, const QStringPairVector &binds)
