@@ -155,7 +155,7 @@ void MyQTableWidget::CreateContextMenu()
 	addAction(copyAction);
 	addAction(pasteAction);
 
-	connect(this, &QWidget::customContextMenuRequested, [this](const QPoint &pos){ menu->exec(mapToGlobal(pos)); });
+	connect(this, &QWidget::customContextMenuRequested, [this](const QPoint &pos){ menu->exec(viewport()->mapToGlobal(pos)); });
 }
 
 QString MyQTableWidget::RestoreState(const std::vector<MyQTableWidget::ItemState> &states)
