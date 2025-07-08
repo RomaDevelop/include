@@ -29,7 +29,7 @@ public:
 	inline static bool SwapRows(QTableWidget *table, int row1, int row2);
 	inline static void SetItemEditableState(QTableWidgetItem *item, bool editableNewState);
 	inline static void FitColsWidths(QTableWidget *table); // не проверено!!!
-	inline static std::set<int> SelectedRows(QTableWidget *table);
+	inline static std::set<int> SelectedRows(QTableWidget *table, bool onlyVisibleRows);
 
 public:
 	inline explicit MyQTableWidget(QWidget *parent = nullptr);
@@ -110,14 +110,17 @@ void MyQTableWidget::FitColsWidths(QTableWidget *table)
 	}
 }
 
-std::set<int> MyQTableWidget::SelectedRows(QTableWidget *table)
+std::set<int> MyQTableWidget::SelectedRows(QTableWidget *table, bool onlyVisibleRows)
 {
 	std::set<int> rows;
 	auto ranges = table->selectedRanges();
 	for(auto &range:ranges)
 	{
-		for(int r=range.topRow(); r<=range.bottomRow(); r++)
-			rows.insert(r);
+		for(int row=range.topRow(); row<=range.bottomRow(); row++)
+		{
+			if(onlyVisibleRows && table->isRowHidden(row)) continue;
+			rows.insert(row);
+		}
 	}
 	return rows;
 }
