@@ -103,7 +103,7 @@ QString MyQString::GetRowOfLetter(const QString &str, int letterIndex)
 
 	while (start > 0 && str[start - 1] != '\n') { start--; }
 
-	int end = str.indexOf('\n', start + 1);
+	int end = str.indexOf('\n', letterIndex);
 
 	if (end == -1) { end = str.length(); }
 
