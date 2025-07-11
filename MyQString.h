@@ -74,6 +74,9 @@ struct MyQString
 	}
 
 	inline static QString Translited(QString str);
+
+	inline static QString ToSentenceCase(QString str);
+	inline static QString ToUpperWordStartLetter(QString str);
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -136,6 +139,33 @@ QString MyQString::Translited(QString str)
 		{
 			c = it->second;
 		}
+	}
+	return str;
+}
+
+QString MyQString::ToSentenceCase(QString str)
+{
+	int size = str.size();
+	if(size >= 1) str[0] = str[0].toUpper();
+	if(size >= 2) str[1] = str[1].toLower();
+	for(int i=4; i<size; i++)
+	{
+		if(str[i-2] == '.' && str[i-1] == ' ')
+			str[i] = str[i].toUpper();
+		else str[i] = str[i].toLower();
+	}
+	return str;
+}
+
+QString MyQString::ToUpperWordStartLetter(QString str)
+{
+	int size = str.size();
+	if(size >= 1) str[0] = str[0].toUpper();
+	for(int i=1; i<size; i++)
+	{
+		if(str[i-1] == ' ')
+			str[i] = str[i].toUpper();
+		else str[i] = str[i].toLower();
 	}
 	return str;
 }
