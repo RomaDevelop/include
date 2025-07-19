@@ -2,6 +2,7 @@
 #define CODE_H
 
 #include <string_view>
+#include <set>
 
 #include <QString>
 #include <QStringList>
@@ -34,7 +35,7 @@ namespace CodeKeyWords
 	const int encodingPrefixSize = binCodePrefix.size();
 	static_assert (binCodePrefix.size() == hexCodePrefix.size(), "encodingPrefixSizes are different");
 
-	const QString hexSymbols = "01234567890abcdef";
+	const std::set<QChar> hexSymbols { '0','1','2','3','4','5','6','7','8','9','0','a','b','c','d','e','f' };
 
 	const QString idFilter = "ID:";
 	const QString dataFilter = "Data:";

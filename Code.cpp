@@ -564,7 +564,7 @@ bool Code::IsHexCode(const QString & str)
 		if(str.left(2) == CodeKeyWords::hexCodePrefix.data())
 		{
 			for(int i=CodeKeyWords::encodingPrefixSize; i<str.size(); i++)
-				if(!CodeKeyWords::hexSymbols.contains(str[i].toLower()))
+				if(CodeKeyWords::hexSymbols.count(str[i].toLower()) == 0)
 					return false;
 			return true;
 		}
