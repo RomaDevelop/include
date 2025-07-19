@@ -22,6 +22,7 @@
 #include <QMenu>
 
 #include "MyQShortings.h"
+#include "MyQString.h"
 #include "MyQWidget.h"
 #include "MyQTableWidget.h"
 #include "declare_struct.h"
@@ -592,53 +593,39 @@ MyQDialogs::TableDialogRes MyQDialogs::TableOneCol(const QString &caption, QStri
 void MyQDialogs::ShowAllStandartIcons()
 {
 	QWidget *w = new QWidget;
+	MyQWidget::SetFontPointSize(w, 10);
 	w->setAttribute(Qt::WA_DeleteOnClose);
-	auto hlo_main = new QHBoxLayout(w);
+	auto glo = new QGridLayout(w);
 	static std::vector<QPixmap*> pixmaps;
 	pixmaps.clear();
-	QVBoxLayout *vlo = nullptr;
 
 	if(QString(QT_VERSION_STR) == "5.12.10") ; // все норм, enum проверен
 	else { QMbWarning("enum QStyle::SP_TitleBarMenuButton not checked for Qt " QT_VERSION_STR); }
 
-	bool fillDummy = false;
 	int start = QStyle::SP_TitleBarMenuButton;
 	int max = QStyle::SP_LineEditClearButton;
-	int addDummy = 10 - (max+1) % 10;
-	for(int i=start, count = 0; i<=max; i++, count++)
+	for(int i=start, row = 0, col = 0; i<=max; i++)
 	{
-		if(count%10 == 0)
-		{
-			vlo = new QVBoxLayout;
-			hlo_main->addLayout(vlo);
-		}
-		if(!vlo) { QMbError("!vlo"); return; }
-
 		pixmaps.emplace_back(new QPixmap);
 		QPixmap& pixmapRef = *pixmaps.back();
 
-		if(!fillDummy) pixmapRef = QApplication::style()->standardIcon((QStyle::StandardPixmap)i).pixmap(50,50);
+		auto icon = QApplication::style()->standardIcon((QStyle::StandardPixmap)i);
+		if(!icon.isNull()) pixmapRef = icon.pixmap(50,50);
 
-		auto hlo = new QHBoxLayout;
-		vlo->addLayout(hlo);
 		auto labelImage = new QLabel;
 		labelImage->setAlignment(Qt::AlignCenter);
-		MyQWidget::SetFontPointSize(labelImage,14);
-		if(!fillDummy) labelImage->setPixmap(pixmapRef);
-		else { labelImage->setText("0"); }
-		hlo->addWidget(labelImage);
-		//QStyle::StandardPixmap pixmapVar = (QStyle::StandardPixmap)i;
-		hlo->addSpacing(10);
-		auto labelCaption = new QLabel("i="+QSn(i)+" n="+QSn(count+1));
-		hlo->addWidget(labelCaption);
-		MyQWidget::SetFontPointSize(labelCaption,14);
-		hlo->addSpacing(10);
+		if(!icon.isNull()) labelImage->setPixmap(pixmapRef);
+		else { labelImage->setText("null"); }
 
-		if(i == max && !fillDummy)
-		{
-			fillDummy = true;
-			max += addDummy;
-		}
+		QString caption = MyQString::AsDebug((QStyle::StandardPixmap)i).remove("QStyle::");
+		if(caption.size() > 20) caption = caption.left(18).append("...");
+		auto labelCaption = new QLabel(caption);
+
+		glo->addWidget(labelImage, row, col);
+		glo->addWidget(labelCaption, row, col+1);
+
+		row++;
+		if(row == 10) { row=0; col+=2; }
 	}
 	w->move(200,200);
 	w->show();
