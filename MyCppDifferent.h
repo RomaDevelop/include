@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <functional>
 #include <algorithm>
 #include <iomanip>
 
@@ -46,23 +47,35 @@ public:
 	inline static float to_float(std::array<unsigned char,4> bytes); // нулевой байт в return = bytes[0]
 	inline static bool test_float_to_bytes_conversion();
 
-	template <class T>
+	struct any_guard_dummy_T {}; // for template deduction at any_guard(std::function<void()> startFoo...)
+	template <class T = any_guard_dummy_T>
 	class any_guard
 	{
 	public:
-		any_guard(T &varible, T startValue, T endValue):
-			m_variable {varible},
-			m_end_value {std::move(endValue)}
+		/// can be executed without template argument
+		any_guard(T &variable, T startValue, T endValue):
+			m_variable {&variable}
 		{
-			m_variable = std::move(startValue);
+			*m_variable = std::move(startValue);
+			m_end_value = std::make_unique<T>(std::move(endValue));
 		}
-		~any_guard() { m_variable = std::move(m_end_value); }
+		/// executes without template argument
+		any_guard(std::function<void()> startFoo, std::function<void()> endFoo):
+			m_endFoo {std::move(endFoo)}
+		{
+			startFoo();
+		}
+		~any_guard()
+		{
+			if(m_variable) *m_variable = std::move(*m_end_value);
+			if(m_endFoo) m_endFoo();
+		}
 	private:
-		T &m_variable;
-		T m_end_value;
+		T *m_variable = nullptr;
+		std::unique_ptr<T> m_end_value;
+		std::function<void()> m_endFoo;
 	};
 };
-
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 std::string MyCppDifferent::ToDiapasons(std::vector<int> vect)
