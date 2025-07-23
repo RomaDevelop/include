@@ -21,7 +21,8 @@ public:
 	/// no_checks_in_destructor - ничего не делает
 	enum destructor_policies { smart_policy, user_must_call_finish, no_checks_in_destructor };
 
-	explicit inline thread_box(): m_name {}, m_finish_policy {smart_policy}  {}
+	explicit inline thread_box(destructor_policies finish_policy = smart_policy):
+		m_name {}, m_finish_policy {finish_policy}  {}
 	explicit inline thread_box(std::string aName, destructor_policies finish_policy = smart_policy):
 		m_name {std::move(aName)}, m_finish_policy {finish_policy}  {}
 	inline ~thread_box();
@@ -37,6 +38,7 @@ public:
 	inline bool finish(uint wait_for_milliseconds = 1000);
 
 	void set_name(std::string aName) { m_name = std::move(aName); }
+	void set_finish_policy(destructor_policies finish_policy) { m_finish_policy = finish_policy; }
 
 	std::string name() { return m_name; }
 	destructor_policies finish_policy() { return m_finish_policy; }
