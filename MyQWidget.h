@@ -24,6 +24,8 @@ struct MyQWidget
 	 * Когда перейдем на С++ 20, попробовать через концепты этого избежать */
 
 	inline static void AdjustWidgetPosition(QWidget *widget, int edgeDistance = 0);
+
+	inline static QScreen* WidgetScreen(QWidget *widget);
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -91,6 +93,20 @@ void MyQWidget::AdjustWidgetPosition(QWidget *widget, int edgeDistance) {
 		// Устанавливаем новую позицию виджета
 		widget->move(pos);
 	}
+}
+
+QScreen *MyQWidget::WidgetScreen(QWidget *widget)
+{
+	auto currentPos = widget->pos();
+	QList<QScreen*> screens = QApplication::screens();
+	QScreen* widgetScreen {};
+	for (auto &screen : screens) {
+		QRect screenGeometry = screen->geometry();
+
+		// Проверяем, находится ли виджет на текущем экране
+		if (screenGeometry.contains(currentPos)) { widgetScreen = screen; }
+	}
+	return widgetScreen;
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
