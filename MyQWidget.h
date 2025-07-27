@@ -26,6 +26,7 @@ struct MyQWidget
 	inline static void AdjustWidgetPosition(QWidget *widget, int edgeDistance = 0);
 
 	inline static QScreen* WidgetScreen(QWidget *widget);
+	// когда перейдем на Qt 6 можно будет удалить, там есть готовая
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------

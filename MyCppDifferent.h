@@ -49,9 +49,11 @@ public:
 
 	struct any_guard_dummy_T {}; // for template deduction at any_guard(std::function<void()> startFoo...)
 	template <class T = any_guard_dummy_T>
+	/// A universal RAII guard that sets and restores a variable or executes custom functions on scope enter and exit
 	class any_guard
 	{
 	public:
+		/// Sets variable to startValue on construction, and to endValue on destruction
 		/// can be executed without template argument
 		any_guard(T &variable, T startValue, T endValue):
 			m_variable {&variable}
@@ -59,8 +61,9 @@ public:
 			*m_variable = std::move(startValue);
 			m_end_value = std::make_unique<T>(std::move(endValue));
 		}
+		/// Call startFoo on construction, and endFoo on destruction
 		/// executes without template argument
-		any_guard(std::function<void()> startFoo, std::function<void()> endFoo):
+		any_guard(const std::function<void()> &startFoo, std::function<void()> endFoo):
 			m_endFoo {std::move(endFoo)}
 		{
 			startFoo();
