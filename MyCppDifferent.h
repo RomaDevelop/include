@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <optional>
 #include <functional>
 #include <algorithm>
 #include <iomanip>
@@ -59,23 +60,23 @@ public:
 			m_variable {&variable}
 		{
 			*m_variable = std::move(startValue);
-			m_end_value = std::make_unique<T>(std::move(endValue));
+			m_end_value = std::move(endValue);
 		}
 		/// Call startFoo on construction, and endFoo on destruction
 		/// executes without template argument
 		any_guard(const std::function<void()> &startFoo, std::function<void()> endFoo):
 			m_endFoo {std::move(endFoo)}
 		{
-			startFoo();
+			if(startFoo) startFoo();
 		}
 		~any_guard()
 		{
-			if(m_variable) *m_variable = std::move(*m_end_value);
+			if(m_variable) *m_variable = std::move(m_end_value.value());
 			if(m_endFoo) m_endFoo();
 		}
 	private:
 		T *m_variable = nullptr;
-		std::unique_ptr<T> m_end_value;
+		std::optional<T> m_end_value;
 		std::function<void()> m_endFoo;
 	};
 };
