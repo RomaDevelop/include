@@ -57,8 +57,6 @@ private:
 	volatile bool thread_ended = false;
 	volatile bool m_finish_executed = false;
 
-	//std::string errors;
-
 	thread_box(const thread_box &) = delete;
 	thread_box(thread_box &&) = delete;
 	thread_box& operator= (const thread_box& other) = delete;
@@ -66,7 +64,7 @@ private:
 };
 
 /*
-чат ревью 26 июля 2024 в 16:27 
+AI ревью 26 июля 2024 в 16:27 
 Класс не предоставляет возможности для присоединения к потоку или ожидания его завершения. Это может привести к утечкам ресурсов, если поток не завершится корректно.
 	в классе есть функция finish, для безопасного завершения работы потока и проверки на утечки ресурсов
 Ограничение на тип функции: Методы start принимают только функции без аргументов или с одним аргументом stopper_t. Это ограничивает гибкость использования класса.
@@ -126,7 +124,7 @@ void thread_box::start(std::function<void ()> task)
 	}
 
 	thread_was_started = true;
-	std::thread thread([this, task](){
+	std::thread thread([this, task = std::move(task)](){
 		task();
 		thread_ended = true;
 	});
