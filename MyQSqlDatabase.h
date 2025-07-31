@@ -278,6 +278,15 @@ std::pair<QString, QStringPairVector> MyQSqlDatabase::MakeUpdateRequest(QString 
 	if(fields.size() != values.size()) { Error("MakeUpdateRequest fields values sizes differ"); return {}; }
 	if(whereFields.size() != whereValues.size()) { Error("MakeUpdateRequest whereFields whereValues sizes differ"); return {}; }
 	if(fields.empty()) { Error("MakeUpdateRequest empty update fields "); return {}; }
+
+	bool contains = false;
+	for(auto &field:fields)
+	{
+		for(auto &whereField:whereFields)
+			if(whereField == field) {contains = true; break;}
+	}
+	if(contains) { Error("MakeUpdateRequest fields and whereFields have dubles"); return {}; }
+
 	QString &sql = table;
 	QStringPairVector binds;
 	sql = "update "+table+" set ";

@@ -48,6 +48,7 @@ public:
 	inline static float to_float(std::array<unsigned char,4> bytes); // нулевой байт в return = bytes[0]
 	inline static bool test_float_to_bytes_conversion();
 
+	/// class any_guard: a universal RAII guard that sets and restores a variable or executes custom functions on scope enter and exit
 	struct any_guard_dummy_T {}; // for template deduction at any_guard(std::function<void()> startFoo...)
 	template <class T = any_guard_dummy_T>
 	/// A universal RAII guard that sets and restores a variable or executes custom functions on scope enter and exit
