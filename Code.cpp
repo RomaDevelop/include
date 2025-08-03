@@ -178,6 +178,11 @@ QStringList Code::CommandToWords(const QString &command)
 {
 	QStringList retWords;
 	int size = command.size();
+	if(size == 0)
+	{
+		CodeLogs::Error("Code::CommandToWords get empty command! Returns {\"error_get_empty_command\"}");
+		return {"error_get_empty_command"};
+	}
 	QString word;
 	bool quatsNow = false;
 	QChar currentQuats = ckw::quatsSymbol1;
