@@ -57,7 +57,6 @@ public:
 	inline static std::vector<BaseData> baseDataAddBases;
 
 	using logWorkerFunction = std::function<void(const QString &str)>;
-
 	inline static void Init(BaseData mainBase_, std::vector<BaseData> additionalBases_ = {},
 	                        logWorkerFunction logWorker_ = {}, logWorkerFunction errorWorker_ = {});
 
@@ -65,6 +64,7 @@ public:
 
 	inline static void Log(const QString &str) { if(logWorker) logWorker(str); else qdbg << str; }
 	inline static void Error(const QString &str) { if(errorWorker) errorWorker(str); else qdbg << str; }
+
 	inline static logWorkerFunction logWorker;
 	inline static logWorkerFunction errorWorker;
 

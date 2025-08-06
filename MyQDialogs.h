@@ -35,6 +35,8 @@ public:
 	inline static void ShowText(const QStringList &text, uint w = 800, uint h = 600);
 
 	inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
+	inline static QString CustomDialog2(QString caption, QString text, QStringList buttons,
+										bool *chBoxRes=nullptr, QString checkBoxText="Apply to all current");
 
 	declare_struct_2_fields_move(MenuItem, QString, text, std::function<void()>, worker);
 	inline static void MenuUnderWidget(QWidget *w, std::vector<MenuItem> &&items);
@@ -96,8 +98,9 @@ public:
 //------------------------------------------------------------------------------------------------------------------------------------------
 void MyQDialogs::ShowText(const QString & text, uint w, uint h)
 {
-	std::unique_ptr<QDialog> dialog(new QDialog);
-	QHBoxLayout *hlo  = new QHBoxLayout(dialog.get());
+	QDialog dialog_obj;
+	QDialog *dialog = &dialog_obj;
+	QHBoxLayout *hlo  = new QHBoxLayout(dialog);
 	QTextBrowser *textBrowser = new QTextBrowser;
 	textBrowser->setTabStopDistance(40);
 	textBrowser->setPlainText(text);
@@ -111,8 +114,9 @@ void MyQDialogs::ShowText(const QString & text, uint w, uint h)
 
 void MyQDialogs::ShowText(const QStringList &text, uint w, uint h)
 {
-	std::unique_ptr<QDialog> dialog(new QDialog);
-	QHBoxLayout *hlo  = new QHBoxLayout(dialog.get());
+	QDialog dialog_obj;
+	QDialog *dialog = &dialog_obj;
+	QHBoxLayout *hlo  = new QHBoxLayout(dialog);
 	QTextBrowser *textBrowser = new QTextBrowser;
 	textBrowser->setTabStopDistance(40);
 
@@ -134,7 +138,7 @@ QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList butt
 	{
 		btn.prepend(' ').append(' ');
 		messageBox.addButton(btn, QMessageBox::YesRole);  // Role не имеет значения
-		// " " + btn + " " потому что setContentsMargins для вн.виджетов, а не текста, а setStyleSheet("padding: 6px;") имеет побочные эффекты
+		// ' ' + btn + ' ' потому что setContentsMargins для вн.виджетов, а не текста, а setStyleSheet("padding: 6px;") имеет побочные эффекты
 	}
 	messageBox.exec();
 	QString retText;
@@ -144,6 +148,45 @@ QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList butt
 		retText.chop(1);
 		retText.remove(0,1);
 	}
+	return retText;
+}
+
+QString MyQDialogs::CustomDialog2(QString caption, QString text, QStringList buttons, bool *chBoxRes, QString checkBoxText)
+{
+	QString retText;
+	QDialog dialog;
+	dialog.setWindowTitle(caption);
+	dialog.setWindowFlag(Qt::WindowCloseButtonHint, false);
+
+	QVBoxLayout *vloMain = new QVBoxLayout(&dialog);
+
+	QLabel *label = new QLabel(text);
+	vloMain->addWidget(label);
+
+	QCheckBox *chBoxForAll = nullptr;
+	if(chBoxRes)
+	{
+		chBoxForAll = new QCheckBox(checkBoxText);
+		vloMain->addWidget(chBoxForAll);
+	}
+
+	QHBoxLayout *hloBtns = new QHBoxLayout;
+	vloMain->addLayout(hloBtns);
+
+	for(auto &btnText: buttons)
+	{
+		QPushButton *button = new QPushButton(QString(btnText).prepend(' ').append(' '));
+		hloBtns->addWidget(button);
+		QObject::connect(button, &QPushButton::clicked, &dialog, [&dialog, &retText, btnText, chBoxRes, chBoxForAll]() {
+			retText = btnText;
+			if(chBoxRes) *chBoxRes = chBoxForAll->isChecked();
+			dialog.close();
+		});
+	}
+
+	dialog.setLayout(vloMain);
+	dialog.exec();
+
 	return retText;
 }
 
@@ -202,10 +245,10 @@ void MyQDialogs::MenuUnderWidget(QWidget *w, QStringList texts, std::vector<std:
 
 MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString startText,  uint w, uint h)
 {
-	std::unique_ptr<QDialog> dialog(new QDialog);
+	QDialog dialog;
 	InputTextRes res;
-	dialog->setWindowTitle(captionDialog);
-	QVBoxLayout *vloAll  = new QVBoxLayout(dialog.get());
+	dialog.setWindowTitle(captionDialog);
+	QVBoxLayout *vloAll  = new QVBoxLayout(&dialog);
 	QTextEdit *textEdit = new QTextEdit;
 	textEdit->setTabStopDistance(40);
 	textEdit->setText(startText);
@@ -219,13 +262,13 @@ MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString st
 	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&res, &dialog, textEdit](){
 		res.accepted=true;
 		res.text = textEdit->toPlainText();
-		dialog->close();
+		dialog.close();
 	});
 	hloBtns->addWidget(new QPushButton(Cansel()));
-	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog](){ dialog->close(); });
+	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog](){ dialog.close(); });
 
-	dialog->resize(w, h);
-	dialog->exec();
+	dialog.resize(w, h);
+	dialog.exec();
 
 	return res;
 }
@@ -240,11 +283,12 @@ MyQDialogs::InputTextRes MyQDialogs::InputLine(QString captionDialog, QString te
 MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QString textDialog, QString startText,
 													 QStringList buttons, uint w)
 {
-	std::unique_ptr<QDialog> dialog(new QDialog);
+	QDialog dialog_obj;
+	QDialog *dialog = &dialog_obj;
 	InputLineResExt ret;
 	ret.button = Undefined();
 	dialog->setWindowTitle(captionDialog);
-	QVBoxLayout *vloAll  = new QVBoxLayout(dialog.get());
+	QVBoxLayout *vloAll  = new QVBoxLayout(dialog);
 
 	QLabel *label = new QLabel(textDialog);
 	vloAll->addWidget(label);
@@ -279,10 +323,11 @@ MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QStr
 MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList valuesList, uint w, uint h)
 {
 	ListDialogRes res(-1,"", false);
-	std::unique_ptr<QDialog> dialog(new QDialog);
+	QDialog dialog_obj;
+	QDialog *dialog = &dialog_obj;
 	dialog->resize(w, h);
 	dialog->setWindowTitle(caption);
-	QVBoxLayout *vloMain  = new QVBoxLayout(dialog.get());
+	QVBoxLayout *vloMain  = new QVBoxLayout(dialog);
 	QListWidget *listWidget = new QListWidget;
 	listWidget->addItems(valuesList);
 	vloMain->addWidget(listWidget);
@@ -342,10 +387,11 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 {
 	CheckBoxDialogResult result;
 
-	std::unique_ptr<QDialog> dialog(new QDialog);
+	QDialog dialog_obj;
+	QDialog *dialog = &dialog_obj;
 	dialog->resize(w, h);
 	dialog->setWindowTitle(caption);
-	auto vloMain = new QVBoxLayout(dialog.get());
+	auto vloMain = new QVBoxLayout(dialog);
 	auto hloHeader = new QHBoxLayout;
 	auto listWidget = new QListWidget;
 	auto chBoxCheckAll = new QCheckBox;
@@ -358,7 +404,7 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	QObject::connect(btnCansel,&QPushButton::clicked,[&dialog, &result](){ result.accepted = false; dialog->hide();});
 
 	chBoxCheckAll->setChecked(true);
-	QObject::connect(chBoxCheckAll, &QCheckBox::clicked,[listWidget, chBoxCheckAll](){
+	QObject::connect(chBoxCheckAll, &QCheckBox::clicked,[listWidget](){
 		for(int i=0; i<listWidget->count(); i++)
 		{
 			if(listWidget->item(i)->flags().testFlag(Qt::ItemIsEnabled))
@@ -367,7 +413,7 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	});
 
 	chBoxCheckNothing->setChecked(false);
-	QObject::connect(chBoxCheckNothing, &QCheckBox::clicked,[listWidget, chBoxCheckNothing](){
+	QObject::connect(chBoxCheckNothing, &QCheckBox::clicked,[listWidget](){
 		for(int i=0; i<listWidget->count(); i++)
 		{
 			if(listWidget->item(i)->flags().testFlag(Qt::ItemIsEnabled))
@@ -429,7 +475,8 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::
 											 QStringList horisontalHeader, QStringList verticalHeader,
 											 bool autoColWidths, bool readOnly, uint w, uint h)
 {
-	std::unique_ptr<QDialog> dialog(new QDialog);
+	QDialog dialog_obj;
+	QDialog *dialog = &dialog_obj;
 	dialog->setWindowTitle(caption);
 	if(0) CodeMarkers::to_do("кнопки вверх, вниз, отменить изменения, автоподгонка ширины колонок");
 	if(!w) w = 640;
@@ -438,7 +485,7 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::
 
 	TableDialogRes res;
 
-	QVBoxLayout *vlo_main  = new QVBoxLayout(dialog.get());
+	QVBoxLayout *vlo_main  = new QVBoxLayout(dialog);
 
 	QTableWidget *table = new QTableWidget;
 	res.table = std::unique_ptr<QTableWidget>(table);

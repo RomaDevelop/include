@@ -49,7 +49,7 @@ public:
 	inline static bool test_float_to_bytes_conversion();
 
 	/// class any_guard: a universal RAII guard that sets and restores a variable or executes custom functions on scope enter and exit
-	struct any_guard_dummy_T {}; // for template deduction at any_guard(std::function<void()> startFoo...)
+	struct any_guard_dummy_T {}; // for template deduction at any_guard(std::function<void()> startFoo, std::function<void()> endFoo)
 	template <class T = any_guard_dummy_T>
 	/// A universal RAII guard that sets and restores a variable or executes custom functions on scope enter and exit
 	class any_guard
@@ -64,7 +64,7 @@ public:
 			m_end_value = std::move(endValue);
 		}
 		/// Call startFoo on construction, and endFoo on destruction
-		/// executes without template argument
+		/// can be executed without template argument
 		any_guard(const std::function<void()> &startFoo, std::function<void()> endFoo):
 			m_endFoo {std::move(endFoo)}
 		{
