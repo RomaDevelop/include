@@ -51,6 +51,7 @@ namespace CodeKeyWords
 	const QString thisParam = "thisParam";
 	const QString thisWorker = "thisWorker";
 	const QString thisVariable = "thisVariable";
+	const QString thisWidget = "thisWidget";
 
 	const QString obrabotchik = "Обработчик";
 	const QString transform = "Transform";
@@ -147,22 +148,38 @@ struct CodeTests
 	static bool TestTextToStatements();
 };
 
+struct LogFunction
+{
+	std::function<void(const QString& text)> m_function;
+
+	int countInTestMode;
+	std::list<QString> textsInTestMode;
+	std::function<void(const QString& text)> fucnctionBackup;
+
+	explicit LogFunction(std::function<void(const QString& text)> a_function):
+		m_function{ a_function ? std::move(a_function) : [](const QString& text){ qdbg << text; } } {}
+
+	void ActivateTestMode(bool active);
+
+	QString GetTexts(int count);
+};
+
 struct CodeLogs
 {
-private:
-	static std::function<void(const QString& logText)> logFucnction;
-	static std::function<void(const QString& errorText)> errorLogFucnction;
-
 public:
+	static LogFunction log;
+	static LogFunction warning;
+	static LogFunction error;
+
 	static void SetLogFunction(std::function<void(const QString& logText)> &&logFucnction);
+	static void SetWarningFunction(std::function<void(const QString& warningText)> &&warningFucnction);
 	static void SetErrorFunction(std::function<void(const QString& errorText)> &&errorLogFucnction);
 
-	static void Log(const QString& logText) { logFucnction(logText); }
-	static void Error(const QString& errorText) { errorLogFucnction(errorText); }
+	static void Log(const QString& logText);
+	static void Warning(const QString& text);
+	static void Error(const QString& errorText);
 
-	inline static int errorsTestCount;
-	inline static std::list<QString> errorsTestList;
-	static void ActivateTestMode(bool active, bool callNativeLogInTestMode);
+	static void ActivateTestMode(bool active);
 };
 
 #endif // CODE_H

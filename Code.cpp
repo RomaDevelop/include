@@ -1238,53 +1238,90 @@ bool Statement::CmpStatement(const Statement &lhs, const Statement &rhs, QString
 	return true;
 }
 
-std::function<void(const QString& logText)> CodeLogs::logFucnction = [](const QString& logText){
-	DO_ONCE(qdbg << "CodeLogs: Warning: LogFunction not set. Code logs will be sent to qDebug");
-	qdbg << logText;
-};
-
-std::function<void(const QString& errorText)> CodeLogs::errorLogFucnction = [](const QString& logText){
-	DO_ONCE(qdbg << "CodeLogs: Warning: ErrorLogFunction not set. Code errors will be sent to qDebug");
-	qdbg << logText;
-};
-
-void CodeLogs::SetLogFunction(std::function<void (const QString &)> &&logFucnction)
+void LogFunction::ActivateTestMode(bool active)
 {
-	if(!logFucnction) {
-		CodeLogs::errorLogFucnction("CodeLogs::SetLogFunction get invalid function. LogFunction not set.");
-		return;
-	}
-	CodeLogs::logFucnction = std::move(logFucnction);
-}
-
-void CodeLogs::SetErrorFunction(std::function<void (const QString &)> &&errorLogFucnction)
-{
-	if(!errorLogFucnction) {
-		CodeLogs::errorLogFucnction("CodeLogs::SetErrorLogFunction get invalid function. ErrorLogFunction not set.");
-		return;
-	}
-	CodeLogs::errorLogFucnction = std::move(errorLogFucnction);
-}
-
-void CodeLogs::ActivateTestMode(bool active, bool callNativeLogInTestMode) {
-	static std::function<void(const QString& errorText)> errorLogFucnctionBackup;
-	static int removed = 0;
 	if(active)
 	{
-		errorLogFucnctionBackup = std::move(errorLogFucnction);
-		errorLogFucnction = [callNativeLogInTestMode](const QString& errorText){
-			errorsTestCount++;
-			errorsTestList.push_back(errorText);
-			while(errorsTestCount - removed > 1000) { errorsTestList.pop_front(); removed++; }
-			if(callNativeLogInTestMode)
-			{
-				if(errorLogFucnctionBackup) errorLogFucnctionBackup(errorText);
-				else qdbg << errorText;
-			}
+		countInTestMode = 0;
+		textsInTestMode.clear();
+
+		fucnctionBackup = std::move(m_function);
+		m_function = [this](const QString& errorText){
+			countInTestMode++;
+			textsInTestMode.push_back(errorText);
 		};
 	}
 	else
 	{
-		errorLogFucnction = std::move(errorLogFucnctionBackup);
+		m_function = std::move(fucnctionBackup);
 	}
+}
+
+QString LogFunction::GetTexts(int count)
+{
+	QString text;
+	auto it = CodeLogs::error.textsInTestMode.end();
+	for(int i=0; i<count; i++) --it;
+	for (int i = 0; i < count; ++i) {
+		text += *it;
+		++it;
+	}
+	return text;
+}
+
+LogFunction CodeLogs::log([](const QString& logText){
+	DO_ONCE(qdbg << "CodeLogs: Warning: LogFunction not set. Code logs will be sent to qDebug");
+	qdbg << logText;
+});
+
+LogFunction CodeLogs::warning([](const QString& logText){
+	DO_ONCE(qdbg << "CodeLogs: Warning: warningFucnction not set. Code warnings will be sent to qDebug");
+	qdbg << logText;
+});
+
+LogFunction CodeLogs::error([](const QString& logText){
+	DO_ONCE(qdbg << "CodeLogs: Warning: ErrorLogFunction not set. Code errors will be sent to qDebug");
+	qdbg << logText;
+});
+
+void CodeLogs::SetLogFunction(std::function<void (const QString &)> &&logFucnction) {
+	if(!logFucnction) {
+		CodeLogs::error.m_function("CodeLogs::SetLogFunction get invalid function. LogFunction not set.");
+		return;
+	}
+	CodeLogs::log.m_function = std::move(logFucnction);
+}
+
+void CodeLogs::SetWarningFunction(std::function<void (const QString &)> &&warningFucnction) {
+	if(!warningFucnction) {
+		CodeLogs::error.m_function("CodeLogs::SetLogFunction get invalid function. LogFunction not set.");
+		return;
+	}
+	CodeLogs::warning.m_function = std::move(warningFucnction);
+}
+
+void CodeLogs::SetErrorFunction(std::function<void (const QString &)> &&errorLogFucnction) {
+	if(!errorLogFucnction) {
+		CodeLogs::error.m_function("CodeLogs::SetErrorLogFunction get invalid function. ErrorLogFunction not set.");
+		return;
+	}
+	CodeLogs::error.m_function = std::move(errorLogFucnction);
+}
+
+void CodeLogs::Log(const QString &logText) {
+	log.m_function(logText);
+}
+
+void CodeLogs::Warning(const QString &text) {
+	warning.m_function(text);
+}
+
+void CodeLogs::Error(const QString &errorText) {
+	error.m_function(errorText);
+}
+
+void CodeLogs::ActivateTestMode(bool active) {
+	log.ActivateTestMode(active);
+	warning.ActivateTestMode(active);
+	error.ActivateTestMode(active);
 }
