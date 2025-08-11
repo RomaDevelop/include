@@ -119,6 +119,41 @@ void PlatformDependent::SetTopMostFlash(QWidget *w)
 	SetTopMost(w, false);
 }
 
+void PlatformDependent::FlashClickOnTitle(QWidget *w)
+{
+	// Получаем дескриптор окна
+	HWND hwndTool = reinterpret_cast<HWND>(w->winId());
+
+	static int captionHeight = GetSystemMetrics(SM_CYCAPTION);
+
+	// Получаем координаты заголовка окна
+	RECT rect;
+	GetWindowRect(hwndTool, &rect);
+	int x = (rect.left + rect.right) / 2; // Центр окна по X
+	int y = rect.top + captionHeight / 2; // Центр высоты заголовка окна
+
+	// Запоминаем текущие координаты мыши
+	POINT currentPos;
+	GetCursorPos(&currentPos);
+
+	// Перемещаем курсор мыши в нужную позицию
+	SetCursorPos(x, y);
+
+	// Эмулируем клик мышью
+	INPUT input {};
+	input.type = INPUT_MOUSE;
+	input.mi.dx = 0;
+	input.mi.dy = 0;
+	input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+	SendInput(1, &input, sizeof(INPUT)); // Нажатие кнопки мыши
+
+	input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+	SendInput(1, &input, sizeof(INPUT)); // Отпускание кнопки мыши
+
+	// Возвращаем курсор мыши на исходные координаты
+	SetCursorPos(currentPos.x, currentPos.y);
+}
+
 void PlatformDependent::ShowPropertiesWindow(const QString &file)
 {
 	SHELLEXECUTEINFO sei = {};

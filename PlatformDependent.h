@@ -19,6 +19,8 @@ struct PlatformDependent
 	static void SetTopMost(QWidget *w, bool topMost);
 	static void SetTopMostFlash(QWidget *w); // set topMost in true and immitietly sets false
 
+	static void FlashClickOnTitle(QWidget *w); // делает клик на заголовок окна и возвращает курсор обратно
+
 	static void ShowPropertiesWindow(const QString &file);
 };
 
