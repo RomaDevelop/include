@@ -145,7 +145,7 @@ struct CodeTests
 	static bool TestGetPrevWord();
 	static bool TestNormalize();
 	static bool TestTextToCommands();
-	static bool TestTextToStatements();
+	static QStringList TestTextToStatements();
 };
 
 struct LogFunction
