@@ -26,7 +26,7 @@ void Code::Normalize(QString &text)
 				continue;
 			}
 
-			if(text[i] == ',' || text[i] == '.'
+			if(text[i] == ',' || text[i] == '.' || text[i] == ':'
 						  || text[i] == '(' || text[i] == ')'
 						  || text[i] == '[' || text[i] == ']'
 						  || text[i] == '{' || text[i] == '}'
@@ -477,19 +477,6 @@ AllIndexes Code::GetAllIndexes(QString text)
 	return result;
 }
 
-void Code::RemoveEmulatorServis(QStringList & commands, int codeCurrent)
-{
-	for(int i=commands.size()-1; i>=0; i--)
-	{
-		bool startsWithEmulator = commands[i].startsWith(CodeKeyWords::emulatorStr);
-		bool startsWithServis = commands[i].startsWith(CodeKeyWords::servisStr);
-		if(startsWithEmulator && codeCurrent != CodeKeyWords::emulatorInt) commands.removeAt(i);
-		if(startsWithServis && codeCurrent != CodeKeyWords::servisInt) commands.removeAt(i);
-		if(startsWithEmulator && codeCurrent == CodeKeyWords::emulatorInt) commands[i].remove(0,CodeKeyWords::emulatorStr.size()+1);
-		if(startsWithServis && codeCurrent == CodeKeyWords::servisInt) commands[i].remove(0,CodeKeyWords::servisStr.size()+1);
-	}
-}
-
 QString Code::GetInitialisationStr(const QString &command, bool printErrorIfNoInitialisation)
 {
 	QString initialisation;
@@ -692,14 +679,7 @@ QString TextConstant::AddQuates(const QString & str, char quates)
 	return QString(str).prepend(quates).append(quates);
 }
 
-QString CodeKeyWords::TypeToStr(int type)
-{
-	if(type == emulatorInt) return "Эмулятор";
-	if(type == servisInt) return "Сервис";
-	if(type == codeUndefined) return "undefined";
-	CodeLogs::Error("TypeToStr unknown type" + QSn(type));
-    return "unknown type";
-}
+
 
 bool CodeTests::DoCodeTests()
 {

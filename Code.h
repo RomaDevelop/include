@@ -36,25 +36,6 @@ namespace CodeKeyWords
 	static_assert (binCodePrefix.size() == hexCodePrefix.size(), "encodingPrefixSizes are different");
 
 	const std::set<QChar> hexSymbols { '0','1','2','3','4','5','6','7','8','9','0','a','b','c','d','e','f' };
-
-	const QString idFilter = "ID:";
-	const QString dataFilter = "Data:";
-
-	const QString emulatorStr = "Эмулятор";
-	const QString servisStr = "Сервис";
-	const int codeUndefined = 0;
-	const int emulatorInt = 1;
-	const int servisInt = 2;
-	QString TypeToStr(int type);
-
-	const QString dataOperand = "Data";
-	const QString thisParam = "thisParam";
-	const QString thisWorker = "thisWorker";
-	const QString thisVariable = "thisVariable";
-	const QString thisWidget = "thisWidget";
-
-	const QString obrabotchik = "Обработчик";
-	const QString transform = "Transform";
 };
 
 namespace CodeKeyWordsAdditional
@@ -127,7 +108,6 @@ public:
 	static QStringList GetTextsInSquareBrackets(const QString &text);
 	static AllIndexes GetAllIndexes(QString operand);
 
-	static void RemoveEmulatorServis(QStringList &commands, int codeCurrent);
 	static QString GetInitialisationStr(const QString &command, bool printErrorIfNoInitialisation);
 
 	static bool IsInteger(const QString &str);

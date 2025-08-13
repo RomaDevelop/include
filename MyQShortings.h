@@ -14,9 +14,9 @@
 #define QSn QString::number
 //------------------------------------------------------------------------------------------------------------------------------------------
 template<class QStringType>
-bool IsInt(QStringType stringVariable) { bool ok; stringVariable.toInt(&ok); return ok; }
+bool IsInt(const QStringType &stringVariable) { bool ok; stringVariable.toInt(&ok); return ok; }
 template<class QStringType>
-bool IsUInt(QStringType stringVariable) { bool ok; stringVariable.toUInt(&ok); return ok; }
+bool IsUInt(const QStringType &stringVariable) { bool ok; stringVariable.toUInt(&ok); return ok; }
 //------------------------------------------------------------------------------------------------------------------------------------------
 #define qDbg qDebug()
 #define qdbg qDebug()
