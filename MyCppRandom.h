@@ -3,6 +3,7 @@
 #define MyCppRandom_H
 //------------------------------------------------------------------------------------------------------------------------------------------
 #include <random>
+#include <chrono>
 //------------------------------------------------------------------------------------------------------------------------------------------
 
 struct MyCppRandom
@@ -14,9 +15,8 @@ struct MyCppRandom
 
 int MyCppRandom::Get(int from, int to)
 {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(from, to);
+	static std::mt19937 gen(std::chrono::system_clock::now().time_since_epoch().count());
+	std::uniform_int_distribution<int> distrib(from, to);
     return distrib(gen);
 }
 
