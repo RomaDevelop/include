@@ -170,7 +170,7 @@ public: static const Resource& pasteIco() { if(instancePtr) return instancePtr->
 	                                  aCopyResourcesInDistib);																			\
 	        instancePtr = &instance;																									\
 			if(!aCopyResourcesInDistib) qDebug() << QString("WARNING: ") + #ResourcesName + " Init param copyResourcesInDistib = "		\
-	                                                + (aCopyResourcesInDistib ? "true" : "false");										\
+	                             + (aCopyResourcesInDistib ? "true" : "false; resources will not be copied to the release directory");	\
 	        if(!Resource::errors.isEmpty()) for(auto &error:Resource::errors) qCritical() << error;										\
 	        if(!Resource::errors.isEmpty()) if(errorWorker) errorWorker(Resource::errors.join('\n'));									\
 	    }

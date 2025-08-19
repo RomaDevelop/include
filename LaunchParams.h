@@ -18,14 +18,14 @@ struct LaunchParams {
 
 	inline static void Init(std::vector<DeveloperData> developersData);
 
-	inline static DeveloperData* CurrentDeveloper();
+	inline static const DeveloperData& CurrentDeveloper();
 
-	static bool DevComp() { static bool myComp { QHostInfo::localHostName().toUpper() == CurrentDeveloper()->hostName }; return myComp; }
-	static bool LaunchedFromWorkFiles() { static bool check {MyQDifferent::PathToExe().contains(CurrentDeveloper()->buildPath)}; return check;}
-	static bool DevCompAndFromWorkFiles() { return DevComp() && LaunchedFromWorkFiles(); }
+	inline static bool LaunchedOnDevComp();
+	inline static bool LaunchedFromWorkFiles();
+	inline static bool DevCompAndFromWorkFiles() { return LaunchedOnDevComp() && LaunchedFromWorkFiles(); }
 
-	static const QString& ServisCreatorSourcesPath() { static QString str = CurrentDeveloper()->sourcesPath;  return str; }
-	static const QString& ConfigsPath() { static QString str = ServisCreatorSourcesPath()+"/Конфиги";  return str; }
+	inline static const QString& ServisCreatorSourcesPath() { static QString str = CurrentDeveloper().sourcesPath;  return str; }
+	inline static const QString& ConfigsPath() { static QString str = ServisCreatorSourcesPath()+"/Конфиги";  return str; }
 
 private:
 	inline static std::vector<DeveloperData> developersData;
@@ -44,23 +44,35 @@ void LaunchParams::Init(std::vector<DeveloperData> developersData)
 	}
 }
 
-LaunchParams::DeveloperData *LaunchParams::CurrentDeveloper()
+const LaunchParams::DeveloperData& LaunchParams::CurrentDeveloper()
 {
-	static DeveloperData* currentDeveloper = nullptr;
-	static bool defineDid = false;
-	if(!defineDid)
+	static DeveloperData* currentDeveloper = &notDeveloper;
+	static bool defineDeveloperDid = false;
+	if(!defineDeveloperDid)
 	{
 		for(auto &dev:developersData)
 			if(dev.hostName.toUpper() == QHostInfo::localHostName().toUpper())
 				currentDeveloper = &dev;
-		if(!currentDeveloper)
+		if(currentDeveloper == &notDeveloper)
 		{
 			currentDeveloper = &notDeveloper;
-			qCritical() << "can't define current by hostName " + QHostInfo::localHostName().toUpper();
+			qCritical() << "can't define current developer by hostName " + QHostInfo::localHostName().toUpper();
 		}
-		defineDid = true;
+		defineDeveloperDid = true;
 	}
-	return currentDeveloper;
+	return *currentDeveloper;
+}
+
+bool LaunchParams::LaunchedOnDevComp()
+{
+	static bool isDevComp { QHostInfo::localHostName().toUpper() == CurrentDeveloper().hostName.toUpper() };
+	return isDevComp;
+}
+
+bool LaunchParams::LaunchedFromWorkFiles()
+{
+	static bool check { MyQDifferent::PathToExe().contains(CurrentDeveloper().buildPath) };
+	return check;
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
