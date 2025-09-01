@@ -200,7 +200,10 @@ void MyQDifferent::GetPathName(QString file, QString *path, QString *name)
 QStringList MyQDifferent::ArgsToStrList(int argc, char *argv[])
 {
 	QStringList args;
-	for(int i=0; i<argc; i++) args += argv[i];
+	for(int i=0; i<argc; i++)
+	{
+		args += QString::fromLocal8Bit(argv[i]);
+	}
 	return args;
 }
 
