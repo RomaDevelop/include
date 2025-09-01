@@ -27,6 +27,7 @@ bool IsUInt(const QStringType &stringVariable) { bool ok; stringVariable.toUInt(
 #define DateTimeFormat_ms "yyyy.MM.dd hh:mm:ss.zzz"
 #define DateTimeFormatForFileName "yyyy.MM.dd hh-mm-ss"
 #define DateTimeFormatForFileName_ms "yyyy.MM.dd hh-mm-ss-zzz"
+#define DateTimeFormat_rus "dd MMM yyyy hh:mm:ss"
 //------------------------------------------------------------------------------------------------------------------------------------------
 #define DO_ONCE(code_to_do) { static bool did = false; if(!did) { code_to_do; did = true; } }
 //------------------------------------------------------------------------------------------------------------------------------------------

@@ -20,6 +20,9 @@ struct MyQString
 
 	inline static QString GetRowOfLetter(const QString& str, int letterIndex);
 
+	template<class String, class Splitter>
+	inline static std::pair<QString, QString> SplitOnce(const String &string, const Splitter &splitter);
+
 	template<typename... Args>
 	inline static void Append(QString& s, const Args&... args) { (s.append(args), ...); }
 	template<class char_type>
@@ -77,6 +80,13 @@ struct MyQString
 
 	inline static QString ToSentenceCase(QString str);
 	inline static QString ToUpperWordStartLetter(QString str);
+
+private:
+	static constexpr int sepLen(QChar) { return 1; }
+	static constexpr int sepLen(char) { return 1; }
+	static int sepLen(const char* s) { return int(strlen(s)); }
+	template<class S>
+	static constexpr int sepLen(const S &s) { return int(s.size()); }
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -208,6 +218,15 @@ QString & MyQString::LeftJistifie(QString & str_to_justifie, int width, char_typ
 	str_to_justifie.resize(width, fill);
 
 	return str_to_justifie;
+}
+
+template<class String, class Splitter>
+std::pair<QString, QString> MyQString::SplitOnce(const String &string, const Splitter &splitter)
+{
+	int pos = string.indexOf(splitter);
+	if (pos == -1)
+		return { QString(string), {} };
+	return { string.left(pos), string.mid(pos + sepLen(splitter)) };
 }
 
 #endif
