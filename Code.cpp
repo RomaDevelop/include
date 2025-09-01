@@ -15,7 +15,7 @@ void Code::Normalize(QString &text)
 	// add spaces before and after operators
 	for(int i = text.length()-1; i>=0; i--)
 	{
-		if(!quats && TextConstant::IsItQuatsSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
+		if(!quats && TextConstant::IsItQuateSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
 		if(text[i] == currQuats && quats) { quats = false; continue; }
 
 		if(!quats)
@@ -26,7 +26,7 @@ void Code::Normalize(QString &text)
 				continue;
 			}
 
-			if(text[i] == ',' || text[i] == '.' || text[i] == ':'
+			if(text[i] == ',' || text[i] == '.' || text[i] == ':' || text[i] == ';'
 						  || text[i] == '(' || text[i] == ')'
 						  || text[i] == '[' || text[i] == ']'
 						  || text[i] == '{' || text[i] == '}'
@@ -50,7 +50,7 @@ void Code::Normalize(QString &text)
 	quats = false;
 	for(int i = text.length()-1; i>=0; i--)
 	{
-		if(!quats && TextConstant::IsItQuatsSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
+		if(!quats && TextConstant::IsItQuateSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
 		if(text[i] == currQuats && quats) { quats = false; continue; }
 
 		if(!quats && (i > 0 && text[i] == ' ' && text[i-1] == ' ')) { text.remove(i,1); continue; }
@@ -60,7 +60,7 @@ void Code::Normalize(QString &text)
 	quats = false;
 	for(int i = text.length()-1; i>=0; i--)
 	{
-		if(!quats && TextConstant::IsItQuatsSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
+		if(!quats && TextConstant::IsItQuateSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
 		if(text[i] == currQuats && quats) { quats = false; continue; }
 
 		if(!quats && text[i] == ' ')
@@ -90,7 +90,7 @@ void Code::Normalize(QString &text)
 	quats = false;
 	for(int i=0; i<text.size(); i++)
 	{
-		if(!quats && TextConstant::IsItQuatsSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
+		if(!quats && TextConstant::IsItQuateSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
 		if(text[i] == currQuats && quats) { quats = false; continue; }
 
 		if(!quats && text[i] == '.')
@@ -142,7 +142,7 @@ QStringList Code::TextToCommands(const QString &text)
 		}
 		command += text[i];
 
-		if(!quats && TextConstant::IsItQuatsSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
+		if(!quats && TextConstant::IsItQuateSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
 		if(text[i] == currQuats && quats) { quats = false; continue; }
 	}
 	if(command.size())
@@ -174,7 +174,7 @@ QStringList Code::TextToCommands(const QString &text)
 	return commands;
 }
 
-QStringList Code::CommandToWords(const QString &command)
+QStringList Code::CommandToWords(const QString &command, bool canContainCommandSplitter)
 {
 	QStringList retWords;
 	int size = command.size();
@@ -188,28 +188,33 @@ QStringList Code::CommandToWords(const QString &command)
 	QChar currentQuats = ckw::quatsSymbol1;
 	for(int i=0; i<size; i++)
 	{
-		if(!quatsNow && TextConstant::IsItQuatsSybol(command[i]))
+		auto currentChar = command[i];
+		if(!quatsNow && TextConstant::IsItQuateSybol(currentChar))
 		{
-			word += command[i];
-			currentQuats = command[i];
+			word += currentChar;
+			currentQuats = currentChar;
 			quatsNow = true;
 			continue;
 		}
-		if(quatsNow  && command[i] == currentQuats)
+		if(quatsNow  && currentChar == currentQuats)
 		{
 			if(i != 0 && command[i-1] == '\\' )
 				continue;
 
-			word += command[i];
+			word += currentChar;
 			quatsNow = false;
 			continue;
 		}
 
-		if(!quatsNow && command[i] == CodeKeyWords::commandSplitter)
-			CodeLogs::Error("Error!!! Compiler::CommandToWords command [" + command + "] contains ;");
+		if(!quatsNow)
+		{
+			if(currentChar == CodeKeyWords::commandSplitter && canContainCommandSplitter == false)
+				CodeLogs::Error("Error!!! Code::CommandToWords command [" + command + "] contains ;");
 
-		if(!quatsNow && command[i] == CodeKeyWords::wordsSplitter) { retWords += word; word = ""; continue; }
-		word += command[i];
+			if(currentChar == CodeKeyWords::wordsSplitter) { retWords += word; word = ""; continue; }
+		}
+
+		word += currentChar;
 	}
 	if(word != "") retWords += word;
 	if(quatsNow) CodeLogs::Error("Code::CommandToWords not closed text constant in command [" + command + "]");
@@ -297,7 +302,7 @@ Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int
 
 		current += text[i];
 
-		if(!quats && TextConstant::IsItQuatsSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
+		if(!quats && TextConstant::IsItQuateSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
 		if(text[i] == currQuats && quats) { quats = false; continue; }
 	}
 
@@ -385,6 +390,39 @@ QString Code::GetNextWord(const QString & text, int charIndexInText)
 	return text.mid(openerIndex+1, closerIndex-openerIndex-1);
 }
 
+QStringList Code::TakeBlock(QStringList &words)
+{
+	QStringList block;
+	bool started = false;
+	int countNested = 0;
+	while (words.isEmpty() == false) {
+		if(!started)
+		{
+			if(words.front() == CodeKeyWords::blockOpener) started = true;
+			words.removeFirst();
+		}
+		else
+		{
+			if(words.front() == CodeKeyWords::blockOpener)
+				countNested++;
+			if(words.front() == CodeKeyWords::blockCloser)
+			{
+				if(countNested == 0)
+				{
+					words.removeFirst();
+					break;
+				}
+				else countNested--;
+			}
+
+			block.append("");
+			block.back() = std::move(words.front());
+			words.removeFirst();
+		}
+	}
+	return block;
+}
+
 QStringList Code::GetTextsInSquareBrackets(const QString &text)
 {
 	QStringList result;
@@ -406,7 +444,7 @@ QStringList Code::GetTextsInSquareBrackets(const QString &text)
 		if(indexesNow && text[i] == '[') nestedIndexes++;
 		if(indexesNow && text[i] == ']') nestedIndexes--;
 
-		if(!quats && TextConstant::IsItQuatsSybol(text[i]))
+		if(!quats && TextConstant::IsItQuateSybol(text[i]))
 		{ quats = true; currQuats = text[i]; continue; }
 		if(quats && text[i] == currQuats) { quats = false; continue; }
 
@@ -643,7 +681,7 @@ bool TextConstant::IsItTextConstant(const QString &text, bool printLog = false)
 {
 	if(text.size() > 1)
 	{
-		if(TextConstant::IsItQuatsSybol(text[0]))
+		if(TextConstant::IsItQuateSybol(text[0]))
 		{
 			auto currQuats = text[0];
 			if(text[text.length()-1] == currQuats)
@@ -660,16 +698,10 @@ bool TextConstant::IsItTextConstant(const QString &text, bool printLog = false)
 	return false;
 }
 
-template<typename T>
-bool TextConstant::IsItQuatsSybol(const T& symbol)
-{
-	return (symbol == CodeKeyWords::quatsSymbol1 || symbol == CodeKeyWords::quatsSymbol2);
-}
-
 bool TextConstant::ContainsSplitter(const QString & str)
 {
 	for(auto &c:str)
-		if(TextConstant::IsItQuatsSybol(c))
+		if(TextConstant::IsItQuateSybol(c))
 			return true;
 	return false;
 }
@@ -679,7 +711,11 @@ QString TextConstant::AddQuates(const QString & str, char quates)
 	return QString(str).prepend(quates).append(quates);
 }
 
-
+void TextConstant::RemoveQuates(QString &text)
+{
+	text.chop(CodeKeyWords::quatsSymbolLength);
+	text.remove(0, CodeKeyWords::quatsSymbolLength);
+}
 
 bool CodeTests::DoCodeTests()
 {
@@ -785,8 +821,8 @@ bool CodeTests::TestNormalize()
 	inputsTexts			+= " Эмулятор float \n\t\r {5.45   } ";
 	resultMustBe	+= "Эмулятор float { 5.45 }";
 
-	inputsTexts			+= "23+2 -    33 *2 /3";
-	resultMustBe	+= "23 + 2 - 33 * 2 / 3";
+	inputsTexts			+= "23+2;-    33 *2 /3";
+	resultMustBe	+= "23 + 2 ; - 33 * 2 / 3";
 
 	inputsTexts			+= "3=3==2 >34< 3 <=323 > = 343!=2";
 	resultMustBe	+= "3 = 3 == 2 > 34 < 3 <= 323 >= 343 != 2";

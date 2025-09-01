@@ -27,6 +27,8 @@ namespace CodeKeyWords
 
 	const QString commentMarker = "//";
 
+	const QChar comma = ',';
+
 	const QChar blockOpener = '{';
 	const QChar blockCloser = '}';
 
@@ -52,9 +54,13 @@ struct TextConstant
 
 	static bool IsItTextConstant(const QString &text, bool printLog);
 	template<typename T>
-	inline static bool IsItQuatsSybol(const T& symbol);
+	static bool IsItQuateSybol(const T& symbol)
+	{
+		return (symbol == CodeKeyWords::quatsSymbol1 || symbol == CodeKeyWords::quatsSymbol2);
+	}
 	static bool ContainsSplitter(const QString &str);
 	static QString AddQuates(const QString &text, char quates = CodeKeyWords::quatsSymbol1);
+	static void RemoveQuates(QString &text);
 };
 
 struct AllIndexes
@@ -93,15 +99,20 @@ class Code
 public:
 	static void Normalize(QString &text);
 	static QStringList TextToCommands(const QString &text);		// внутри вызывается Normalize; гарантируется отсутсвие пустых команд в return
-	static QStringList CommandToWords(const QString &command);	// гарантируется возвращение непустого списка
-																// если передана пустая command вернет список с одним словом-индикатором ошибки
+	static QStringList CommandToWords(const QString &command, bool canContainCommandSplitter = false);
+	// гарантируется возвращение непустого списка
+	// если передана пустая command вернет список с одним словом-индикатором ошибки
 
 	/// внутри вызывается Normalize
-	static Statement TextToStatements(const QString &text, int nestedBlockParsingStart = -1, int *nestedBlockFinish = {});
+	static Statement TextToStatements(const QString &text, int nestedBlockOpener = -1, int *nestedBlockCloser = {});
 
 	static QString GetFirstWord(const QString &text);
 	static QString GetPrevWord(const QString &text, int charIndexInText);
 	static QString GetNextWord(const QString &text, int charIndexInText);
+
+	/// извлекает содержимое первого блока (блок может содержать вложенные блоки)
+	/// всё что до него и сам блок из words будут удалены
+	static QStringList TakeBlock(QStringList &words);
 
 	static std::vector<int> DecodeStrNumbers(const QString &strNumbers, bool printErrorIfEmpty);
 
