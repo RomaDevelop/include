@@ -52,10 +52,12 @@ public:
 	inline static InputLineResExt InputLineExt(QString captionDialog = "", QString textDialog = "", QString startText = "",
 											   QStringList buttons = {Accept(),Cansel()}, uint w = 640);
 
-	declare_struct_3_fields_move(ListDialogRes, int, index, QString, choosedText, bool, accepted);
 	// -1 index and empty text if cansel or close
-	inline static ListDialogRes ListDialog(QString caption, QStringList valuesList, uint w = 640, uint h = 480);
-	inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter, uint w = 640, uint h = 480);
+	declare_struct_3_fields_move(ListDialogRes, int, index, QString, choosedText, bool, accepted);
+	inline static ListDialogRes ListDialog(QString caption, QStringList valuesList,
+	                                       QString acceptButton = Accept(), QString canselButton = Cansel(), uint w = 640, uint h = 480);
+	inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter,
+	                                       QString acceptButton = Accept(), QString canselButton = Cansel(), uint w = 640, uint h = 480);
 
 	declare_struct_3_fields_move(CheckBoxDialogItem, QString, text, bool, checkState, bool, enabled);
 	declare_struct_4_fields_move(CheckBoxDialogResult,
@@ -320,7 +322,8 @@ MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QStr
 	return ret;
 }
 
-MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList valuesList, uint w, uint h)
+MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList valuesList,
+                                                 QString acceptButton, QString canselButton, uint w, uint h)
 {
 	ListDialogRes res(-1,"", false);
 	QDialog dialog_obj;
@@ -345,22 +348,26 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 	};
 	QObject::connect(listWidget, &QListWidget::itemDoubleClicked, acceptAction);
 
+	acceptButton.prepend(' ').append(' ');
+	canselButton.prepend(' ').append(' ');
+
 	auto hloBtns = new QHBoxLayout();
 	vloMain->addLayout(hloBtns);
 	hloBtns->addStretch();
-	hloBtns->addWidget(new QPushButton(Accept()));
+	hloBtns->addWidget(new QPushButton(acceptButton));
 	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, acceptAction);
-	hloBtns->addWidget(new QPushButton(Cansel()));
+	hloBtns->addWidget(new QPushButton(canselButton));
 	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog]() { dialog->close(); });
 
 	dialog->exec();
 	return res;
 }
 
-MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QString valuesList, QString splitter, uint w, uint h)
+MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QString valuesList, QString splitter,
+                                                 QString acceptButton, QString canselButton, uint w, uint h)
 {
 	if(valuesList.endsWith(splitter)) valuesList.chop(splitter.size());
-	return ListDialog(caption, valuesList.split(splitter), w, h);
+	return ListDialog(std::move(caption), valuesList.split(splitter), std::move(acceptButton), std::move(canselButton), w, h);
 }
 
 MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &caption, std::vector<CheckBoxDialogItem> items, uint w, uint h)
