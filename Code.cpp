@@ -583,7 +583,7 @@ bool Code::IsBinCode(const QString & str)
 {
 	if(str.size() >= 3)
 	{
-		if(str.left(2) == CodeKeyWords::binCodePrefix.data())
+		if(str.startsWith(CodeKeyWords::binCodePrefix.data()))
 		{
 			for(int i=CodeKeyWords::encodingPrefixSize; i<str.size(); i++)
 				if(str[i] != '0' && str[i] != '1')
@@ -598,7 +598,7 @@ bool Code::IsHexCode(const QString & str)
 {
 	if(str.size() >= 3)
 	{
-		if(str.left(2) == CodeKeyWords::hexCodePrefix.data())
+		if(str.startsWith(CodeKeyWords::hexCodePrefix.data()))
 		{
 			for(int i=CodeKeyWords::encodingPrefixSize; i<str.size(); i++)
 				if(CodeKeyWords::hexSymbols.count(str[i].toLower()) == 0)
