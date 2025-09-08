@@ -60,9 +60,10 @@ public:
 	                                       QString acceptButton = Accept(), QString canselButton = Cansel(), uint w = 640, uint h = 480);
 
 	declare_struct_3_fields_move(CheckBoxDialogItem, QString, text, bool, checkState, bool, enabled);
-	declare_struct_4_fields_move(CheckBoxDialogResult,
+	declare_struct_5_fields_move(CheckBoxDialogResult,
 								 std::vector<CheckBoxDialogItem>, allItems,
 								 std::vector<CheckBoxDialogItem>, checkedItems,
+	                             std::vector<int>, checkedIndexes,
 								 QStringList, checkedTexts,
 								 bool, accepted);
 
@@ -470,6 +471,7 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 			if(result.allItems.back().checkState)
 			{
 				result.checkedItems.emplace_back(result.allItems.back());
+				result.checkedIndexes.emplace_back(i);
 				result.checkedTexts += result.allItems.back().text;
 			}
 		}
