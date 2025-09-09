@@ -15,27 +15,24 @@ void Code::Normalize(QString &text)
 	// add spaces before and after operators
 	for(int i = text.length()-1; i>=0; i--)
 	{
-		if(!quats && TextConstant::IsItQuateSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
-		if(text[i] == currQuats && quats) { quats = false; continue; }
+		auto currentChar = text[i];
+		if(!quats && TextConstant::IsItQuateSybol(currentChar)) { quats = true; currQuats = currentChar; continue; }
+		if(currentChar == currQuats && quats) { quats = false; continue; }
 
 		if(!quats)
 		{
-			if(text[i] == '\n' || text[i] == '\r' || text[i] == '\t')
+			if(currentChar == '\n' || currentChar == '\r' || currentChar == '\t')
 			{
-				text[i] = ' ';
+				currentChar = ' ';
 				continue;
 			}
 
-			if(text[i] == ',' || text[i] == '.' || text[i] == ':' || text[i] == ';'
-						  || text[i] == '(' || text[i] == ')'
-						  || text[i] == '[' || text[i] == ']'
-						  || text[i] == '{' || text[i] == '}'
-						  || text[i] == '=' || text[i] == '+' || text[i] == '-' || text[i] == '*' || text[i] == '/'
-						  || text[i] == '~'
-						  || text[i] == '>' || text[i] == '<' || text[i] == '!')
+			static const std::set<QChar> charsToSurroundSpaces { CodeKeyWords::comma, '.', ':', ';', '(', ')',  '[', ']', '{', '}',
+						'=', '+', '-', '*', '/', '%',      '~',     '>', '<', '!'};
+			if(charsToSurroundSpaces.count(currentChar) > 0)
 			{
-				text.insert(i+1,' ');
-				text.insert(i,' ');
+				if(i != text.length()-1 && text[i+1] != ' ') text.insert(i+1,' ');
+				if(i != 0 && text[i-1] != ' ') text.insert(i,' ');
 				continue;
 			}
 		}
@@ -698,7 +695,7 @@ bool TextConstant::IsItTextConstant(const QString &text, bool printLog = false)
 	return false;
 }
 
-bool TextConstant::ContainsSplitter(const QString & str)
+bool TextConstant::ContainsQuate(const QString & str)
 {
 	for(auto &c:str)
 		if(TextConstant::IsItQuateSybol(c))
@@ -821,8 +818,8 @@ bool CodeTests::TestNormalize()
 	inputsTexts			+= " Эмулятор float \n\t\r {5.45   } ";
 	resultMustBe	+= "Эмулятор float { 5.45 }";
 
-	inputsTexts			+= "23+2;-    33 *2 /3";
-	resultMustBe	+= "23 + 2 ; - 33 * 2 / 3";
+	inputsTexts			+= "23+2;-    33 *2 /3%34";
+	resultMustBe	+= "23 + 2 ; - 33 * 2 / 3 % 34";
 
 	inputsTexts			+= "3=3==2 >34< 3 <=323 > = 343!=2";
 	resultMustBe	+= "3 = 3 == 2 > 34 < 3 <= 323 >= 343 != 2";
@@ -1144,7 +1141,7 @@ QString Statement::PrintStatements(std::vector<Statement> statements, const QStr
 	return str;
 }
 
-QString Statement::PrintStatement(const QString &indent)
+QString Statement::PrintStatement(const QString &indent) const
 {
 	QString str;
 	if(header.isEmpty()) str += indent + "// empty header\n";

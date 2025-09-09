@@ -58,7 +58,7 @@ struct TextConstant
 	{
 		return (symbol == CodeKeyWords::quatsSymbol1 || symbol == CodeKeyWords::quatsSymbol2);
 	}
-	static bool ContainsSplitter(const QString &str);
+	static bool ContainsQuate(const QString &str);
 	static QString AddQuates(const QString &text, char quates = CodeKeyWords::quatsSymbol1);
 	static void RemoveQuates(QString &text);
 };
@@ -87,7 +87,7 @@ struct Statement
 	explicit Statement(QString header, QStringList blockSingleInstructions);
 
 	static QString PrintStatements(std::vector<Statement> statements, const QString &indent = {});
-	QString PrintStatement(const QString &indent = {});
+	QString PrintStatement(const QString &indent = {}) const;
 	void ForEach(const std::function<void(std::pair<Statement*,QString*>)> &function, bool &statementExitFlag, bool &returnFlag);
 	void Remove_child_if(const std::function<bool(std::pair<Statement*,QString*>)> &condition);
 
