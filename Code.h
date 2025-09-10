@@ -98,7 +98,7 @@ class Code
 {
 public:
 	static void Normalize(QString &text);
-	static QStringList TextToCommands(const QString &text);		// внутри вызывается Normalize; гарантируется отсутсвие пустых команд в return
+	static QStringList TextToCommands(const QString &text);	// внутри вызывается Normalize; гарантируется отсутсвие пустых команд в return
 	static QStringList CommandToWords(const QString &command, bool canContainCommandSplitter = false);
 	// гарантируется возвращение непустого списка
 	// если передана пустая command вернет список с одним словом-индикатором ошибки

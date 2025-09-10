@@ -193,9 +193,9 @@ QStringList Code::CommandToWords(const QString &command, bool canContainCommandS
 			quatsNow = true;
 			continue;
 		}
-		if(quatsNow  && currentChar == currentQuats)
+		if(quatsNow && currentChar == currentQuats)
 		{
-			if(i != 0 && command[i-1] == '\\' )
+			if(i != 0 && command[i-1] == '\\')
 				continue;
 
 			word += currentChar;

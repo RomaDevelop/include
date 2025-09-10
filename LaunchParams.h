@@ -19,13 +19,11 @@ struct LaunchParams {
 	inline static void Init(std::vector<DeveloperData> developersData);
 
 	inline static const DeveloperData& CurrentDeveloper();
+	inline static const QString& SourcesPath() { static QString str = CurrentDeveloper().sourcesPath;  return str; }
 
 	inline static bool LaunchedOnDevComp();
 	inline static bool LaunchedFromWorkFiles();
 	inline static bool DevCompAndFromWorkFiles() { return LaunchedOnDevComp() && LaunchedFromWorkFiles(); }
-
-	inline static const QString& ServisCreatorSourcesPath() { static QString str = CurrentDeveloper().sourcesPath;  return str; }
-	inline static const QString& ConfigsPath() { static QString str = ServisCreatorSourcesPath()+"/Конфиги";  return str; }
 
 private:
 	inline static std::vector<DeveloperData> developersData;
