@@ -15,8 +15,9 @@
 //------------------------------------------------------------------------------------------------------------------------------------------
 struct MyQFileDir
 {
-	// если имена различнаются только в регистре QFile::rename не переименовывает (верно для ntfs)
-	inline static QString Rename(QString oldFile, QString newFile, bool forceCaseSensitiveRename); 
+	/// Возвращает пустую строку при успешном переименовании или текст ошибки
+	inline static QString Rename(QString oldFile, QString newFile, bool forceCaseSensitiveRename);
+		// если имена различнаются только в регистре QFile::rename не переименовывает (верно для ntfs)
 
 	inline static QString GetCurrentFileNameFromRenameError(QString errorStr);
 

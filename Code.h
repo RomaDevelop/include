@@ -10,6 +10,7 @@
 
 #include "CodeMarkers.h"
 #include "MyQShortings.h"
+#include "declare_struct.h"
 
 //#include "logs.h"
 
@@ -31,6 +32,8 @@ namespace CodeKeyWords
 
 	const QChar blockOpener = '{';
 	const QChar blockCloser = '}';
+
+	const QChar assign = '=';
 
 	constexpr std::string_view binCodePrefix = "0b";
 	constexpr std::string_view hexCodePrefix = "0x";
@@ -111,7 +114,7 @@ public:
 	static QString GetNextWord(const QString &text, int charIndexInText);
 
 	/// извлекает содержимое первого блока (блок может содержать вложенные блоки)
-	/// всё что до него и сам блок из words будут удалены
+	/// всё что до него и сам блок (включая {}) из words будут удалены
 	static QStringList TakeBlock(QStringList &words);
 
 	static std::vector<int> DecodeStrNumbers(const QString &strNumbers, bool printErrorIfEmpty);
@@ -119,7 +122,8 @@ public:
 	static QStringList GetTextsInSquareBrackets(const QString &text);
 	static AllIndexes GetAllIndexes(QString operand);
 
-	static QString GetInitialisationStr(const QString &command, bool printErrorIfNoInitialisation);
+	declare_struct_4_fields_move(InitParsed, QString, error, QStringList, wordsBefore, QStringList, wordsInit, QStringList, wordsAfter);
+	static InitParsed ParseInitialisation(QStringList words);
 
 	static bool IsInteger(const QString &str);
 	static bool IsUnsigned(const QString &str);

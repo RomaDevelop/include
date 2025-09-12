@@ -512,37 +512,59 @@ AllIndexes Code::GetAllIndexes(QString text)
 	return result;
 }
 
-QString Code::GetInitialisationStr(const QString &command, bool printErrorIfNoInitialisation)
+Code::InitParsed Code::ParseInitialisation(QStringList words)
 {
-	QString initialisation;
-	if(command.count('{') == 1 && command.count('}') == 1)
+	InitParsed result;
+	QStringList wordsCopy = words;
+	int initOpener = -1;
+	for(int i=0; i<wordsCopy.size(); i++)
 	{
-		initialisation = command;
-		initialisation.remove(0,initialisation.indexOf('{')+1);
-		initialisation = initialisation.left(initialisation.indexOf('}'));
-
-		while(initialisation.size() && initialisation[initialisation.size()-1] == ' ') initialisation.chop(1);
-		while(initialisation.size() && initialisation[0] == ' ') initialisation.remove(0,1);
+		if(wordsCopy[i] == CodeKeyWords::blockOpener or wordsCopy[i] == CodeKeyWords::assign)
+		{
+			initOpener = i;
+			break;
+		}
 	}
-	else if(auto words = CommandToWords(command); words.count("=") == 1)
+	if(initOpener == -1)
 	{
-		while(words.first() != "=") words.removeFirst();
-		words.removeFirst();
-		initialisation = words.join(' ');
+		result.error = "initialisation opener not found in command";
+		return result;
 	}
-	else if(printErrorIfNoInitialisation)
+	if(initOpener == 0)
 	{
-		CodeLogs::Error("GetInitialisation wrong initialisation " + command);
-		return initialisation;
+		result.error = "initialisation opener is first word";
+		return result;
 	}
 
-	if(printErrorIfNoInitialisation && initialisation.isEmpty())
-		CodeLogs::Error("No initialisation in command" + command);
+	result.wordsBefore = MyQString::SizedQStringList(initOpener);
+	for(int i=0; i<initOpener; i++)
+		result.wordsBefore[i] = std::move(wordsCopy[i]);
 
-	if(initialisation.startsWith('-'))
-		while(initialisation.size() >= 2 && initialisation[1] == ' ') initialisation.remove(1,1);
+	if(wordsCopy[initOpener] == CodeKeyWords::blockOpener)
+	{
+		result.wordsInit = Code::TakeBlock(wordsCopy);
+		result.wordsAfter = wordsCopy;
+	}
+	else if(wordsCopy[initOpener] == CodeKeyWords::assign)
+	{
+		result.wordsInit = MyQString::SizedQStringList(wordsCopy.size() - (initOpener + 1));
+		for(int wordsIndex=initOpener+1,  wordsInitIndex = 0; wordsIndex<wordsCopy.size(); wordsIndex++, wordsInitIndex++)
+			result.wordsInit[wordsInitIndex] = std::move(wordsCopy[wordsIndex]);
 
-	return initialisation;
+		if(result.wordsInit.startsWith(CodeKeyWords::blockOpener) and result.wordsInit.endsWith(CodeKeyWords::blockCloser)) {
+			result.wordsInit.removeFirst();
+			result.wordsInit.removeLast();
+			if(0) CodeMarkers::to_do("такая проверка теоретически может когда-то приводить к ошибкам если в инициализации будут"
+									 "последовательные блоки типа {} ... {}, остается } ... {");
+		}
+	}
+	else
+	{
+		result.error = "programm logic error: unexpected init starter " + wordsCopy[initOpener];
+		return result;
+	}
+
+	return result;
 }
 
 bool Code::IsNumber(const QString &str)
