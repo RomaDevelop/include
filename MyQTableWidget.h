@@ -24,7 +24,7 @@ class MyQTableWidget : public QTableWidget
 {
 	Q_OBJECT
 public:
-	/// SwapRows doesn't support cellWidgets because of idiotic QTableWidget work with them.
+	/// SwapRows doesn't support cellWidgets because of strange QTableWidget work with them.
 	/// You can't just take or move cellWidget correct. Even with crutches: try create buf row or even buf QTableWidget.
 	inline static bool SwapRows(QTableWidget *table, int row1, int row2);
 	inline static void SetItemEditableState(QTableWidgetItem *item, bool editableNewState);
