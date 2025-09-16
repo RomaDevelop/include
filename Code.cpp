@@ -622,10 +622,10 @@ std::vector<int> Code::DecodeStrNumbers(const QString &strNumbers, bool printErr
 			if(element.count('-') == 1)
 			{
 				QString first = element.left(element.indexOf('-'));
-				QString secnd = element.remove(0,first.length()+1);
+				QString second = element.remove(0,first.length()+1);
 				bool ok1, ok2;
 				int start = first.toInt(&ok1);
-				int end = secnd.toInt(&ok2);
+				int end = second.toInt(&ok2);
 				if(ok1 && ok2)
 				{
 					if(end <= start) error = "DecodeStrNumbers error end("+QSn(end)+") <= start("+QSn(start)+") " + strNumbers;
