@@ -23,10 +23,14 @@ bool IsUInt(const QStringType &stringVariable) { bool ok; stringVariable.toUInt(
 //------------------------------------------------------------------------------------------------------------------------------------------
 #define LastAddedWidget(Layout, Type) static_cast<Type*>(Layout->itemAt(Layout->count()-1)->widget())
 //------------------------------------------------------------------------------------------------------------------------------------------
+#define TimeFormat "hh:mm:ss"
+
 #define DateTimeFormat "yyyy.MM.dd hh:mm:ss"
 #define DateTimeFormat_ms "yyyy.MM.dd hh:mm:ss.zzz"
 #define DateTimeFormatForFileName "yyyy.MM.dd hh-mm-ss"
 #define DateTimeFormatForFileName_ms "yyyy.MM.dd hh-mm-ss-zzz"
+
+#define DateFormat_rus "dd MMM yyyy"
 #define DateTimeFormat_rus "dd MMM yyyy hh:mm:ss"
 //------------------------------------------------------------------------------------------------------------------------------------------
 #define DO_ONCE(code_to_do) { static bool did = false; if(!did) { code_to_do; did = true; } }
