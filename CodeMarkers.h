@@ -10,11 +10,11 @@ struct CodeMarkers
     inline static const QString retired {"retired"};
     inline static const QString note {"note"};
 
-    static void to_do(QString) {}
-	static void to_do_with_cpp20(QString) {}
-	static void to_do_afterwards(QString) {}
-    static void can_be_optimized(QString) {}
-    static void need_optimisation(QString) {}
+	static void to_do(const char*) {}
+	static void to_do_with_cpp20(const char*) {}
+	static void to_do_afterwards(const char*) {}
+	static void can_be_optimized(const char*) {}
+	static void need_optimisation(const char*) {}
 
 };
 

@@ -73,7 +73,7 @@ struct AllIndexes
 struct AllIndexesOld
 {
 	std::vector<int> first;
-	std::vector<int> secnd;
+	std::vector<int> second;
 };
 
 struct Statement
