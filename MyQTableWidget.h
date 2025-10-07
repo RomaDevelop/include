@@ -53,6 +53,7 @@ public:
 	std::vector<ItemState> itemStatesBeforePaste;
 	std::vector<ItemState> itemStatesBeforeCut;
 	inline QString RestoreState(const std::vector<ItemState> &states);
+	inline static std::set<int> VisibleRows(QTableWidget* tableToGetViewport);
 private slots:
 	inline void Cut();
 	inline void Copy();
@@ -289,6 +290,29 @@ void MyQTableWidget::PasteFromOsClip()
 			itemToChange->setText(columns[j]);
 		}
 	}
+}
+
+std::set<int> MyQTableWidget::VisibleRows(QTableWidget* tableToGetViewport)
+{
+	// Получаем высоту видимой области таблицы
+	int visibleTop = tableToGetViewport->viewport()->geometry().y();
+	int visibleBottom = visibleTop + tableToGetViewport->viewport()->height();
+
+
+	// Получаем начальную и конечную позиции видимых строк
+	int firstVisibleRow = tableToGetViewport->rowAt(visibleTop); // Первая видимая строка
+	int lastVisibleRow = tableToGetViewport->rowAt(visibleBottom); // Последняя видимая строка
+
+	std::set<int> setOfVisibleRows;
+	// Если первая видимая строка не определена, выходим
+	if (firstVisibleRow == -1) return setOfVisibleRows;
+
+	// Заполняем set видимыми строками
+	for (int row = firstVisibleRow; row <= lastVisibleRow; ++row)
+	{
+		if (row >= 0 && row < tableToGetViewport->rowCount()) { setOfVisibleRows.insert(row);}
+	}
+	return setOfVisibleRows;
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
