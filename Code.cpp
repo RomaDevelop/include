@@ -27,7 +27,8 @@ void Code::Normalize(QString &text)
 				continue;
 			}
 
-			static const std::set<QChar> charsToSurroundSpaces { CodeKeyWords::comma, '.', ':', ';', '(', ')',  '[', ']', '{', '}',
+			static const std::set<QChar> charsToSurroundSpaces { CodeKeyWords::comma, CodeKeyWords::dot, ':', ';',
+						'(', ')',  '[', ']', '{', '}',
 						'=', '+', '-', '*', '/', '%',      '~',     '>', '<', '!'};
 			if(charsToSurroundSpaces.count(currentChar) > 0)
 			{
