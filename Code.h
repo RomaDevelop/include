@@ -28,6 +28,7 @@ namespace CodeKeyWords
 
 	const QString commentMarker = "//";
 
+	const QChar dot = '.';
 	const QChar comma = ',';
 
 	const QChar blockOpener = '{';
