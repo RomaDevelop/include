@@ -67,15 +67,9 @@ struct TextConstant
 	static void RemoveQuates(QString &text);
 };
 
-struct AllIndexes
-{
-	std::vector<std::vector<int>> indexes;
-};
-struct AllIndexesOld
-{
-	std::vector<int> first;
-	std::vector<int> second;
-};
+///\brief Тип данных для представления множественных индексов
+/// var[...][...]...
+using AllIndices = std::vector<std::vector<int>>;
 
 struct Statement
 {
@@ -121,7 +115,7 @@ public:
 	static std::vector<int> DecodeStrNumbers(const QString &strNumbers, bool printErrorIfEmpty);
 
 	static QStringList GetTextsInSquareBrackets(const QString &text);
-	static AllIndexes GetAllIndexes(QString operand);
+	static AllIndices GetAllIndices(const QString &text);
 
 	declare_struct_4_fields_move(InitParsed, QString, error, QStringList, wordsBefore, QStringList, wordsInit, QStringList, wordsAfter);
 	static InitParsed ParseInitialisation(QStringList words);

@@ -21,6 +21,8 @@
 //------------------------------------------------------------------------------------------------------------------------------------------
 class TextEditCleaner : public QObject
 {
+	Q_OBJECT
+
 public:
 
 	///\brief connect SignalNeedClean -> SlotClean
@@ -63,8 +65,6 @@ private slots:
 	inline void SlotClean(int count);
 
 private:
-
-	Q_OBJECT
 
 	///\brief Поток, который будет осуществлять очистку
 	std::thread *threadCleaner = nullptr;

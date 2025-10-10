@@ -426,33 +426,33 @@ QStringList Code::GetTextsInSquareBrackets(const QString &text)
 	QStringList result;
 	result.push_back(QString());
 	int opSize = text.size();
-	bool indexesNow = false;
+	bool indicesNow = false;
 	bool quats = false;
 	QChar currQuats = ckw::quatsSymbol1;
 	int nestedIndexes = 0;
 	for(int i=0; i<opSize; i++)
 	{
-		if(indexesNow && text[i] == ']' && nestedIndexes == 0)
+		if(indicesNow && text[i] == ']' && nestedIndexes == 0)
 		{
-			indexesNow = false;
+			indicesNow = false;
 			result.push_back(QString());
 		}
 
-		if(indexesNow) result.back() += text[i];
-		if(indexesNow && text[i] == '[') nestedIndexes++;
-		if(indexesNow && text[i] == ']') nestedIndexes--;
+		if(indicesNow) result.back() += text[i];
+		if(indicesNow && text[i] == '[') nestedIndexes++;
+		if(indicesNow && text[i] == ']') nestedIndexes--;
 
 		if(!quats && TextConstant::IsItQuateSybol(text[i]))
 		{ quats = true; currQuats = text[i]; continue; }
 		if(quats && text[i] == currQuats) { quats = false; continue; }
 
-		if(!quats && text[i] == '[') indexesNow = true;
+		if(!quats && text[i] == '[') indicesNow = true;
 	}
 	if(result.back().isEmpty()) result.removeLast();
 
 	if(quats) CodeLogs::Error("not closed quats in text [" + text + "]");
 
-	if(indexesNow) CodeLogs::Error("not closed brackets in text [" + text + "]");
+	if(indicesNow) CodeLogs::Error("not closed brackets in text [" + text + "]");
 
 	return result;
 
@@ -473,19 +473,19 @@ QStringList Code::GetTextsInSquareBrackets(const QString &text)
 	return result;
 }
 
-AllIndexes Code::GetAllIndexes(QString text)
+AllIndices Code::GetAllIndices(const QString &text)
 {
-	AllIndexes result;
+	AllIndices result;
 	auto textsInBrackets = GetTextsInSquareBrackets(text);
 
 	for(auto &subText:textsInBrackets)
 	{
 		if(!subText.isEmpty())
 		{
-			auto indexes = DecodeStrNumbers(subText,true);
-			result.indexes.push_back(indexes);
+			auto indices = DecodeStrNumbers(subText,true);
+			result.push_back(indices);
 		}
-		else result.indexes.push_back({}); // если скобки пустые - добавляем пустой вектор
+		else result.push_back({}); // если скобки пустые - добавляем пустой вектор
 	}
 
 	if(0)
@@ -497,14 +497,14 @@ AllIndexes Code::GetAllIndexes(QString text)
 		tests << "[5-5]";
 		for(auto &test:tests)
 		{
-			auto res = GetAllIndexes(test);
+			auto res = GetAllIndices(test);
 			qdbg << "test" << test;
-			for(auto &indexes:res.indexes)
+			for(auto &indices:res)
 			{
-				QString indexesStr;
-				for(auto &index:indexes)
-					indexesStr += QSn(index) + " ";
-				qdbg << "indexes" << indexesStr;
+				QString indicesStr;
+				for(auto &index:indices)
+					indicesStr += QSn(index) + " ";
+				qdbg << "indices" << indicesStr;
 			}
 			qdbg << " ";
 		}
