@@ -69,7 +69,7 @@ struct TextConstant
 
 ///\brief Тип данных для представления множественных индексов
 /// var[...][...]...
-using AllIndices = std::vector<std::vector<int>>;
+using AllIndexes = std::vector<std::vector<int>>;
 
 struct Statement
 {
@@ -115,7 +115,7 @@ public:
 	static std::vector<int> DecodeStrNumbers(const QString &strNumbers, bool printErrorIfEmpty);
 
 	static QStringList GetTextsInSquareBrackets(const QString &text);
-	static AllIndices GetAllIndices(const QString &text);
+	static AllIndexes GetAllIndexes(const QString &text);
 
 	declare_struct_4_fields_move(InitParsed, QString, error, QStringList, wordsBefore, QStringList, wordsInit, QStringList, wordsAfter);
 	static InitParsed ParseInitialisation(QStringList words);
