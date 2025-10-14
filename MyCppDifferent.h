@@ -19,6 +19,7 @@ class MyCppDifferent
 {
 public:
 	inline static std::string ToDiapasons(std::vector<int> vect);
+	inline static std::vector<ushort> Digits(uint number);
 
 	inline static std::string GetPathToExe();	// если программа запускается из среды Qt creator, то выдаёт путь не до конца
 	// пропускает последнюю папку debug или release
@@ -117,6 +118,17 @@ std::string MyCppDifferent::ToDiapasons(std::vector<int> vect)
 		if(resOff[resOff.size()-1] == '-') resOff += std::to_string(vect.back());
 	}
 	return resOff;
+}
+
+std::vector<ushort> MyCppDifferent::Digits(uint number)
+{
+	std::vector<ushort> digits;
+	while(number > 0)
+	{
+		digits.insert(digits.begin(), number % 10);
+		number /= 10;
+	}
+	return digits;
 }
 
 std::string MyCppDifferent::GetPathToExe()
