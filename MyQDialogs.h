@@ -35,8 +35,11 @@ public:
 	inline static void ShowText(const QStringList &text, uint w = 800, uint h = 600);
 
 	inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
-	inline static QString CustomDialog2(QString caption, QString text, QStringList buttons,
-										bool *chBoxRes=nullptr, QString checkBoxText="Apply to all current");
+	inline static QString CustomDialogWithCheckBox(QString caption, QString text, QStringList buttons,
+												   bool *chBoxRes=nullptr, QString checkBoxText="Apply to all current");
+	/// defaultButtonIndex can take -1 to disable timer mechanics
+	inline static QString CustomDialogWithTimer(QString caption, QString text, QStringList buttons,
+												int defaultButtonIndex, uint secondsToDefaultPressed);
 
 	declare_struct_2_fields_move(MenuItem, QString, text, std::function<void()>, worker);
 	inline static void MenuUnderWidget(QWidget *w, std::vector<MenuItem> &&items);
@@ -154,7 +157,7 @@ QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList butt
 	return retText;
 }
 
-QString MyQDialogs::CustomDialog2(QString caption, QString text, QStringList buttons, bool *chBoxRes, QString checkBoxText)
+QString MyQDialogs::CustomDialogWithCheckBox(QString caption, QString text, QStringList buttons, bool *chBoxRes, QString checkBoxText)
 {
 	QString retText;
 	QDialog dialog;
@@ -186,6 +189,75 @@ QString MyQDialogs::CustomDialog2(QString caption, QString text, QStringList but
 			dialog.close();
 		});
 	}
+
+	dialog.setLayout(vloMain);
+	dialog.exec();
+
+	return retText;
+}
+
+QString MyQDialogs::CustomDialogWithTimer(QString caption, QString text, QStringList buttons,
+										  int defaultButtonIndex, uint secondsToDefaultPressed)
+{
+	QString retText;
+
+	QDialog dialog;
+	dialog.setWindowTitle(caption);
+	dialog.setWindowFlag(Qt::WindowCloseButtonHint, false);
+
+	QTimer timer;
+
+	QVBoxLayout *vloMain = new QVBoxLayout(&dialog);
+
+	QLabel *label = new QLabel(text);
+	vloMain->addWidget(label);
+
+	QHBoxLayout *hloBtns = new QHBoxLayout;
+	vloMain->addLayout(hloBtns);
+
+	QPushButton* defaultButton = nullptr;
+	QString defaultButtonText;
+
+	int index = 0;
+	for(auto &btnText: buttons)
+	{
+		QPushButton *button = new QPushButton(QString(btnText).prepend(' ').append(' '));
+		if(index == defaultButtonIndex)
+		{
+			defaultButton = button;
+			defaultButtonText = btnText;
+		}
+		hloBtns->addWidget(button);
+		QObject::connect(button, &QPushButton::clicked, &dialog, [&dialog, &retText, btnText]() {
+			retText = btnText;
+			dialog.close();
+		});
+		index++;
+	}
+
+	if(defaultButtonIndex == -1) {}
+	else if(defaultButton)
+	{
+		auto SetDefButtonText = [&defaultButtonText, &secondsToDefaultPressed, &defaultButton](){
+			QString newText = defaultButtonText;
+			newText.append(" (").append(QSn(secondsToDefaultPressed)).append(")");
+			defaultButton->setText(newText);
+		};
+		SetDefButtonText();
+
+		QObject::connect(&timer, &QTimer::timeout, &dialog, [&timer, defaultButton, &secondsToDefaultPressed,
+						 &SetDefButtonText]() {
+			secondsToDefaultPressed--;
+			SetDefButtonText();
+			if(secondsToDefaultPressed == 0)
+			{
+				timer.stop();
+				defaultButton->click();
+			}
+		});
+		timer.start(1000);
+	}
+	else QMbError("CustomDialogWithTimer defaultButton wrong index");
 
 	dialog.setLayout(vloMain);
 	dialog.exec();
