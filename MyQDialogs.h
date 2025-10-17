@@ -474,8 +474,8 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	auto vloMain = new QVBoxLayout(dialog);
 	auto hloHeader = new QHBoxLayout;
 	auto listWidget = new QListWidget;
-	auto chBoxCheckAll = new QCheckBox;
-	auto chBoxCheckNothing = new QCheckBox;
+	auto chBoxAllCheck = new QCheckBox;
+	auto chBoxAllUncheck = new QCheckBox;
 
 	auto hloBottom = new QHBoxLayout;
 	auto btnOk = new QPushButton(Accept());
@@ -483,27 +483,9 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	QObject::connect(btnOk,&QPushButton::clicked,[&dialog, &result](){ result.accepted = true; dialog->hide(); });
 	QObject::connect(btnCansel,&QPushButton::clicked,[&dialog, &result](){ result.accepted = false; dialog->hide();});
 
-	chBoxCheckAll->setChecked(true);
-	QObject::connect(chBoxCheckAll, &QCheckBox::clicked,[listWidget](){
-		for(int i=0; i<listWidget->count(); i++)
-		{
-			if(listWidget->item(i)->flags().testFlag(Qt::ItemIsEnabled))
-				listWidget->item(i)->setCheckState(Qt::Checked);
-		}
-	});
-
-	chBoxCheckNothing->setChecked(false);
-	QObject::connect(chBoxCheckNothing, &QCheckBox::clicked,[listWidget](){
-		for(int i=0; i<listWidget->count(); i++)
-		{
-			if(listWidget->item(i)->flags().testFlag(Qt::ItemIsEnabled))
-				listWidget->item(i)->setCheckState(Qt::Unchecked);
-		}
-	});
-
 	vloMain->addLayout(hloHeader);
-	hloHeader->addWidget(chBoxCheckAll);
-	hloHeader->addWidget(chBoxCheckNothing);
+	hloHeader->addWidget(chBoxAllCheck);
+	hloHeader->addWidget(chBoxAllUncheck);
 	hloHeader->addStretch();
 	vloMain->addWidget(listWidget);
 	vloMain->addLayout(hloBottom);
@@ -511,28 +493,83 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	hloBottom->addWidget(btnOk);
 	hloBottom->addWidget(btnCansel);
 
-	for(auto str:values)
-	{
-		listWidget->addItem(str);
-		listWidget->item(listWidget->count()-1)->setCheckState(Qt::Unchecked);
-	}
+	// all check и all uncheck
+	chBoxAllCheck->setChecked(true);
+	QObject::connect(chBoxAllCheck, &QCheckBox::clicked,[listWidget, chBoxAllCheck](){
+		for(int i=0; i<listWidget->count(); i++)
+		{
+			if(listWidget->item(i)->flags().testFlag(Qt::ItemIsEnabled))
+				listWidget->item(i)->setCheckState(Qt::Checked);
+		}
+		chBoxAllCheck->setChecked(true);
+	});
+
+	chBoxAllUncheck->setChecked(false);
+	QObject::connect(chBoxAllUncheck, &QCheckBox::clicked,[listWidget,chBoxAllUncheck](){
+		for(int i=0; i<listWidget->count(); i++)
+		{
+			if(listWidget->item(i)->flags().testFlag(Qt::ItemIsEnabled))
+				listWidget->item(i)->setCheckState(Qt::Unchecked);
+		}
+		chBoxAllUncheck->setChecked(false);
+	});
+
+	// двойной клик на строку
 	QObject::connect(listWidget, &QListWidget::itemDoubleClicked, [](QListWidgetItem *item){
 		if(item->checkState() == Qt::Checked) item->setCheckState(Qt::Unchecked);
 		else item->setCheckState(Qt::Checked);
 	});
 
-	for(int i=0; i<listWidget->count() && i<(int)startChecked.size(); i++)
-		if(startChecked[i]) listWidget->item(i)->setCheckState(Qt::Checked);
+	// механика работы зажатого Shift
+	int prevRow = -1;
+	bool disableSignalItemChanged = false;
+	QObject::connect(listWidget, &QListWidget::itemChanged, listWidget,
+					 [listWidget, &prevRow, &disableSignalItemChanged](QListWidgetItem *item){
+		if(disableSignalItemChanged) return;
 
-	if(startAllChecked)
-		for(int i=0; i<listWidget->count(); i++)
-			listWidget->item(i)->setCheckState(Qt::Checked);
+		if (QApplication::keyboardModifiers() & Qt::ShiftModifier
+				and item->checkState() == Qt::Checked
+				and prevRow != -1)
+		{
+			int startRow, endRow;
+			int currentRow = listWidget->row(item);
+			if(currentRow == prevRow) { prevRow = -1; return; }
+			if(currentRow > prevRow) { startRow = prevRow; endRow = currentRow; }
+			else { startRow = currentRow; endRow = prevRow; }
+			prevRow = -1;
 
-	for(int i=0; i<listWidget->count() && i<(int)enabled.size(); i++)
-		if(!enabled[i]) listWidget->item(i)->setFlags(listWidget->item(i)->flags() ^ Qt::ItemIsEnabled);
+			disableSignalItemChanged = true;
+			for(int row=startRow; row<=endRow; row++)
+			{
+				listWidget->item(row)->setCheckState(Qt::Checked);
+			}
+			disableSignalItemChanged = false;
+			return;
+		}
 
+		if(item->checkState() == Qt::Checked) prevRow = listWidget->row(item);
+		else prevRow = -1;
+	});
+
+	// добавление и настройка строк
+	uint i=0;
+	for(auto str:values)
+	{
+		listWidget->addItem(str);
+
+		listWidget->item(i)->setCheckState(Qt::Unchecked);
+		if(startAllChecked) listWidget->item(i)->setCheckState(Qt::Checked);
+		if(startChecked.size() > i and startChecked[i]) listWidget->item(i)->setCheckState(Qt::Checked);
+
+		if(enabled.size() > i and enabled[i] == false) listWidget->item(i)->setFlags(listWidget->item(i)->flags() ^ Qt::ItemIsEnabled);
+
+		i++;
+	}
+
+	// запуск диалога
 	dialog->exec();
 
+	// подготовка результата
 	if(result.accepted)
 	{
 		for(int i=0; i<listWidget->count(); i++)
