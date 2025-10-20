@@ -2,6 +2,8 @@
 #ifndef MYQSHORTINGS_H
 #define MYQSHORTINGS_H
 //------------------------------------------------------------------------------------------------------------------------------------------
+#include "MyCppShortings.h"
+//------------------------------------------------------------------------------------------------------------------------------------------
 #define QMb  QMessageBox::information
 #define QMbi QMessageBox::information
 #define QMbw QMessageBox::warning
