@@ -17,6 +17,8 @@
 namespace CodeKeyWords
 {
 	const char commandSplitter = ';';
+	const char colon = ':';
+
 	const char wordsSplitter = ' ';
 
 	const char quatsSymbol1 = '\'';
