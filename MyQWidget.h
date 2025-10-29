@@ -15,9 +15,15 @@
 
 struct MyQWidget
 {
+	inline static void SetFontFamily(QWidget *obj, const QString &fontName);
+
 	inline static void SetFontPointSize(QWidget *obj, int fontSize);
 	inline static void SetFontPointSize(QAction *obj, int fontSize);
+	/// increaseValue can be negative
+	inline static void IncreaseFontPointSize(QWidget *obj, int increaseValue);
+
 	inline static void SetTextColor_palette(QWidget *obj, const QColor &color);
+
 	inline static void SetFontBold(QWidget *obj, bool enable);
 	inline static void SetFontBold(QAction *obj, bool enable);
 	/* Можно сделать шаблонную функцию, но тогда копилятор будет создавать функции для каждого наследника QWidget, а их очень много
@@ -31,6 +37,13 @@ struct MyQWidget
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 
+void MyQWidget::SetFontFamily(QWidget *obj, const QString &fontName)
+{
+	auto font = obj->font();
+	font.setFamily(fontName);
+	obj->setFont(font);
+}
+
 void MyQWidget::SetFontPointSize(QWidget *obj, int fontSize)
 {
 	auto font = obj->font();
@@ -43,6 +56,13 @@ void MyQWidget::SetFontPointSize(QAction *obj, int fontSize)
 	if(0) CodeMarkers::to_do_with_cpp20("перейти на шаблон с концептом, см. комментарий в классе");
 	auto font = obj->font();
 	font.setPointSize(fontSize);
+	obj->setFont(font);
+}
+
+void MyQWidget::IncreaseFontPointSize(QWidget *obj, int increaseValue)
+{
+	auto font = obj->font();
+	font.setPointSize(font.pointSize()+increaseValue);
 	obj->setFont(font);
 }
 
