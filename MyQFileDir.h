@@ -46,8 +46,8 @@ struct MyQFileDir
 	inline static QFileInfoList StrListToFileInfoList(const QStringList &fileInfoList);
 
 	using cbProgress_t = std::function<void(int copied)>;
+	/// перезаписывает не спрашивая
 	inline static bool CopyDirectory(QString directory, QString pathDestination, QString newName = "", cbProgress_t progress = nullptr);
-	// перезаписывает не спрашивая
 
 	struct ReadResult { bool success = 0; QString content; };
 

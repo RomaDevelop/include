@@ -12,22 +12,26 @@
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 
-///\brief определение параметров запуска
+///\brief LaunchParams предназначен для определения параметров запуска
+/// функцию Init необходимо вызвать на самом раннем этапе работы программы, передать в неё массив данных о разработчиках
+/// далее, на этапе работы программы можно получать параметры запуска: данные разработчика,
+///		выполнять проверку запущено ли на компьютере разработчика, из каталога сборки ли и т.д.
+///	при вызове функций проверки и получения данных, значение вычислеяется однократно (Meyer's Singleton)
 struct LaunchParams {
 	declare_struct_4_fields_move(DeveloperData, QString, devName, QString, hostName, QString, sourcesPath, QString, buildPath);
 
 	inline static void Init(std::vector<DeveloperData> developersData);
 
 	inline static const DeveloperData& CurrentDeveloper();
-	inline static const QString& SourcesPath() { static QString str = CurrentDeveloper().sourcesPath;  return str; }
+	inline static const QString& SourcesPath();
 
 	inline static bool LaunchedOnDevComp();
 	inline static bool LaunchedFromWorkFiles();
-	inline static bool DevCompAndFromWorkFiles() { return LaunchedOnDevComp() && LaunchedFromWorkFiles(); }
+	inline static bool DevCompAndFromWorkFiles();
 
 private:
 	inline static std::vector<DeveloperData> developersData;
-	inline static DeveloperData notDeveloper {"not_developer", "not_developer","not_developer","not_developer"};
+	inline static DeveloperData notDeveloper {"not_developer", "not_developer", "not_developer", "not_developer"};
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -61,6 +65,12 @@ const LaunchParams::DeveloperData& LaunchParams::CurrentDeveloper()
 	return *currentDeveloper;
 }
 
+const QString &LaunchParams::SourcesPath()
+{
+	static QString str = CurrentDeveloper().sourcesPath;
+	return str;
+}
+
 bool LaunchParams::LaunchedOnDevComp()
 {
 	static bool isDevComp { QHostInfo::localHostName().toUpper() == CurrentDeveloper().hostName.toUpper() };
@@ -71,6 +81,11 @@ bool LaunchParams::LaunchedFromWorkFiles()
 {
 	static bool check { MyQDifferent::PathToExe().contains(CurrentDeveloper().buildPath) };
 	return check;
+}
+
+bool LaunchParams::DevCompAndFromWorkFiles()
+{
+	return LaunchedOnDevComp() && LaunchedFromWorkFiles();
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
