@@ -17,7 +17,6 @@ struct MyQString
 
 	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 
-
 	inline static QString GetRowOfLetter(const QString& str, int letterIndex);
 
 	template<class String, class Splitter>
@@ -76,7 +75,11 @@ struct MyQString
 		return ret;
 	}
 
-	inline static QString Translited(QString str);
+	using mapQCHar = std::map<QChar, QChar>;
+	inline static std::pair<mapQCHar, mapQCHar> TranslitWrongLanguageMaps();
+	inline static QString TranslitWrongLanguage(QString str);
+
+	inline static QString TranslitToLatin(const QString &str);
 
 	inline static QString ToSentenceCase(QString str);
 	inline static QString ToUpperWordStartLetter(QString str);
@@ -103,9 +106,7 @@ QStringList MyQString::QStringListSized(int size, const QString & value)
 
 QStringList MyQString::ArgsToStrList(int argc, char *argv[])
 {
-	QStringList strList;
-	for(int i=0; i<argc; i++) strList += argv[i];
-	return strList;
+	return MyQDifferent::ArgsToStrList(argc, argv);
 }
 
 QString MyQString::GetRowOfLetter(const QString &str, int letterIndex)
@@ -123,34 +124,74 @@ QString MyQString::GetRowOfLetter(const QString &str, int letterIndex)
 	return str.mid(start, end - start).trimmed();
 }
 
-QString MyQString::Translited(QString str)
+std::pair<MyQString::mapQCHar, MyQString::mapQCHar> MyQString::TranslitWrongLanguageMaps()
 {
-	static const QString latin = "qwertyuiop[]asdfghjkl;'zxcvbnm,./";
-	static const QString kiril = "йцукенгшщзхъфывапролджэячсмитьбю.";
-	bool mapsInited = false;
-	static std::map<QChar, QChar> toLatin;
-	static std::map<QChar, QChar> toKiril;
-	if(!mapsInited)
+	const char *latin = "qwertyuiop[]asdfghjkl;'zxcvbnm,./QWERTYUIOP{}ASDFGHJKL:\"" "ZXCVBNM<>"; // разрыв из-за экранирования \"
+	const char *kiril = "йцукенгшщзхъфывапролджэячсмитьбю.ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭ"  "ЯЧСМИТЬБЮ";
+	auto len = strlen(latin);
+	assert(len == strlen(kiril));
+
+	std::map<QChar, QChar> toLatin;
+	std::map<QChar, QChar> toKiril;
+
+	for(size_t i=0; i<len; i++)
 	{
-		for(int i=0; i<latin.size(); i++)
-		{
-			toLatin[kiril[i]] = latin[i];
-			toKiril[latin[i]] = kiril[i];
-		}
-		mapsInited = true;
+		toLatin[*kiril] = *latin;
+		toKiril[*latin] = *kiril;
+		kiril++;
+		latin++;
 	}
+
+	return {std::move(toLatin), std::move(toKiril)};
+}
+
+QString MyQString::TranslitWrongLanguage(QString str)
+{
+	static std::pair<mapQCHar, mapQCHar> translitMaps = TranslitWrongLanguageMaps();
 	for(auto &c:str)
 	{
-		if(auto it = toLatin.find(c); it != toLatin.end())
+		if(auto it = translitMaps.first.find(c); it != translitMaps.first.end())
 		{
 			c = it->second;
 		}
-		else if(auto it = toKiril.find(c); it != toKiril.end())
+		else if(auto it = translitMaps.second.find(c); it != translitMaps.second.end())
 		{
 			c = it->second;
 		}
+		// else ; // буква остается без изменений
 	}
 	return str;
+}
+
+QString MyQString::TranslitToLatin(const QString &str)
+{
+	static std::map<QChar, const char *> translit { {L'а',"a"},   {L'б',"b"},  {L'в',"v"},  {L'г',"g"},  {L'д',"d"},
+													{L'е',"e"},   {L'ё',"yo"}, {L'ж',"zh"}, {L'з',"z"},  {L'и',"i"},
+													{L'к',"k"},   {L'л',"l"},  {L'м',"m"},  {L'н',"n"},  {L'о',"o"},
+													{L'п',"p"},   {L'р',"r"},  {L'с',"s"},  {L'т',"t"},  {L'у',"u"},
+													{L'ф',"f"},   {L'х',"h"},  {L'ц',"ts"}, {L'ч',"ch"}, {L'ш',"sh"},
+													{L'щ',"sch"}, {L'ъ',""},   {L'ы',"y"},  {L'ь',""},   {L'э',"e"},
+													{L'ю',"yu"},  {L'я',"ya"},
+
+													{L'А',"A"},   {L'б',"B"},  {L'В',"V"},  {L'Г',"G"},  {L'Д',"D"},
+													{L'Е',"E"},   {L'Ё',"YO"}, {L'Ж',"ZH"}, {L'З',"Z"},  {L'И',"I"},
+													{L'К',"K"},   {L'Л',"L"},  {L'М',"M"},  {L'Н',"N"},  {L'О',"O"},
+													{L'П',"P"},   {L'Р',"R"},  {L'С',"S"},  {L'Т',"T"},  {L'У',"U"},
+													{L'Ф',"F"},   {L'Х',"H"},  {L'Ц',"TS"}, {L'Ч',"CH"}, {L'Ш',"SH"},
+													{L'Щ',"SCH"}, {L'Ъ',""},   {L'Ы',"Y"},  {L'Ь',""},   {L'Э',"E"},
+													{L'Ю',"YU"},  {L'Я',"YA"},
+											 /* */};
+
+	QString result;
+	for(auto &c:str)
+	{
+		if(auto it = translit.find(c); it != translit.end())
+		{
+			result += it->second;
+		}
+		else result += c;
+	}
+	return result;
 }
 
 QString MyQString::ToSentenceCase(QString str)
