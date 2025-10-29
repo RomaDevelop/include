@@ -13,10 +13,12 @@
 #include "MyQFileDir.h"
 
 namespace AppDataWorkNames {
-	const char* RomaDevelop = "RomaDevelop";
+	inline const char* RomaDevelop = "RomaDevelop";
 
-	const char* Windeploy = "Windeploy";
-	const char* Catalog = "Catalog";
+	inline const char* Windeploy = "Windeploy";
+	inline const char* Catalog = "Catalog";
+
+	inline const char* linkFileName = "exe_path_name.txt";
 }
 namespace ADWN = AppDataWorkNames;
 #define ADWN_RomaDevelop_Catalog ADWN::RomaDevelop, ADWN::Catalog
@@ -24,15 +26,15 @@ namespace ADWN = AppDataWorkNames;
 
 struct AppDataWork
 {
-	static bool MakeFolderInAppData(const QString &appDataSubdir, const QString &programmName);
-	static void MakeFolderAndLinkInAppData(const QString &appDataSubdir, const QString &programmName);
+	inline static bool MakeFolderInAppData(const QString &appDataSubdir, const QString &programmName);
+	inline static void MakeFolderAndLinkInAppData(const QString &appDataSubdir, const QString &programmName);
 
-	static QString GetLinkFromAppData(const QString &appDataSubdir, const QString &programmName);
-	static QString GetFolderInAppData(const QString &appDataSubdir, const QString &programmName);
+	inline static QString GetLinkFromAppData(const QString &appDataSubdir, const QString &programmName);
+	inline static QString GetFolderInAppData(const QString &appDataSubdir, const QString &programmName);
 
-	static void WriteMessageFileInAppData(const QString &appDataSubdir, const QString &programmName, const QString &message);
-	static void RemoveOldMessageFiles(const QString &folder);
-	static void InitTimerMessagesReader(const QString &appDataSubdir, const QString &programmName, QObject *parent,
+	inline static void WriteMessageFileInAppData(const QString &appDataSubdir, const QString &programmName, const QString &message);
+	inline static void RemoveOldMessageFiles(const QString &folder);
+	inline static void InitTimerMessagesReader(const QString &appDataSubdir, const QString &programmName, QObject *parent,
 	                                    std::function<void (QString messageContent, bool &removeFile)> messageFunction);
 };
 
@@ -48,7 +50,7 @@ void AppDataWork::MakeFolderAndLinkInAppData(const QString &appDataSubdir, const
 	if(!MakeFolderInAppData(appDataSubdir, programmName)) return;
 
 #ifdef QT_NO_DEBUG
-	QString fileExePath = GetFolderInAppData(appDataSubdir, programmName).append("/exe_path_name.txt");
+	QString fileExePath = GetFolderInAppData(appDataSubdir, programmName).append(QString("/")+ADWN::linkFileName);
 #endif
 #ifdef QT_DEBUG
 	QString fileExePath = GetFolderInAppData(appDataSubdir, programmName).append("/exe_path_name_debug.txt");
