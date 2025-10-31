@@ -126,10 +126,10 @@ QString MyQString::GetRowOfLetter(const QString &str, int letterIndex)
 
 std::pair<MyQString::mapQCHar, MyQString::mapQCHar> MyQString::TranslitWrongLanguageMaps()
 {
-	const char *latin = "qwertyuiop[]asdfghjkl;'zxcvbnm,./QWERTYUIOP{}ASDFGHJKL:\"" "ZXCVBNM<>"; // разрыв из-за экранирования \"
-	const char *kiril = "йцукенгшщзхъфывапролджэячсмитьбю.ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭ"  "ЯЧСМИТЬБЮ";
-	auto len = strlen(latin);
-	assert(len == strlen(kiril));
+	const wchar_t *latin = L"qwertyuiop[]asdfghjkl;'zxcvbnm,./QWERTYUIOP{}ASDFGHJKL:\"" "ZXCVBNM<>"; // разрыв из-за экранирования \"
+	const wchar_t *kiril = L"йцукенгшщзхъфывапролджэячсмитьбю.ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭ"  "ЯЧСМИТЬБЮ";
+	auto len = wcslen(latin);
+	assert(len == wcslen(kiril));
 
 	std::map<QChar, QChar> toLatin;
 	std::map<QChar, QChar> toKiril;
