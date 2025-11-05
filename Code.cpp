@@ -27,7 +27,8 @@ void Code::Normalize(QString &text)
 				continue;
 			}
 
-			static const std::set<QChar> charsToSurroundSpaces { CodeKeyWords::comma, CodeKeyWords::dot, ':', ';',
+			using namespace CodeKeyWords;
+			static const std::set<QChar> charsToSurroundSpaces { comma, dot, colon, ';',
 						'(', ')',  '[', ']', '{', '}',
 						'=', '+', '-', '*', '/', '%',      '~',     '>', '<', '!'};
 			if(charsToSurroundSpaces.count(currentChar) > 0)
@@ -1280,7 +1281,7 @@ bool Statement::CmpStatement(const Statement &lhs, const Statement &rhs, QString
 
 		if(resultDetails)
 			*resultDetails = QString("CmpStatement2: different type nested statements: [")
-				+(stringPtrL?"QString":"Statement")+" and "+(stringPtrR?"QString":"Statement")+"]";
+				+(stringPtrL ? "QString" : "Statement")+" and "+(stringPtrR ? "QString" : "Statement")+"]";
 		return false;
 	}
 	return true;
