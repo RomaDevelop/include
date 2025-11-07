@@ -56,7 +56,7 @@ public:
 											   QStringList buttons = {Accept(),Cansel()}, uint w = 640);
 
 	// -1 index and empty text if cansel or close
-	declare_struct_3_fields_move(ListDialogRes, int, index, QString, choosedText, bool, accepted);
+	declare_struct_3_fields_move(ListDialogRes, int, chosenIndex, QString, chosenText, bool, accepted);
 	inline static ListDialogRes ListDialog(QString caption, QStringList valuesList,
 	                                       QString acceptButton = Accept(), QString canselButton = Cansel(), uint w = 640, uint h = 480);
 	inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter,
@@ -412,8 +412,8 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 	{
 		if(auto item = listWidget->currentItem())
 		{
-			res.index = listWidget->currentRow();
-			res.choosedText = item->text();
+			res.chosenIndex = listWidget->currentRow();
+			res.chosenText = item->text();
 			res.accepted = true;
 			dialog->close();
 		}
