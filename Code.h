@@ -104,13 +104,20 @@ struct Statement
 class Code
 {
 public:
+	///\brief Нормализация текста
+	/// символы переноса строки и табуляции заменяются пробелами
+	/// добавляются пробелы до и после опереаторов ( a+b -> a + b )
+	/// лишние пробелы удаляются ( a  = b -> a = b )
 	static void Normalize(QString &text);
 	static QStringList TextToCommands(const QString &text);	// внутри вызывается Normalize; гарантируется отсутсвие пустых команд в return
 	static QStringList CommandToWords(const QString &command, bool canContainCommandSplitter = false);
 	// гарантируется возвращение непустого списка
 	// если передана пустая command вернет список с одним словом-индикатором ошибки
 
-	/// внутри вызывается Normalize
+	///\brief Парсинг текста в выражения
+	/// при парсинге текст нормализуется (вызывается Normalize)
+	/// параметры nestedBlockOpener и nestedBlockCloser предназначены для внутреннего рекурсивного вызова
+	/// при внешнем вызове nestedBlockOpener и nestedBlockCloser не используются, оставлять значения по-умолчанию
 	static Statement TextToStatements(const QString &text, int nestedBlockOpener = -1, int *nestedBlockCloser = {});
 
 	static QString GetFirstWord(const QString &text);
