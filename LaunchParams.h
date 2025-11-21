@@ -29,6 +29,8 @@ struct LaunchParams {
 	inline static bool LaunchedFromWorkFiles();
 	inline static bool DevCompAndFromWorkFiles();
 
+	inline static const std::vector<DeveloperData>& DevelopersData() { return developersData; }
+
 private:
 	inline static std::vector<DeveloperData> developersData;
 	inline static DeveloperData notDeveloper {"not_developer", "not_developer", "not_developer", "not_developer"};
