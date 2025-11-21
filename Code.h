@@ -144,18 +144,6 @@ public:
 	static bool IsNumber(const QString &str);
 };
 
-struct CodeTests
-{
-	static bool DoCodeTests();
-
-	static bool TestGetTextsInSquareBrackets();
-
-	static bool TestGetPrevWord();
-	static bool TestNormalize();
-	static bool TestTextToCommands();
-	static QStringList TestTextToStatements();
-};
-
 struct LogFunction
 {
 	std::function<void(const QString& text)> m_function;
