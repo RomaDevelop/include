@@ -148,6 +148,8 @@ struct CodeTests
 {
 	static bool DoCodeTests();
 
+	static bool TestGetTextsInSquareBrackets();
+
 	static bool TestGetPrevWord();
 	static bool TestNormalize();
 	static bool TestTextToCommands();

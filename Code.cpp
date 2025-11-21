@@ -2,6 +2,7 @@
 
 #include <QMessageBox>
 
+#include "MyCppDifferent.h"
 #include "MyQDialogs.h"
 
 namespace ckw = CodeKeyWords;
@@ -447,29 +448,15 @@ QStringList Code::GetTextsInSquareBrackets(const QString &text)
 		{ quats = true; currQuats = text[i]; continue; }
 		if(quats && text[i] == currQuats) { quats = false; continue; }
 
+		if(quats && indexesNow) { CodeLogs::Error("quats found inside indexing [" + text + "]"); return {}; }
+
 		if(!quats && text[i] == '[') indexesNow = true;
 	}
 	if(result.back().isEmpty()) result.removeLast();
 
-	if(quats) CodeLogs::Error("not closed quats in text [" + text + "]");
+	if(quats) { CodeLogs::Error("not closed quats in text [" + text + "]"); return {}; };
 
-	if(indexesNow) CodeLogs::Error("not closed brackets in text [" + text + "]");
-
-	return result;
-
-	if(0) // test for this function
-	{
-		QStringList tests;
-		tests << "" << "'sacsd[ds]sdvsdv' ['s[]d']  [[]]   [123]  ['sdvsdvsdv[]']   ['[]sdvsdv']"
-				 /*<< "[1]" << "[123]" << "[][1]" << "[1][]" << "[][][]" << "[1][2][3][4" << "[1][2][3][4]" << "[]["*/;
-		for(auto &test:tests)
-		{
-			auto res = GetTextsInSquareBrackets(test);
-			qdbg << "test" << test;
-			qdbg << "content" << res.size() << res.join(" ; ");
-			qdbg << " ";
-		}
-	}
+	if(indexesNow) { CodeLogs::Error("not closed brackets in text [" + text + "]"); return {}; };
 
 	return result;
 }
@@ -550,14 +537,17 @@ Code::InitParsed Code::ParseInitialisation(QStringList words)
 	else if(wordsCopy[initOpener] == CodeKeyWords::assign)
 	{
 		result.wordsInit = MyQString::SizedQStringList(wordsCopy.size() - (initOpener + 1));
-		for(int wordsIndex=initOpener+1,  wordsInitIndex = 0; wordsIndex<wordsCopy.size(); wordsIndex++, wordsInitIndex++)
+		int wordsIndex=initOpener+1, wordsInitIndex = 0;
+		for(; wordsIndex<wordsCopy.size(); wordsIndex++, wordsInitIndex++)
 			result.wordsInit[wordsInitIndex] = std::move(wordsCopy[wordsIndex]);
 
-		if(result.wordsInit.startsWith(CodeKeyWords::blockOpener) and result.wordsInit.endsWith(CodeKeyWords::blockCloser)) {
+		if(result.wordsInit.startsWith(CodeKeyWords::blockOpener)
+				and result.wordsInit.endsWith(CodeKeyWords::blockCloser))
+		{
 			result.wordsInit.removeFirst();
 			result.wordsInit.removeLast();
-			if(0) CodeMarkers::to_do("такая проверка теоретически может когда-то приводить к ошибкам если в инициализации будут"
-									 "последовательные блоки типа {} ... {}, остается } ... {");
+			if(0) CodeMarkers::to_do("такая проверка теоретически может когда-то приводить к ошибкам "
+					"если в инициализации будут последовательные блоки типа {} ... {}, остается } ... {");
 		}
 	}
 	else
@@ -652,7 +642,10 @@ std::vector<int> Code::DecodeStrNumbers(const QString &strNumbers, bool printErr
 				int end = second.toInt(&ok2);
 				if(ok1 && ok2)
 				{
-					if(end <= start) error = "DecodeStrNumbers error end("+QSn(end)+") <= start("+QSn(start)+") " + strNumbers;
+					if(end <= start)
+					{
+						error = "DecodeStrNumbers error end("+QSn(end)+") <= start("+QSn(start)+") " + strNumbers;
+					}
 					else
 					{
 						for(int i=start; i<=end; i++) result.push_back(i);
@@ -744,6 +737,7 @@ bool CodeTests::DoCodeTests()
 	if(!TestGetPrevWord()) correct = false;
 	if(!TestNormalize()) correct = false;
 	if(!TestTextToCommands()) correct = false;
+	if(!TestGetTextsInSquareBrackets()) correct = false;
 	if(auto res = TestTextToStatements(); !res.isEmpty())
 	{
 		qdbg << "DoCodeTests errors in TestTextToStatements:";
@@ -754,6 +748,60 @@ bool CodeTests::DoCodeTests()
 		correct = false;
 	}
 	return correct;
+}
+
+bool CodeTests::TestGetTextsInSquareBrackets()
+{
+	MyCppDifferent::any_guard guarg(
+				[](){CodeLogs::ActivateTestMode(true);},
+				[](){CodeLogs::ActivateTestMode(false);});
+
+	bool result = true;
+	struct Test { int number; QString text; QStringList retult; QString error; };
+	std::vector<Test> tests {
+		{1, "",{}, ""},
+		{2, "[1234]",{"1234"}, ""},
+		{3, "ssss[1234] sdgvdsfv [21]",{"1234","21"}, ""},
+		{4, "arr[1234][21]",{"1234","21"}, ""},
+		{5, "arr[1234][21][FORWARD] 'some [123] text'",{"1234","21","FORWARD"}, ""},
+
+		{6, "arr[12'34][2'1]",{}, "quats found inside indexing"},
+		{7, "arr[1234][21] 'text",{}, "not closed quats"},
+		{8, "arr[1234][[21]",{}, "not closed brackets"},
+	};
+	for(auto &test:tests)
+	{
+		CodeLogs::error.countInTestMode = 0;
+		auto res = Code::GetTextsInSquareBrackets(test.text);
+		if(res != test.retult)
+		{
+			result = false;
+			qdbg << "TestGetTextsInSquareBrackets "+QSn(test.number)+" not passed, expected ["+
+					test.retult.join(',')+"], but reuslt is ["+res.join(',')+"]";
+		}
+		if(test.error.isEmpty() and CodeLogs::error.countInTestMode == 0) ; // ok
+		else
+		{
+			if(test.error.isEmpty() == false and CodeLogs::error.countInTestMode == 1)
+			{
+				if(CodeLogs::error.GetTexts(1).contains(test.error)) continue;
+			}
+
+			result = false;
+			qdbg << "TestGetTextsInSquareBrackets "+QSn(test.number)+" not passed, expected ["+
+					test.error+"] error, but get: ";
+			qdbg << CodeLogs::error.GetTexts(CodeLogs::error.countInTestMode);
+		}
+	}
+
+	if(CodeLogs::warning.countInTestMode != 0)
+	{
+		result = false;
+		qdbg << "TestGetTextsInSquareBrackets not passed, unexpected warnings ["+
+				CodeLogs::warning.GetTexts(CodeLogs::warning.countInTestMode)+"]";
+	}
+
+	return result;
 }
 
 bool CodeTests::TestGetPrevWord()
@@ -808,7 +856,8 @@ bool CodeTests::TestGetPrevWord()
 		if(result != resultsPrevMustBe[i])
 		{
 			correct = false;
-			CodeLogs::Error("Тест "+QSn(i+1)+" Code::GetPrevWord(\""+inputsTexts[i]+"\", "+inputsIndexes[i]+") выдал ошибку!"
+			CodeLogs::Error("Тест "+QSn(i+1)+" Code::GetPrevWord(\""+inputsTexts[i]+"\", "+inputsIndexes[i]
+							+") выдал ошибку!"
 						  +"\n\tрезультат <" + result + "> а ожидается <" + resultsPrevMustBe[i]+ ">");
 		}
 		else if(printResAlways) CodeLogs::Log("Тест Code::GetPrevWord(\""+inputsTexts[i]+"\", "+inputsIndexes[i]+") "
@@ -821,7 +870,8 @@ bool CodeTests::TestGetPrevWord()
 		if(result != resultsNextMustBe[i])
 		{
 			correct = false;
-			CodeLogs::Error("Тест "+QSn(i+1)+" Code::GetNextWord(\""+inputsTexts[i]+"\", "+inputsIndexes[i]+") выдал ошибку!"
+			CodeLogs::Error("Тест "+QSn(i+1)+" Code::GetNextWord(\""+inputsTexts[i]+"\", "+inputsIndexes[i]
+							+") выдал ошибку!"
 						  +"\n\tрезультат <" + result + "> а ожидается <" + resultsNextMustBe[i]+ ">");
 		}
 		else if(printResAlways) CodeLogs::Log("Тест Code::GetNextWord(\""+inputsTexts[i]+"\", "+inputsIndexes[i]+") "
@@ -928,7 +978,9 @@ QStringList CodeTests::TestTextToStatements()
 	{
 
 		QStringList errorsThisTest;
-		CodeLogs::ActivateTestMode(true);
+		MyCppDifferent::any_guard guarg(
+					[](){CodeLogs::ActivateTestMode(true);},
+					[](){CodeLogs::ActivateTestMode(false);});
 		int countErrInLogBefore = CodeLogs::error.countInTestMode;
 		int countWrnInLogBefore = CodeLogs::warning.countInTestMode;
 		auto result = Code::TextToStatements(text);
@@ -946,7 +998,6 @@ QStringList CodeTests::TestTextToStatements()
 			if(wrnGetedCountFromTest != 0)
 				errorsThisTest += "Warnings: " + CodeLogs::warning.GetTexts(eggorsGetedCountFromTest);
 		}
-		CodeLogs::ActivateTestMode(false);
 
 		QString resultCmpDetails;
 		if(Statement::CmpStatement(result, resultMustBe, &resultCmpDetails) != resultShouldBe)
