@@ -64,6 +64,7 @@ public:
 			*m_variable = std::move(startValue);
 			m_end_value = std::move(endValue);
 		}
+
 		/// Call startFoo on construction, and endFoo on destruction
 		/// can be executed without template argument
 		any_guard(const std::function<void()> &startFoo, std::function<void()> endFoo):
@@ -71,17 +72,43 @@ public:
 		{
 			if(startFoo) startFoo();
 		}
+
 		~any_guard()
 		{
 			if(m_variable) *m_variable = std::move(m_end_value.value());
 			if(m_endFoo) m_endFoo();
 		}
+
 	private:
 		T *m_variable = nullptr;
 		std::optional<T> m_end_value;
 		std::function<void()> m_endFoo;
 	};
 };
+
+namespace any_guard {
+	template <class T, typename Function>
+	class function_caller
+	{
+	public:
+		/// Call
+		function_caller(const Function &foo, const T& startValue, const T& endValue):
+			m_foo {foo},
+			m_end_value{endValue}
+		{
+			m_foo(startValue);
+		}
+
+		~function_caller()
+		{
+			if(m_foo) m_foo(m_end_value);
+		}
+
+	private:
+		const Function &m_foo;
+		const T& m_end_value;
+	};
+}
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 std::string MyCppDifferent::ToDiapasons(std::vector<int> vect)
