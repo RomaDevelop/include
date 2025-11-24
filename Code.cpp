@@ -476,28 +476,6 @@ AllIndexes Code::GetAllIndexes(const QString &text)
 		else result.push_back({}); // если скобки пустые - добавляем пустой вектор
 	}
 
-	if(0)
-	{
-		QStringList tests;
-		tests << "" << "[[]]   [123]  ";
-		tests << "sdsdv[123]sdvsdv[][1][1,2,3,4][1-5,7-8]";
-		tests << "[5-2]";
-		tests << "[5-5]";
-		for(auto &test:tests)
-		{
-			auto res = GetAllIndexes(test);
-			qdbg << "test" << test;
-			for(auto &indexes:res)
-			{
-				QString indexesStr;
-				for(auto &index:indexes)
-					indexesStr += QSn(index) + " ";
-				qdbg << "indexes" << indexesStr;
-			}
-			qdbg << " ";
-		}
-	}
-
 	return result;
 }
 

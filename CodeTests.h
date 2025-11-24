@@ -11,6 +11,7 @@ struct CodeTests
 	inline static bool DoCodeTests();
 
 	inline static bool TestGetTextsInSquareBrackets();
+	inline static bool TestGetAllIndexes();
 
 	inline static bool TestGetPrevWord();
 	inline static bool TestNormalize();
@@ -25,6 +26,7 @@ bool CodeTests::DoCodeTests()
 	if(!TestNormalize()) correct = false;
 	if(!TestTextToCommands()) correct = false;
 	if(!TestGetTextsInSquareBrackets()) correct = false;
+	if(!TestGetAllIndexes()) correct = false;
 	if(auto res = TestTextToStatements(); !res.isEmpty())
 	{
 		qdbg << "DoCodeTests errors in TestTextToStatements:";
@@ -89,6 +91,29 @@ bool CodeTests::TestGetTextsInSquareBrackets()
 	}
 
 	return result;
+}
+
+bool CodeTests::TestGetAllIndexes()
+{
+	QStringList tests;
+	tests << "" << "[[]]   [123]  ";
+	tests << "sdsdv[123]sdvsdv[][1][1,2,3,4][1-5,7-8]";
+	tests << "[5-2]";
+	tests << "[5-5]";
+//	for(auto &test:tests)
+	{
+//		auto res = Code::GetAllIndexes(test);
+//		qdbg << "test" << test;
+//		for(auto &indexes:res)
+//		{
+//			QString indexesStr;
+//			for(auto &index:indexes)
+//				indexesStr += QSn(index) + " ";
+//			qdbg << "indexes" << indexesStr;
+//		}
+//		qdbg << " ";
+	}
+	return true;
 }
 
 bool CodeTests::TestGetPrevWord()
@@ -220,16 +245,16 @@ bool CodeTests::TestTextToCommands()
 	//printResAlwause = true;
 
 	// простой тест
-	inputsTexts.push_back(					"command1;c2w1 c2w2    c2w3     ;   command3");
-	resultsMustBe.push_back(QStringList({	"command1", "c2w1 c2w2 c2w3", "command3"}));
+	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;   command3");
+	resultsMustBe.push_back(QStringList({"command1", "c2w1 c2w2 c2w3", "command3"}));
 
 	// тест игнорирования комментария
-	inputsTexts.push_back(					"command1;c2w1 c2w2    c2w3     ;  //  command3;other;\"sdvsdv\";//;\nrow2 /");
-	resultsMustBe.push_back(QStringList({	"command1", "c2w1 c2w2 c2w3","row2 /"}));
+	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;  //  command3;other;\"sdvsdv\";//;\nrow2 /");
+	resultsMustBe.push_back(QStringList({"command1", "c2w1 c2w2 c2w3","row2 /"}));
 
 	// проверка с пустыми командами
-	inputsTexts.push_back(					"command1;   ;    ;    command3");
-	resultsMustBe.push_back(QStringList({	"command1", "command3"}));
+	inputsTexts.push_back("command1;   ;    ;    command3");
+	resultsMustBe.push_back(QStringList({"command1", "command3"}));
 
 	QStringList errors;
 
@@ -261,7 +286,8 @@ QStringList CodeTests::TestTextToStatements()
 
 	QStringList errorsAllTests;
 	auto test = [&errorsAllTests, &printResAlwause]
-			(int i, QString &text, Statement &resultMustBe, int countErrorsMustBe, int countWarningsMustBe, bool resultShouldBe = true)
+			(int i, QString &text, Statement &resultMustBe, int countErrorsMustBe, int countWarningsMustBe,
+			bool resultShouldBe = true)
 	{
 
 		QStringList errorsThisTest;
@@ -276,8 +302,8 @@ QStringList CodeTests::TestTextToStatements()
 		if(eggorsGetedCountFromTest != countErrorsMustBe or wrnGetedCountFromTest != countWarningsMustBe)
 		{
 			errorsThisTest += "Тест i"+QSn(i)+" TestTextToStatements(\""+text+"\") wrong count prints!"
-						+ "\nошибок <" + QSn(eggorsGetedCountFromTest) + "> а ожидается <" + QSn(countErrorsMustBe) + ">"
-				+ "\nпредупреждений <" + QSn(wrnGetedCountFromTest) + "> а ожидается <" + QSn(countWarningsMustBe) + ">";
+				+ "\nошибок <" + QSn(eggorsGetedCountFromTest) + "> а ожидается <" + QSn(countErrorsMustBe) + ">"
+				+ "\nпредупреждений <"+QSn(wrnGetedCountFromTest)+"> а ожидается <"+QSn(countWarningsMustBe)+">";
 
 			if(eggorsGetedCountFromTest != 0)
 				errorsThisTest += "Errors: " + CodeLogs::error.GetTexts(eggorsGetedCountFromTest);
@@ -289,7 +315,8 @@ QStringList CodeTests::TestTextToStatements()
 		QString resultCmpDetails;
 		if(Statement::CmpStatement(result, resultMustBe, &resultCmpDetails) != resultShouldBe)
 		{
-			if(!errorsThisTest.isEmpty()) errorsThisTest +=	"============================================================================";
+			if(!errorsThisTest.isEmpty())
+				errorsThisTest +=	"============================================================================";
 			errorsThisTest += "Тест i"+QSn(i)+" TestTextToStatements(\""+text+"\") выдал ошибку!"
 					+"\nрезультат <\n" + result.PrintStatement()
 					+ ">\nа ожидается <\n" + resultMustBe.PrintStatement()+ ">";
@@ -341,27 +368,32 @@ QStringList CodeTests::TestTextToStatements()
 
 	// 3 тест с блоком команд
 	inputsTexts.push_back("if(a==5) { a=10; next command; cmd3 1 2 34; }");
-	resultsMustBe.emplace_back("", Statement::VectorStatementOrQString{Statement{"if ( a == 5 )", Statement::VectorStatementOrQString{
+	resultsMustBe.emplace_back("", Statement::VectorStatementOrQString{
+								   Statement{"if ( a == 5 )", Statement::VectorStatementOrQString{
 												"a = 10", "next command", "cmd3 1 2 34"}}});
 	test(3, inputsTexts.back(), resultsMustBe.back(), 0, 0);
 
 	// 5 тест с блоком команд и вложенным блоком 2
 	inputsTexts.push_back("if(a==5) { FIVE(); Six(); if(b==5) { nested block; } }");
-	resultsMustBe.emplace_back("", Statement::VectorStatementOrQString{Statement{"if ( a == 5 )", Statement::VectorStatementOrQString{
-												"FIVE ( )", "Six ( )",
-												Statement("if ( b == 5 )", Statement::VectorStatementOrQString{"nested block"})
+	resultsMustBe.emplace_back("", Statement::VectorStatementOrQString{
+								   Statement{"if ( a == 5 )", Statement::VectorStatementOrQString{
+										"FIVE ( )", "Six ( )",
+												Statement("if ( b == 5 )",
+												 Statement::VectorStatementOrQString{"nested block"})
 												}}});
 	test(5, inputsTexts.back(), resultsMustBe.back(), 0, 0);
 
 	// 51 тест с блоком команд и вложенным блоком 2 - с ошибкой, отсутсвующ точка с запятой
 	inputsTexts.push_back("if(a==5) { FIVE(); Six(); if(b==5) { nested block } }");
-	resultsMustBe.emplace_back("", Statement::VectorStatementOrQString{Statement{"if ( a == 5 )", Statement::VectorStatementOrQString{
+	resultsMustBe.emplace_back("", Statement::VectorStatementOrQString{
+								   Statement{"if ( a == 5 )", Statement::VectorStatementOrQString{
 												"FIVE ( )", "Six ( )",
 												Statement("if ( b == 5 )", Statement::VectorStatementOrQString{})
 												}}});
 	test(51, inputsTexts.back(), resultsMustBe.back(), 1, 0);
 
-	// 52 тест с блоком команд и вложенным блоком 2 - с ошибкой, отсутсвующ точка с запятой перед if и отсутсвующ точка с запятой в блоке
+// 52 тест с блоком команд и вложенным блоком 2 - с ошибкой, отсутсвующ точка с запятой перед if
+//	и отсутсвующ точка с запятой в блоке
 /// данная проверка должна происходить уже при распознавании слов инструкции
 //	inputsTexts.push_back("if(a==5) { FIVE(); Six() if(b==5) { nested block } }");
 //	resultsMustBe.push_back({ Statement2("if ( a == 5 )", {Statement2("FIVE ( )"), Statement2("Six ( )"),
@@ -369,15 +401,16 @@ QStringList CodeTests::TestTextToStatements()
 //	test(52, inputsTexts.back(), resultsMustBe.back(), 2);
 
 	// 6 тест с блоком команд и вложенным блоком, командами до и после
-	inputsTexts.push_back("pred op; if(a==5) { FIVE(); Six(); if(b==5) { nested op1; nested op2; } end command in a== 5; } after op;");
+	inputsTexts.push_back("pred op; if(a==5) { FIVE(); Six(); if(b==5) { nested op1; nested op2; } "
+						  "end command in a== 5; } after op;");
 	resultsMustBe.emplace_back("", Statement::VectorStatementOrQString{
 			 "pred op",
 			 Statement("if ( a == 5 )", Statement::VectorStatementOrQString{
-							   "FIVE ( )",
-							   "Six ( )",
-							   Statement("if ( b == 5 )", Statement::VectorStatementOrQString{"nested op1", "nested op2"}),
-							   "end command in a == 5"
-						}),
+					"FIVE ( )",
+					"Six ( )",
+					Statement("if ( b == 5 )", Statement::VectorStatementOrQString{"nested op1", "nested op2"}),
+					"end command in a == 5"
+					}),
 			 "after op"
 			});
 	test(6, inputsTexts.back(), resultsMustBe.back(), 0, 0);
@@ -405,8 +438,8 @@ QStringList CodeTests::TestTextToStatements()
 
 	// тест полный ForEach
 	bool stExitFlag=0, returnFlag=0;
-	QStringList ForEachResEtalon = QStringList{"", "pred op", "if ( a == 5 )", "FIVE ( )", "Six ( )", "if ( b == 5 )", "nested op1",
-									"nested op2", "end command in a == 5", "after op"};
+	QStringList ForEachResEtalon = QStringList{"", "pred op", "if ( a == 5 )", "FIVE ( )", "Six ( )", "if ( b == 5 )",
+									"nested op1", "nested op2", "end command in a == 5", "after op"};
 	QStringList ForEachRes = QStringList{};
 	resultsMustBe.back().ForEach([&ForEachRes](std::pair<Statement*,QString*> item){
 		if(item.first) ForEachRes += item.first->header;
@@ -429,7 +462,7 @@ QStringList CodeTests::TestTextToStatements()
 
 	// тест ForEach с returnFlag 2
 	stExitFlag=0, returnFlag=0;
-	ForEachResEtalon = QStringList{"", "pred op", "if ( a == 5 )", "FIVE ( )", "Six ( )", "if ( b == 5 )", "nested op1"};
+	ForEachResEtalon = QStringList{"","pred op","if ( a == 5 )","FIVE ( )","Six ( )","if ( b == 5 )", "nested op1"};
 	ForEachRes = QStringList{};
 	resultsMustBe.back().ForEach([&ForEachRes, &returnFlag](std::pair<Statement*,QString*> item){
 		if(item.second && *item.second == "nested op2") { returnFlag=true; return; }
@@ -455,8 +488,8 @@ QStringList CodeTests::TestTextToStatements()
 
 	// тест ForEach с stExitFlag 2
 	stExitFlag=0, returnFlag=0;
-	ForEachResEtalon = QStringList{"", "pred op", "if ( a == 5 )", "FIVE ( )", "Six ( )", "if ( b == 5 )", "nested op1",
-										"end command in a == 5", "after op"};
+	ForEachResEtalon = QStringList{"", "pred op", "if ( a == 5 )", "FIVE ( )", "Six ( )", "if ( b == 5 )",
+									"nested op1","end command in a == 5", "after op"};
 	ForEachRes = QStringList{};
 	resultsMustBe.back().ForEach([&ForEachRes, &stExitFlag](std::pair<Statement*,QString*> item){
 		if(item.second && *item.second == "nested op2") { stExitFlag=true; return; }
