@@ -441,6 +441,30 @@ AllIndexes Code::GetAllIndexes(const QString &text)
 	return result;
 }
 
+QString Code::AllIndexesToStr(const AllIndexes &indexes)
+{
+	QString str = indexes.empty() ? "" : "{ ";
+	for(uint i=0; i<indexes.size(); i++)
+	{
+		auto &oneIndexes = indexes[i];
+		if(oneIndexes.empty()) str += "{}";
+		else
+		{
+			str += "{ ";
+			for(auto i:oneIndexes)
+			{
+				str += QSn(i);
+				str += " ";
+			}
+			str += "}";
+		}
+		if(i != indexes.size()-1) str += ',';
+		str += ' ';
+	}
+	if(indexes.empty() == false) str += "}";
+	return str;
+}
+
 QStringList Code::GetTextsInSquareBrackets(const QString &text)
 {
 	QStringList result;
@@ -861,8 +885,7 @@ void LogFunction::ActivateTestMode(bool active)
 {
 	if(active)
 	{
-		countInTestMode = 0;
-		textsInTestMode.clear();
+		ClearCountAndTexts();
 
 		fucnctionBackup = std::move(m_function);
 		m_function = [this](const QString& errorText){
@@ -876,6 +899,12 @@ void LogFunction::ActivateTestMode(bool active)
 	}
 }
 
+void LogFunction::ClearCountAndTexts()
+{
+	countInTestMode = 0;
+	textsInTestMode.clear();
+}
+
 QString LogFunction::GetTexts(int count)
 {
 	QString text;
@@ -886,6 +915,20 @@ QString LogFunction::GetTexts(int count)
 		++it;
 	}
 	return text;
+}
+
+QStringList LogFunction::GetAllTexts()
+{
+	QStringList res;
+	for(auto &text:textsInTestMode)
+		res += text;
+	return res;
+}
+
+void LogFunction::qdbg_AllTexts()
+{
+	auto texts = GetAllTexts();
+	for(auto &text:texts) qdbg << text;
 }
 
 LogFunction CodeLogs::log([](const QString& logText){
@@ -943,4 +986,11 @@ void CodeLogs::ActivateTestMode(bool active) {
 	log.ActivateTestMode(active);
 	warning.ActivateTestMode(active);
 	error.ActivateTestMode(active);
+}
+
+void CodeLogs::ClearTestModeLogs()
+{
+	log.ClearCountAndTexts();
+	warning.ClearCountAndTexts();
+	error.ClearCountAndTexts();
 }

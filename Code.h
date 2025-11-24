@@ -138,6 +138,7 @@ public:
 	///\brief Разбирает содержимое квадратных кобок в строке
 	/// var[1][0,2,5][3-7] -> { {1}, {0,2,5}, {3,4,5} }
 	static AllIndexes GetAllIndexes(const QString &text);
+	static QString AllIndexesToStr(const AllIndexes &indexes);
 	static QStringList GetTextsInSquareBrackets(const QString &text);
 
 	declare_struct_4_fields_move(InitParsed, QString, error, QStringList, wordsBefore, QStringList, wordsInit, QStringList, wordsAfter);
@@ -163,8 +164,11 @@ struct LogFunction
 		m_function{ a_function ? std::move(a_function) : [](const QString& text){ qdbg << text; } } {}
 
 	void ActivateTestMode(bool active);
+	void ClearCountAndTexts();
 
 	QString GetTexts(int count);
+	QStringList GetAllTexts();
+	void qdbg_AllTexts();
 };
 
 struct CodeLogs
@@ -183,6 +187,7 @@ public:
 	static void Error(const QString& errorText);
 
 	static void ActivateTestMode(bool active);
+	static void ClearTestModeLogs();
 };
 
 #endif // CODE_H
