@@ -77,7 +77,7 @@ struct TextConstant
 };
 
 ///\brief Тип данных для представления множественных индексов
-/// var[...][...]...
+/// var[1][0,2,5][3-7] -> { {1}, {0,2,5}, {3,4,5} }
 using AllIndexes = std::vector<std::vector<int>>;
 
 struct Statement
@@ -95,7 +95,8 @@ struct Statement
 
 	static QString PrintStatements(std::vector<Statement> statements, const QString &indent = {});
 	QString PrintStatement(const QString &indent = {}) const;
-	void ForEach(const std::function<void(std::pair<Statement*,QString*>)> &function, bool &statementExitFlag, bool &returnFlag);
+	void ForEach(const std::function<void(std::pair<Statement*,QString*>)> &function,
+				 bool &statementExitFlag, bool &returnFlag);
 	void Remove_child_if(const std::function<bool(std::pair<Statement*,QString*>)> &condition);
 
 	static bool CmpStatement(const Statement &lhs, const Statement &rhs, QString *resultDetails);
@@ -109,7 +110,11 @@ public:
 	/// добавляются пробелы до и после опереаторов ( a+b -> a + b )
 	/// лишние пробелы удаляются ( a  = b -> a = b )
 	static void Normalize(QString &text);
-	static QStringList TextToCommands(const QString &text);	// внутри вызывается Normalize; гарантируется отсутсвие пустых команд в return
+
+	static QStringList TextToCommands(const QString &text);
+	// внутри вызывается Normalize
+	// гарантируется отсутсвие пустых команд в return
+
 	static QStringList CommandToWords(const QString &command, bool canContainCommandSplitter = false);
 	// гарантируется возвращение непустого списка
 	// если передана пустая command вернет список с одним словом-индикатором ошибки
@@ -130,8 +135,10 @@ public:
 
 	static std::vector<int> DecodeStrNumbers(const QString &strNumbers, bool printErrorIfEmpty);
 
-	static QStringList GetTextsInSquareBrackets(const QString &text);
+	///\brief Разбирает содержимое квадратных кобок в строке
+	/// var[1][0,2,5][3-7] -> { {1}, {0,2,5}, {3,4,5} }
 	static AllIndexes GetAllIndexes(const QString &text);
+	static QStringList GetTextsInSquareBrackets(const QString &text);
 
 	declare_struct_4_fields_move(InitParsed, QString, error, QStringList, wordsBefore, QStringList, wordsInit, QStringList, wordsAfter);
 	static InitParsed ParseInitialisation(QStringList words);

@@ -423,6 +423,24 @@ QStringList Code::TakeBlock(QStringList &words)
 	return block;
 }
 
+AllIndexes Code::GetAllIndexes(const QString &text)
+{
+	AllIndexes result;
+	auto textsInBrackets = GetTextsInSquareBrackets(text);
+
+	for(auto &subText:textsInBrackets)
+	{
+		if(!subText.isEmpty())
+		{
+			auto indexes = DecodeStrNumbers(subText,true);
+			result.push_back(indexes);
+		}
+		else result.push_back({}); // если скобки пустые - добавляем пустой вектор
+	}
+
+	return result;
+}
+
 QStringList Code::GetTextsInSquareBrackets(const QString &text)
 {
 	QStringList result;
@@ -457,24 +475,6 @@ QStringList Code::GetTextsInSquareBrackets(const QString &text)
 	if(quats) { CodeLogs::Error("not closed quats in text [" + text + "]"); return {}; };
 
 	if(indexesNow) { CodeLogs::Error("not closed brackets in text [" + text + "]"); return {}; };
-
-	return result;
-}
-
-AllIndexes Code::GetAllIndexes(const QString &text)
-{
-	AllIndexes result;
-	auto textsInBrackets = GetTextsInSquareBrackets(text);
-
-	for(auto &subText:textsInBrackets)
-	{
-		if(!subText.isEmpty())
-		{
-			auto indexes = DecodeStrNumbers(subText,true);
-			result.push_back(indexes);
-		}
-		else result.push_back({}); // если скобки пустые - добавляем пустой вектор
-	}
 
 	return result;
 }
