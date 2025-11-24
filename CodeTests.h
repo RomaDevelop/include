@@ -95,25 +95,57 @@ bool CodeTests::TestGetTextsInSquareBrackets()
 
 bool CodeTests::TestGetAllIndexes()
 {
-	QStringList tests;
-	tests << "" << "[[]]   [123]  ";
-	tests << "sdsdv[123]sdvsdv[][1][1,2,3,4][1-5,7-8]";
-	tests << "[5-2]";
-	tests << "[5-5]";
-//	for(auto &test:tests)
+	any_guard::function_caller guard(CodeLogs::ActivateTestMode, true, false);
+	bool ok = true;
+
+	struct Test { int i; QString test; AllIndexes result; QStringList errors; };
+
+	Test tests[] = {
+		{0, "", {}, {}},
+		{1, "[[]]   [123]  ", { {}, {123}}, {"wrong numbers []", "empty numbers: [[]]"}},
+		{2, "sdsdv[123]sdvsdv[][1][1,2,3,4][1-3,7-8]", { {123}, {}, {1}, {1,2,3,4}, {1, 2, 3, 7, 8} }, {}},
+		{3, "[5-2]", { {} }, {"end(2) <= start(5)", "empty numbers: [5-2]"}},
+		{4, "[5-5]", { {} }, {"end(5) <= start(5)", "empty numbers: [5-5]"}},
+	};
+
+	for(auto &test:tests)
 	{
-//		auto res = Code::GetAllIndexes(test);
-//		qdbg << "test" << test;
-//		for(auto &indexes:res)
-//		{
-//			QString indexesStr;
-//			for(auto &index:indexes)
-//				indexesStr += QSn(index) + " ";
-//			qdbg << "indexes" << indexesStr;
-//		}
-//		qdbg << " ";
+		auto res = Code::GetAllIndexes(test.test);
+		if(res != test.result)
+		{
+			qdbg << "Error in test "+QSn(test.i);
+			qdbg << "expected "+Code::AllIndexesToStr(test.result);
+			qdbg << "but get  "+Code::AllIndexesToStr(res);
+			ok = false;
+		}
+
+		auto textsFact = CodeLogs::error.GetAllTexts();
+		if(test.errors.size() == textsFact.size())
+		{
+			for(int i=0; i<textsFact.size(); i++)
+			{
+				if(textsFact[i].contains(test.errors[i])) ; // ok
+				else
+				{
+					qdbg << "Error missmatch in test "+QSn(test.i);
+					qdbg << "expected "+test.errors[i];
+					qdbg << "but get  "+textsFact[i];
+					ok = false;
+				}
+			}
+		}
+		else
+		{
+			qdbg << "Error size missmatch in test "+QSn(test.i);
+			qdbg << "expected ["+test.errors.join(", ")+"]";
+			qdbg << "but get  ["+CodeLogs::error.GetAllTexts().join(", ")+"]";
+			ok = false;
+		}
+
+		CodeLogs::ClearTestModeLogs();
 	}
-	return true;
+
+	return ok;
 }
 
 bool CodeTests::TestGetPrevWord()
