@@ -8,7 +8,7 @@
 
 #include "MyQShortings.h"
 
-//------------------------------------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 class MyQTextEdit : public QTextEdit
 {
@@ -46,10 +46,15 @@ public:
 	inline void SelectText(int index, int length) { SelectText(this, index, length); }
 
 protected:
-	inline virtual void insertFromMimeData(const QMimeData *source) override; // переопределение вставки текста из буффера обмена для richTextPaste
+	/// переопределение вставки текста из буффера обмена для richTextPaste
+	inline virtual void insertFromMimeData(const QMimeData *source) override;
+
+	inline virtual void keyPressEvent(QKeyEvent *event) override;
+	inline virtual bool IndentingOnEnterMechanic(QKeyEvent *event);
+	inline virtual bool IndentingMultirowMechanic(QKeyEvent *event);
 };
 
-//------------------------------------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 void MyQTextEdit::AppendInLastRow(QTextEdit * textEdit, const QString & text)
 {
@@ -176,6 +181,105 @@ void MyQTextEdit::insertFromMimeData(const QMimeData * source)
 	}
 }
 
-//------------------------------------------------------------------------------------------------------------------------------------------
+void MyQTextEdit::keyPressEvent(QKeyEvent *event)
+{
+	if(IndentingOnEnterMechanic(event)) return;
+	if(IndentingMultirowMechanic(event)) return;
+
+	// Для всех остальных клавиш используем стандартную обработку
+	QTextEdit::keyPressEvent(event);
+}
+
+bool MyQTextEdit::IndentingOnEnterMechanic(QKeyEvent *event)
+{
+	if (event->key() != Qt::Key_Return and event->key() != Qt::Key_Enter) return false;
+
+	// Если нажата клавиша Enter или Return запускается механика
+
+	QTextCursor cursor = textCursor();
+
+	// использую LineUnderCursor, потому что BlockUnderCursor захватывает разделитель параграфа
+	cursor.select(QTextCursor::LineUnderCursor);
+	QString currentLine = cursor.selectedText();
+
+	QChar leaderChar;
+	uint leaderCharCount = 0;
+	for (QChar c : currentLine)
+	{
+		if(leaderChar.isNull() and (c == ' ' or c == '\t')) leaderChar = c;
+
+		if (c == leaderChar)
+		{
+			leaderCharCount++;
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	cursor.beginEditBlock();
+
+	// Вызываем стандартную обработку нажатия Enter (создание новой строки)
+	QTextEdit::keyPressEvent(event);
+
+	// Вставляем полученный отступ в начало новой строки
+	cursor = textCursor(); // Обновляем курсор после добавления новой строки
+	for(uint i=0; i<leaderCharCount; i++)
+		cursor.insertText(leaderChar);
+
+	cursor.endEditBlock();
+
+	return true;
+}
+
+bool MyQTextEdit::IndentingMultirowMechanic(QKeyEvent *event)
+{
+	if (event->key() != Qt::Key_Tab) return false;
+
+	QTextCursor cursor = textCursor();
+	if (!cursor.hasSelection()) return false;
+
+	bool selectionFromRowBegin = false;
+
+	cursor.beginEditBlock();
+
+	int start_pos = cursor.selectionStart();
+	int end_pos = cursor.selectionEnd();
+
+	cursor.setPosition(start_pos);
+	int start_block_number = cursor.blockNumber();
+	cursor.setPosition(end_pos);
+	int end_block_number = cursor.blockNumber();
+
+	for (int block_n = start_block_number; block_n <= end_block_number; ++block_n) {
+		QTextBlock block = document()->findBlockByNumber(block_n);
+
+		if(block_n == start_block_number) // если это первый выбранный блок
+			selectionFromRowBegin = start_pos == block.position();
+
+		QTextCursor block_cursor(block);
+		block_cursor.movePosition(QTextCursor::StartOfBlock);
+		block_cursor.insertText("\t");
+	}
+
+	cursor.endEditBlock();
+
+	const int oneTabLen = 1;
+
+	// Восстанавливаем выделение
+	// начало выделения
+	if(selectionFromRowBegin) cursor.setPosition(start_pos);
+	else cursor.setPosition(start_pos+oneTabLen); // с учетом добавленных отступов
+
+	// конец выделения с учетом добавленных отступов
+	int added_length_total = (end_block_number - start_block_number + 1) * oneTabLen;
+	cursor.setPosition(end_pos + added_length_total, QTextCursor::KeepAnchor);
+	setTextCursor(cursor);
+
+	return true;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
 #endif
-//------------------------------------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
