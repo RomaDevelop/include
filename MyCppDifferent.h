@@ -92,11 +92,11 @@ namespace any_guard {
 	{
 	public:
 		/// Call
-		function_caller(const Function &foo, const T& startValue, const T& endValue):
+		function_caller(const Function &foo, const T& startArg, const T& endArg):
 			m_foo {foo},
-			m_end_value{endValue}
+			m_end_value{endArg}
 		{
-			m_foo(startValue);
+			m_foo(startArg);
 		}
 
 		~function_caller()

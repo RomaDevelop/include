@@ -1,8 +1,9 @@
 #ifndef MyQTimer_H
 #define MyQTimer_H
 
-#include <functional>
 #include <queue>
+#include <memory>
+#include <functional>
 
 #include <QTimer>
 
@@ -67,6 +68,15 @@ class MyQTimer : public QTimer {
     Q_OBJECT
 public:
 
+	///\brief Асинхронный цикл выполняемый в потоке GUI
+	/// эквивалент for (int i = i_start; i < i_less_than; i++)
+	/// но выполняется через интервалы interval
+	/// to_do: сейчас таймеру просто ставится интервал, можно сделать версию с паузами между итерациями
+	void For(int i_start, int i_less_than, int interval, QObject *parent,
+				  std::function<void(int &i)> iteration,
+				  std::function<void()> finishAction);
+
+
 	int timerTicks = 0;
 	int counter = 0;
 	int tag = 0;
@@ -81,6 +91,24 @@ public:
 	}
 };
 
+void MyQTimer::For(int i_start, int i_less_than, int interval, QObject *parent,
+				   std::function<void (int &)> iteration, std::function<void ()> finishAction)
+{
+	auto iShPtr = std::make_shared<int>(i_start);
+	QTimer *timer = new QTimer(parent);
+	connect(timer, &QTimer::timeout, parent, [iShPtr, i_less_than, iteration, finishAction, timer](){
+		auto &i = *iShPtr.get();
+		iteration(i);
+		i++;
+		if(i >= i_less_than)
+		{
+			finishAction();
+			timer->stop();
+			timer->deleteLater();
+		}
+	});
+	timer->start(interval);
+}
 
 
-#endif // MYQTABLEWIDGET_H
+#endif
