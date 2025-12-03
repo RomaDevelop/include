@@ -192,14 +192,15 @@ void MyQTextEdit::keyPressEvent(QKeyEvent *event)
 
 bool MyQTextEdit::IndentingOnEnterMechanic(QKeyEvent *event)
 {
+	//return false;
+
 	if (event->key() != Qt::Key_Return and event->key() != Qt::Key_Enter) return false;
 
 	// Если нажата клавиша Enter или Return запускается механика
 
 	QTextCursor cursor = textCursor();
-
-	// использую LineUnderCursor, потому что BlockUnderCursor захватывает разделитель параграфа
 	cursor.select(QTextCursor::LineUnderCursor);
+	// используем LineUnderCursor, потому что BlockUnderCursor захватывает разделитель параграфа
 	QString currentLine = cursor.selectedText();
 
 	QChar leaderChar;
@@ -218,17 +219,20 @@ bool MyQTextEdit::IndentingOnEnterMechanic(QKeyEvent *event)
 		}
 	}
 
+	cursor = textCursor(); // новый, потому что предыдущий уже испорчен
+
 	cursor.beginEditBlock();
 
-	// Вызываем стандартную обработку нажатия Enter (создание новой строки)
-	QTextEdit::keyPressEvent(event);
+	cursor.insertText("\n");
 
 	// Вставляем полученный отступ в начало новой строки
-	cursor = textCursor(); // Обновляем курсор после добавления новой строки
+	//cursor = textCursor(); // Обновляем курсор после добавления новой строки
 	for(uint i=0; i<leaderCharCount; i++)
 		cursor.insertText(leaderChar);
 
 	cursor.endEditBlock();
+
+	ensureCursorVisible();
 
 	return true;
 }
