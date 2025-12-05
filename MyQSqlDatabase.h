@@ -70,13 +70,18 @@ public:
 
 	inline static QSqlQuery DoSqlQuery(const QString &strQuery, const QStringPairVector &binds = {},
 	                                   bool doNextAfterExec = false, bool showErrorIfNextNotDid = false);
+	inline static QSqlQuery DoSqlQuery2(const QString &strQuery, const QStringList &binds = {},
+	                                   bool doNextAfterExec = false, bool showErrorIfNextNotDid = false);
 	declare_struct_2_fields_move(DoSqlQueryRes, QSqlQuery, query, QString, errors);
 	inline static DoSqlQueryRes DoSqlQueryExt(const QString &strQuery, const QStringPairVector &binds = {},
+	                                          bool doNextAfterExec = false, bool showErrorIfNextNotDid = false);
+	inline static DoSqlQueryRes DoSqlQueryExt2(const QString &strQuery, const QStringList &binds = {},
 	                                          bool doNextAfterExec = false, bool showErrorIfNextNotDid = false);
 	inline static QString DoSqlQueryGetFirstCell(const QString &strQuery, const QStringPairVector &binds = {},
 	                                             bool showErrorIfEmptyQuery = true);
 	inline static QStringList DoSqlQueryGetFirstRec(const QString &strQuery, const QStringPairVector &binds = {});
 	inline static QStringList DoSqlQueryGetFirstField(const QString &strQuery, const QStringPairVector &binds = {});
+	inline static QStringList DoSqlQueryGetFirstField2(const QString &strQuery, const QStringList &binds = {});
 	inline static QStringPairVector DoSqlQueryGetFirstTwoFields(const QString &strQuery, const QStringPairVector &binds = {});
 	inline static std::set<QString> DoSqlQueryGetFirstFieldAsSet(const QString &strQuery, const QStringPairVector &binds = {});
 	inline static std::map<QString,QString> DoSqlQueryAndMakeMap(const QString &strQuery, const QStringPairVector &binds = {},
@@ -105,6 +110,7 @@ public:
 	inline static double ToDouble(QSqlQuery &query, int fieldIndex);
 
 	inline static QString GenErrorText(QString error, const QString &strQuery, const QStringPairVector &binds = {});
+	inline static QString GenErrorText(QString error, const QString &strQuery, const QStringList &binds = {});
 	inline static void ShowErrorForQuery(QString generatedErrorText);
 	inline static void ShowErrorForQuery(QString error, const QString &strQuery, const QStringPairVector &binds = {});
 };
@@ -139,6 +145,11 @@ QSqlQuery MyQSqlDatabase::DoSqlQuery(const QString &strQuery, const QStringPairV
 	return DoSqlQueryExt(strQuery, binds, doNextAfterExec, showErrorIfNextNotDid).query;
 }
 
+QSqlQuery MyQSqlDatabase::DoSqlQuery2(const QString & strQuery, const QStringList & binds, bool doNextAfterExec, bool showErrorIfNextNotDid)
+{
+	return DoSqlQueryExt2(strQuery, binds, doNextAfterExec, showErrorIfNextNotDid).query;
+}
+
 MyQSqlDatabase::DoSqlQueryRes MyQSqlDatabase::DoSqlQueryExt(const QString &strQuery, const QStringPairVector &binds,
                                                             bool doNextAfterExec, bool showErrorIfNextNotDid)
 {
@@ -147,6 +158,47 @@ MyQSqlDatabase::DoSqlQueryRes MyQSqlDatabase::DoSqlQueryExt(const QString &strQu
 	query.prepare(strQuery);
 	for(auto &bind:binds)
 		query.bindValue(bind.first, bind.second);
+	if(query.exec())
+	{
+		if(doNextAfterExec)
+		{
+			if(!query.next())
+			{
+				errors = GenErrorText("Ошибка выполнения next: " + query.lastError().text(), strQuery, binds);
+				if(showErrorIfNextNotDid)
+				{
+					ShowErrorForQuery(errors);
+				}
+			}
+		}
+		else
+		{
+			if(showErrorIfNextNotDid)
+			{
+				QString error = "Ошибка параметров: next не выполнялось, поскольку не установлен флаг выполения next. "
+				                "Но флаг вывода ошибки если next не выполнено установлен";
+				errors = GenErrorText(error, strQuery, binds);
+				ShowErrorForQuery(errors);
+			}
+		}
+	}
+	else
+	{
+		errors = GenErrorText("Ошибка выполнения запроса: " + query.lastError().text(), strQuery, binds);
+		ShowErrorForQuery(errors);
+	}
+	return DoSqlQueryRes(std::move(query), std::move(errors));
+}
+
+MyQSqlDatabase::DoSqlQueryRes MyQSqlDatabase::DoSqlQueryExt2(const QString & strQuery, const QStringList & binds,
+                                                             bool doNextAfterExec, bool showErrorIfNextNotDid)
+{
+	QString errors;
+	QSqlQuery query(*currentQSqlDb);
+	query.prepare(strQuery);
+	for(auto &bind:binds)
+		query.addBindValue(bind);
+
 	if(query.exec())
 	{
 		if(doNextAfterExec)
@@ -206,6 +258,12 @@ QStringList MyQSqlDatabase::DoSqlQueryGetFirstRec(const QString &strQuery, const
 QStringList MyQSqlDatabase::DoSqlQueryGetFirstField(const QString &strQuery, const QStringPairVector &binds)
 {
 	auto query = MyQSqlDatabase::DoSqlQuery(strQuery, binds);
+	return MyQSqlDatabase::FieldFromQuery(query, 0);
+}
+
+QStringList MyQSqlDatabase::DoSqlQueryGetFirstField2(const QString & strQuery, const QStringList & binds)
+{
+	auto query = MyQSqlDatabase::DoSqlQuery2(strQuery, binds);
 	return MyQSqlDatabase::FieldFromQuery(query, 0);
 }
 
@@ -398,9 +456,17 @@ double MyQSqlDatabase::ToDouble(QSqlQuery &query, int fieldIndex)
 
 QString MyQSqlDatabase::GenErrorText(QString error, const QString &strQuery, const QStringPairVector &binds)
 {
-	error += "\n\nЗапрос:\n" + strQuery + "\n\nBinds:";
+	error += "\n\nЗапрос:\n" + strQuery + "\n\nBinds" + ( binds.empty() ? " are empty" : ":\n" );
 	for(auto &bind:binds)
 		error += "\n" + bind.first + " -> " + bind.second;
+	return error;
+}
+
+QString MyQSqlDatabase::GenErrorText(QString error, const QString & strQuery, const QStringList & binds)
+{
+	error += "\n\nЗапрос:\n" + strQuery + "\n\nBinds" + ( binds.isEmpty() ? " are empty" : ":\n" );
+	for(auto &bind:binds)
+		error += "\n" + bind;
 	return error;
 }
 
