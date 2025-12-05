@@ -37,6 +37,7 @@ public:
 	inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
 	inline static QString CustomDialogWithCheckBox(QString caption, QString text, QStringList buttons,
 												   bool *chBoxRes=nullptr, QString checkBoxText="Apply to all current");
+	/// returns empty string if Esc pressed
 	/// defaultButtonIndex can take -1 to disable timer mechanics
 	inline static QString CustomDialogWithTimer(QString caption, QString text, QStringList buttons,
 												int defaultButtonIndex, uint secondsToDefaultPressed);
@@ -239,8 +240,8 @@ QString MyQDialogs::CustomDialogWithTimer(QString caption, QString text, QString
 	else if(defaultButton)
 	{
 		auto SetDefButtonText = [&defaultButtonText, &secondsToDefaultPressed, &defaultButton](){
-			QString newText = defaultButtonText;
-			newText.append(" (").append(QSn(secondsToDefaultPressed)).append(")");
+			QString newText = " "+defaultButtonText;
+			newText.append(" (").append(QSn(secondsToDefaultPressed)).append(") ");
 			defaultButton->setText(newText);
 		};
 		SetDefButtonText();

@@ -222,6 +222,12 @@ QStringList Code::CommandToWords(const QString &command, bool canContainCommandS
 	return retWords;
 }
 
+QStringList Code::CommandToWordsNorm(QString command, bool canContainCommandSplitter)
+{
+	Code::Normalize(command);
+	return Code::CommandToWords(command, canContainCommandSplitter);
+}
+
 Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int *nestedBlockCloser)
 {
 	Statement statement;

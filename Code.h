@@ -119,6 +119,9 @@ public:
 	// гарантируется возвращение непустого списка
 	// если передана пустая command вернет список с одним словом-индикатором ошибки
 
+	/// выполняет Normalize перед разделением
+	static QStringList CommandToWordsNorm(QString command, bool canContainCommandSplitter = false);
+
 	///\brief Парсинг текста в выражения
 	/// при парсинге текст нормализуется (вызывается Normalize)
 	/// параметры nestedBlockOpener и nestedBlockCloser предназначены для внутреннего рекурсивного вызова
