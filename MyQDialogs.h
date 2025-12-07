@@ -93,6 +93,8 @@ public:
 											 bool autoColWidths = true, bool readOnly = false,
 											 uint w = 800, uint h = 600);
 
+	inline static void InfoBar(const QString &message, QWidget *widgetToShowIn);
+
 	inline static void ShowAllStandartIcons();
 
 	// buttons
@@ -754,6 +756,41 @@ MyQDialogs::TableDialogRes MyQDialogs::TableOneCol(const QString &caption, QStri
 	for(auto &row:rows)
 		rowsTmp.emplace_back(std::move(row));
 	return Table(caption, rowsTmp, horisontalHeader, verticalHeader, autoColWidths, readOnly, w, h);
+}
+
+void MyQDialogs::InfoBar(const QString &message, QWidget *widgetToShowIn)
+{
+	auto widget = new QWidget(widgetToShowIn);
+	widget->setAttribute(Qt::WA_DeleteOnClose);
+	widget->setStyleSheet("background-color: #e0f7fa; border: 1px solid #00acc1; padding: 5px;");
+
+	QHBoxLayout *hloMain = new QHBoxLayout(widget);
+	hloMain->setContentsMargins(10, 1, 10, 1);
+	hloMain->setSpacing(10);
+
+	QVBoxLayout *vloClose = new QVBoxLayout;
+	vloClose->setContentsMargins(0,10,0,0);
+
+	QLabel *label = new QLabel(message, widgetToShowIn);
+	label->setWordWrap(true);
+	label->setStyleSheet("border: none;");
+
+	QPushButton *closeButton = new QPushButton("×");
+	closeButton->setFixedSize(20, 20);
+	closeButton->setStyleSheet("QPushButton { background-color: #00acc1; color: white; border-radius: 10px; }"
+							   "QPushButton:hover { background-color: #00838f; }");
+	QObject::connect(closeButton, &QPushButton::clicked, widget, [widget](){ widget->close(); });
+
+	hloMain->addWidget(label);
+	hloMain->addStretch();
+	hloMain->addLayout(vloClose);
+	vloClose->addWidget(closeButton, 0, Qt::AlignTop);
+
+	widget->setLayout(hloMain);
+
+	widget->show();
+	widget->move(0, 0);
+	widget->resize(widgetToShowIn->width(), widget->height());
 }
 
 void MyQDialogs::ShowAllStandartIcons()
