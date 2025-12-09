@@ -3,6 +3,7 @@
 #define MyCDifferent_H
 //------------------------------------------------------------------------------------------------------------------------------------------
 
+#include <cstring>
 #include <stddef.h>
 
 struct MyCDifferent
@@ -20,6 +21,22 @@ struct MyCDifferent
 			bufStr[i] = (num & 1) ? '1' : '0'; // Получение последнего бита
 			num >>= 1; // Сдвиг числа вправо
 		}
+	}
+
+	static bool str_ends_with(const char* fullString, const char* ending)
+	{
+		if (fullString == nullptr || ending == nullptr) {
+			return true;
+		}
+		size_t fullLength = std::strlen(fullString);
+		size_t endingLength = std::strlen(ending);
+
+		if (endingLength > fullLength) {
+			return false;
+		}
+
+		// Сравниваем подстроку в конце fullString с ending
+		return std::strcmp(fullString + fullLength - endingLength, ending) == 0;
 	}
 
 	template<typename T>

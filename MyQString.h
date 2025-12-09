@@ -22,6 +22,8 @@ struct MyQString
 	template<class String, class Splitter>
 	inline static std::pair<QString, QString> SplitOnce(const String &string, const Splitter &splitter);
 
+	inline static bool StartsWith(const QString &str, const std::string_view &str_view);
+
 	template<typename... Args>
 	inline static void Append(QString& s, const Args&... args) { (s.append(args), ...); }
 	template<class char_type>
@@ -122,6 +124,20 @@ QString MyQString::GetRowOfLetter(const QString &str, int letterIndex)
 	if (end == -1) { end = str.length(); }
 
 	return str.mid(start, end - start).trimmed();
+}
+
+bool MyQString::StartsWith(const QString &str, const std::string_view &str_view)
+{
+	if((size_t)str.length() < str_view.length()) return false;
+
+	uint index = 0;
+	for(auto c:str_view)
+	{
+		if(str[index] != c) return false;
+		index++;
+	}
+
+	return true;
 }
 
 std::pair<MyQString::mapQCHar, MyQString::mapQCHar> MyQString::TranslitWrongLanguageMaps()
