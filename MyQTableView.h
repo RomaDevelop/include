@@ -30,7 +30,7 @@ public:
 
 	///\brief для отключения стандартного поиска в QTableView при нажатии букв
 	/// обработка происходит в keyPressEvent
-	bool keyBoardSearch = true;
+	bool disableKeyboardSearch = true;
 
 	enum wheelScrollBehaviors { moveScrollBar, moveCurrentIndex };
 	wheelScrollBehaviors wheelScrollBehavior = moveScrollBar; // обработка происходит в wheelEvent
@@ -57,11 +57,14 @@ public:
 	std::set<int> editableColsIndexes;
 	std::set<QString> editableColsNames;
 
+protected:
 	///\brief для активации редактируемых колонок
 	inline void setModel(QAbstractItemModel *model) override;
 
 	inline void keyPressEvent(QKeyEvent* event) override;
 	inline void wheelEvent(QWheelEvent* event) override;
+	inline void keyboardSearch(const QString &search) override;
+
 private:
 	inline bool IsKeyArrow(int key);
 	inline bool IsKeyEditTrigger(int key);
@@ -268,19 +271,7 @@ void MyQTableView::keyPressEvent(QKeyEvent *event)
 		else { QTableView::keyPressEvent(event); return; }
 	}
 
-	// если поиск не отключен - отрабатывается как обычно
-	if(keyBoardSearch) { QTableView::keyPressEvent(event); return; }
-	else
-	{
-		// а вот если поиск отключен, то:
-
-		// если это стрелка - отрабатывается как обычно
-		if(IsKeyArrow(event->key())) { QTableView::keyPressEvent(event); return; }
-
-		// в остальных случаях - игнорирование события
-		event->accept();
-		return;
-	}
+	QTableView::keyPressEvent(event);
 }
 
 void MyQTableView::wheelEvent(QWheelEvent *event) {
@@ -308,6 +299,12 @@ void MyQTableView::wheelEvent(QWheelEvent *event) {
 		}
 		return;
 	}
+}
+
+void MyQTableView::keyboardSearch(const QString &search)
+{
+	if(disableKeyboardSearch) return;
+	QAbstractItemView::keyboardSearch(search);
 }
 
 bool MyQTableView::IsKeyArrow(int key)

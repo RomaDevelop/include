@@ -37,6 +37,10 @@ public:
 	inline void CreateContextMenu();
 	virtual ~MyQTableWidget() {}
 
+	///\brief для отключения стандартного поиска в QTableView при нажатии букв
+	/// обработка происходит в keyboardSearch
+	bool disableKeyboardSearch = false;
+
 public: signals:
 	void SignalAfterCut();
 	void SignalAfterPaste();
@@ -63,6 +67,9 @@ private slots:
 private:
 	QMenu* menu = nullptr;
 	inline static std::vector<QStringList> innerClipboard {};
+
+protected:
+	inline void keyboardSearch(const QString &search) override;
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -315,7 +322,11 @@ void MyQTableWidget::PasteFromOsClip()
 	}
 }
 
-
+void MyQTableWidget::keyboardSearch(const QString &search)
+{
+	if(disableKeyboardSearch) return;
+	QAbstractItemView::keyboardSearch(search);
+}
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 #endif // MYQTABLEWIDGET_H
