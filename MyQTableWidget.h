@@ -30,7 +30,7 @@ public:
 	inline static void SetItemEditableState(QTableWidgetItem *item, bool editableNewState);
 	inline static void FitColsWidths(QTableWidget *table); // не проверено!!!
 	inline static std::set<int> SelectedRows(QTableWidget *table, bool onlyVisibleRows);
-	inline static std::set<int> VisibleRows(QTableWidget* tableToGetViewport);
+	inline static std::set<int> RowsInViewPort(QTableWidget* table);
 
 public:
 	inline explicit MyQTableWidget(QWidget *parent = nullptr);
@@ -134,25 +134,32 @@ std::set<int> MyQTableWidget::SelectedRows(QTableWidget *table, bool onlyVisible
 	return rows;
 }
 
-std::set<int> MyQTableWidget::VisibleRows(QTableWidget *tableToGetViewport)
+std::set<int> MyQTableWidget::RowsInViewPort(QTableWidget *table)
 {
-	// Получаем высоту видимой области таблицы
-	int visibleTop = tableToGetViewport->viewport()->geometry().y();
-	int visibleBottom = visibleTop + tableToGetViewport->viewport()->height();
+	int visibleTop = table->viewport()->geometry().y();
+	int visibleBottom = visibleTop + table->viewport()->height();
 
-	// Получаем начальную и конечную позиции видимых строк
-	int firstVisibleRow = tableToGetViewport->rowAt(visibleTop); // Первая видимая строка
-	int lastVisibleRow = tableToGetViewport->rowAt(visibleBottom); // Последняя видимая строка
+	int firstVisibleRow = table->rowAt(visibleTop);
+	int lastVisibleRow = table->rowAt(visibleBottom);
+
+	if (firstVisibleRow == -1) return {}; // нет видимых строк вообще
+	if (lastVisibleRow >= table->rowCount())
+	{
+		qCritical() << "MyQTableWidget::VisibleRows error: invalid lastVisibleRow "+QSn(lastVisibleRow);
+		return {};
+	}
+	if (lastVisibleRow == -1) // внизу таблицы нет видимой строки, значит строки не доходят до низа
+	{
+		lastVisibleRow = table->rowCount()-1; // проверим все сколько есть
+	}
 
 	std::set<int> setOfVisibleRows;
-	// Если первая видимая строка не определена, выходим
-	if (firstVisibleRow == -1) return setOfVisibleRows;
-
-	// Заполняем set видимыми строками
 	for (int row = firstVisibleRow; row <= lastVisibleRow; ++row)
 	{
-		if (row >= 0 && row < tableToGetViewport->rowCount()) { setOfVisibleRows.insert(row);}
+		if(table->isRowHidden(row) == false)
+			setOfVisibleRows.insert(row);
 	}
+
 	return setOfVisibleRows;
 }
 
