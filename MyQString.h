@@ -30,17 +30,25 @@ struct MyQString
 	inline static bool StartsWith(const QString &str, const std::string_view &str_view);
 
 	template<typename... Args>
-	inline static void Append(QString& s, const Args&... args) { (s.append(args), ...); }
+	inline static void Append(QString& s, const Args&... args) { (SmartAppend(s, args), ...); }
+	template<typename Separator_t, typename Arg1, typename... ArgsTail>
+	inline static void AppendSep(QString& s, const Separator_t &sep, const Arg1& arg1, const ArgsTail&... args)
+	{ SmartAppend(s, arg1); ( (s.append(sep), SmartAppend(s, args)), ... ); }
+
+	template<typename... Args>
+	inline static QString Join(const Args&... args) { QString s; Append(s, args...); return s; }
+	template<typename Separator_t, typename Arg1, typename... ArgsTail>
+	inline static QString JoinSep(const Separator_t &sep, const Arg1& arg1, const ArgsTail&... args)
+	{ QString s; AppendSep(s, sep, arg1, args...); return s; }
+
 	template<class char_type>
-	inline static QString& RightJistifie(QString &str_to_justifie, int width, char_type fill = ' ', bool trunc = false);
+	inline static QString& RightJistifie(QString &str_to_justifie, int width, char_type fill=' ', bool trunc = false);
 	template<class char_type>
-	inline static QString& LeftJistifie(QString &str_to_justifie, int width, char_type fill = ' ', bool trunc = false);
+	inline static QString& LeftJistifie(QString &str_to_justifie, int width, char_type fill=' ', bool trunc = false);
 
 	template<class QWidgetWithText>
 	inline static int TextWidthInWidget(QWidgetWithText *widget)
-	{
-		return QFontMetrics(widget->font()).boundingRect(widget->text()).width();
-	}
+	{ return QFontMetrics(widget->font()).boundingRect(widget->text()).width(); }
 
 	template<class int_type>
 	inline static QString AsNumberDigits(int_type n, QChar separator = ' ')
@@ -97,6 +105,28 @@ private:
 	static int sepLen(const char* s) { return int(strlen(s)); }
 	template<class S>
 	static constexpr int sepLen(const S &s) { return int(s.size()); }
+
+//	template<typename T>
+//    inline void SmartAppend(QString& s, const T& arg) {
+//        s.append(arg);
+//    }
+
+//    // Специализированная вспомогательная функция для числовых типов
+//    template<typename T>
+//    inline typename std::enable_if<std::is_arithmetic<T>::value>::type
+//    SmartAppend(QString& s, const T& arg) {
+//        s.append(QString::number(arg));
+//    }
+	template<typename T>
+	inline static void SmartAppend(QString& s, const T& arg) {
+		if constexpr (std::is_arithmetic_v<T> and not std::is_same_v<T, char>) {
+			// Эта ветка компилируется только для чисел, кроме char
+			s.append(QString::number(arg));
+		} else {
+			// Эта ветка компилируется только для остальных типов
+			s.append(arg);
+		}
+	}
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
