@@ -26,6 +26,8 @@ bool IsUInt(const QStringType &stringVariable) { bool ok; stringVariable.toUInt(
 #define LastAddedWidget(Layout, Type) static_cast<Type*>(Layout->itemAt(Layout->count()-1)->widget())
 //------------------------------------------------------------------------------------------------------------------------------------------
 #define TimeFormat "hh:mm:ss"
+#define Time_hms "hh:mm:ss"
+#define Time_hm "hh:mm"
 
 #define DateTimeFormat "yyyy.MM.dd hh:mm:ss"
 #define DateTimeFormat_ms "yyyy.MM.dd hh:mm:ss.zzz"

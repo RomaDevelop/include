@@ -18,9 +18,14 @@ struct MyQString
 	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 
 	inline static QString GetRowOfLetter(const QString& str, int letterIndex);
+	struct RowAndIndex { QString row; int indexInRow = -1; };
+	inline static RowAndIndex GetRowOfLetterExt(const QString& str, int letterIndex);
 
 	template<class String, class Splitter>
 	inline static std::pair<QString, QString> SplitOnce(const String &string, const Splitter &splitter);
+
+	/// returns cout removed sybols in the beginginning and in the end
+	inline static std::pair<int, int> TrimExt(QString &str);
 
 	inline static bool StartsWith(const QString &str, const std::string_view &str_view);
 
@@ -113,17 +118,60 @@ QStringList MyQString::ArgsToStrList(int argc, char *argv[])
 
 QString MyQString::GetRowOfLetter(const QString &str, int letterIndex)
 {
-	if (letterIndex >= str.length() || letterIndex < 0) { return ""; }
+	return GetRowOfLetterExt(str, letterIndex).row;
+}
+
+MyQString::RowAndIndex MyQString::GetRowOfLetterExt(const QString &str, int letterIndex)
+{
+	if (letterIndex >= str.length() || letterIndex < 0) { return {}; }
 
 	int start = letterIndex;
+	int indexInRow = 0;
 
-	while (start > 0 && str[start - 1] != '\n') { start--; }
+	while (start > 0 && str[start - 1] != '\n') { start--; indexInRow++; }
 
 	int end = str.indexOf('\n', letterIndex);
 
 	if (end == -1) { end = str.length(); }
 
-	return str.mid(start, end - start).trimmed();
+	return { str.mid(start, end - start), indexInRow };
+}
+
+std::pair<int, int> MyQString::TrimExt(QString &str)
+{
+	std::pair<int, int> res;
+
+	// remove from the end (primarily for microoptimisation)
+	if(str.isEmpty()) return res;
+	int size = str.size();
+	while(true)
+	{
+		int index = size - (1 + res.second);
+		if(index < 0) break;
+		auto curChar = str[index];
+		if(curChar == ' ' or curChar == '\n' or curChar == '\r'  or curChar == '\t')
+		{
+			res.second++;
+		}
+		else break;
+	}
+	str.chop(res.second);
+
+	// remove from the beginning
+	if(str.isEmpty()) return res;
+	while(true)
+	{
+		if(res.first >= str.size()) break;
+		auto curChar = str[res.first];
+		if(curChar == ' ' or curChar == '\n' or curChar == '\r'  or curChar == '\t')
+		{
+			res.first++;
+		}
+		else break;
+	}
+	str.remove(0,res.first);
+
+	return res;
 }
 
 bool MyQString::StartsWith(const QString &str, const std::string_view &str_view)
