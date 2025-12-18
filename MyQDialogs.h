@@ -779,17 +779,47 @@ void MyQDialogs::InfoBar(const QString &message, QWidget *widgetToShowIn)
 	closeButton->setFixedSize(20, 20);
 	closeButton->setStyleSheet("QPushButton { background-color: #00acc1; color: white; border-radius: 10px; }"
 							   "QPushButton:hover { background-color: #00838f; }");
-	QObject::connect(closeButton, &QPushButton::clicked, widget, [widget](){ widget->close(); });
+	QObject::connect(closeButton, &QPushButton::clicked, widget, [widget](){ widget->close(); widget->deleteLater(); });
 
 	hloMain->addWidget(label);
 	hloMain->addStretch();
 	hloMain->addLayout(vloClose);
 	vloClose->addWidget(closeButton, 0, Qt::AlignTop);
 
-	widget->setLayout(hloMain);
+	auto widgetSA = dynamic_cast<QAbstractScrollArea*>(widgetToShowIn);
+	if(widgetSA) hloMain->addSpacing(widgetSA->verticalScrollBar()->width());
 
-	widget->show();
-	widget->move(0, 0);
+	// хранилище
+	static std::map<QWidget *, std::vector<QWidget*>> barsInWidgets;
+
+	// расчет координаты y исходя из последнего бара в этом виджете
+	int y = 0;
+	auto findRes = barsInWidgets.find(widgetToShowIn);
+	if(findRes != barsInWidgets.end())
+		y = findRes->second.back()->y()+findRes->second.back()->height();
+
+	// вставка этого бара в хранилище и обработчик его удаления
+	barsInWidgets[widgetToShowIn].push_back(widget);
+	QObject::connect(widget, &QObject::destroyed, widget, [widgetToShowIn, widget](){
+		auto &barsVect = barsInWidgets[widgetToShowIn];
+		for(uint i=0; i<barsVect.size(); i++)
+			if(barsVect[i] == widget)
+				barsVect.erase(barsVect.begin()+i);
+		if(barsVect.empty()) barsInWidgets.erase(widgetToShowIn);
+		else
+		{
+			// сдвиг оставшихся вверх
+			int y = 0;
+			for(auto &bar:barsVect)
+			{
+				bar->move(0,y);
+				y += bar->height();
+			}
+		}
+	});
+
+	widget->show(); // обязательно до resize иначе показывается криво
+	widget->move(0, y);
 	widget->resize(widgetToShowIn->width(), widget->height());
 }
 

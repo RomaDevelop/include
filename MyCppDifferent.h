@@ -21,7 +21,8 @@ public:
 	inline static std::string ToDiapasons(std::vector<int> vect);
 	inline static std::vector<ushort> Digits(uint number);
 
-	inline static std::string GetPathToExe();	// если программа запускается из среды Qt creator, то выдаёт путь не до конца
+	inline static std::string GetPathToExe();	
+	// если программа запускается из среды Qt creator, то выдаёт путь не до конца
 	// пропускает последнюю папку debug или release
 	// если программа запущена уже как выпущенный exe-файл, то всё норм
 

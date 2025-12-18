@@ -23,22 +23,6 @@ struct MyCDifferent
 		}
 	}
 
-	static bool str_ends_with(const char* fullString, const char* ending)
-	{
-		if (fullString == nullptr || ending == nullptr) {
-			return true;
-		}
-		size_t fullLength = std::strlen(fullString);
-		size_t endingLength = std::strlen(ending);
-
-		if (endingLength > fullLength) {
-			return false;
-		}
-
-		// Сравниваем подстроку в конце fullString с ending
-		return std::strcmp(fullString + fullLength - endingLength, ending) == 0;
-	}
-
 	template<typename T>
 	static T BinaryStringToNumber(const char* binaryString, bool &ok) {
 		ok = true;
@@ -62,6 +46,21 @@ struct MyCDifferent
 		}
 		if(len > sizeof (T)*8) ok = false;
 		return num;
+	}
+	
+	static bool str_ends_with(const char* fullString, const char* ending) {
+		if (fullString == nullptr || ending == nullptr) {
+			return true;
+		}
+		size_t fullLength = std::strlen(fullString);
+		size_t endingLength = std::strlen(ending);
+
+		if (endingLength > fullLength) {
+			return false;
+		}
+
+		// Сравниваем подстроку в конце fullString с ending
+		return std::strcmp(fullString + fullLength - endingLength, ending) == 0;
 	}
 };
 
