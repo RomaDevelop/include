@@ -720,6 +720,11 @@ bool TextConstant::IsItTextConstant(const QString &text, bool printLog = false)
 	return false;
 }
 
+bool TextConstant::IsItNotTextConstant(const QString &text)
+{
+	return !IsItTextConstant(text, false);
+}
+
 bool TextConstant::ContainsQuate(const QString & str)
 {
 	for(auto &c:str)

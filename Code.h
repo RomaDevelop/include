@@ -66,6 +66,7 @@ struct TextConstant
 	static Result GetTextConstVal(const QString &txtConst);
 
 	static bool IsItTextConstant(const QString &text, bool printLog);
+	static bool IsItNotTextConstant(const QString &text);
 	template<typename T>
 	static bool IsItQuateSybol(const T& symbol)
 	{

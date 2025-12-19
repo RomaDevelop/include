@@ -9,28 +9,31 @@
 #include "LaunchParams.h"
 #include "AppDataWork.h"
 
-struct MakeReleaseResult { bool success; QString pathToOutputExe; };
+struct MakeReleaseResult { bool success; QString dirOutput; QString pathToOutputExe; QString exeFileOutput; };
 
 struct ReleaseMaker
 {
-	inline static MakeReleaseResult MakeRelease(const QString &programmName);
+	inline static MakeReleaseResult MakeRelease(const QString &programmName, bool openDirOutput=true, bool launchWindeploy=true);
+	inline static void LaunchWindeploy(const QString &exeFileOutput);
 };
 
 //---------------------------------------------------------------------------------------------------------------------
 
-MakeReleaseResult ReleaseMaker::MakeRelease(const QString &programmName)
+MakeReleaseResult ReleaseMaker::MakeRelease(const QString &programmName, bool openDirOutput, bool launchWindeploy)
 {
 	MakeReleaseResult result;
 
 #ifndef QT_NO_DEBUG
-	QMbInfo("This finction works only at QT_NO_DEBUG mode"); return result;
+	if(QMbq({},"Debug mode active","Debug mode active, release will be unusless. Continue?") == QMessageBox::No)
+		return result;
 #endif
 
 	if(!LaunchParams::DevCompAndFromWorkFiles()) { QMbInfo("MakeRelease works only at developer PC"); return result; }
 
 	QWidget w; w.move(100,100); w.show(); w.hide();
 	// w требуется, потому что тупое окно диалога выводится посередине двух мониторов
-	QString dirOutput = QFileDialog::getExistingDirectory(&w,"Выберите каталог где будет создан дистрибутив", "");
+	QString &dirOutput = result.dirOutput;
+	dirOutput = QFileDialog::getExistingDirectory(&w,"Выберите каталог где будет создан дистрибутив", "");
 
 	if(dirOutput.isEmpty()) return result;
 	dirOutput += "/release " + programmName + " " + QDateTime::currentDateTime().toString(DateTimeFormatForFileName);
@@ -46,7 +49,8 @@ MakeReleaseResult ReleaseMaker::MakeRelease(const QString &programmName)
 
 	// создание подкаталогов
 	result.pathToOutputExe = dirOutput + "/Files";
-	QString exeFileOutput = result.pathToOutputExe + "/" + MyQDifferent::ExeNameNoPath();
+	QString &exeFileOutput = result.exeFileOutput;
+	exeFileOutput = result.pathToOutputExe + "/" + MyQDifferent::ExeNameNoPath();
 	if(!QDir().mkdir(dirOutput)) { QMbError("Can't create dir "+dirOutput); return result; }
 	if(!QDir().mkdir(result.pathToOutputExe)) { QMbError("Can't create dir "+result.pathToOutputExe); return result; }
 
@@ -79,8 +83,16 @@ MakeReleaseResult ReleaseMaker::MakeRelease(const QString &programmName)
 	}
 	else QMbWarning("Link file "+link+" to copy not found");
 
-	MyQExecute::OpenDir(dirOutput);
+	if(openDirOutput) MyQExecute::OpenDir(dirOutput);
 
+	if(launchWindeploy) LaunchWindeploy(exeFileOutput);
+
+	result.success = true;
+	return result;
+}
+
+void ReleaseMaker::LaunchWindeploy(const QString &exeFileOutput)
+{
 	// запуск Windeploy
 	auto appDataPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
 	auto windeployExeFile = appDataPath + "/"+ADWN::RomaDevelop+"/"+ADWN::Windeploy+"/exe_path_name.txt";
@@ -99,9 +111,6 @@ MakeReleaseResult ReleaseMaker::MakeRelease(const QString &programmName)
 		}
 	}
 	else QMbWarning("not found " + windeployExeFile);
-
-	result.success = true;
-	return result;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
