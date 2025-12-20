@@ -57,10 +57,10 @@ public:
 	std::set<int> editableColsIndexes;
 	std::set<QString> editableColsNames;
 
-protected:
 	///\brief для активации редактируемых колонок
 	inline void setModel(QAbstractItemModel *model) override;
 
+protected:
 	inline void keyPressEvent(QKeyEvent* event) override;
 	inline void wheelEvent(QWheelEvent* event) override;
 	inline void keyboardSearch(const QString &search) override;

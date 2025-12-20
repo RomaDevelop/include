@@ -12,18 +12,21 @@
 struct MyQLocalServer
 {
 	inline static std::shared_ptr<QLocalServer> InitServer(QString name,
-	                                                       std::function<void(QByteArray data)> incommingWorker,
+	                                                       std::function<void(QByteArray data, QLocalSocket *fromClient)> incommingWorker,
 	                                                       std::function<void(QString)> logWorker);
+	// shared_ptr потому что конструктор перемещения не доступен
 
 	inline static std::shared_ptr<QLocalSocket> InitSocket(QString serverName, int waitForConnected,
 	                                                       std::function<void(QByteArray data)> incommingWorker,
 	                                                       std::function<void(QString)> logWorker);
+
+
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 
 std::shared_ptr<QLocalServer> MyQLocalServer::InitServer(QString name,
-                                                         std::function<void(QByteArray data)> incommingWorker,
+                                                         std::function<void(QByteArray data, QLocalSocket *fromClient)> incommingWorker,
                                                          std::function<void(QString)> logWorker)
 {
 	if(!incommingWorker) {
@@ -49,7 +52,7 @@ std::shared_ptr<QLocalServer> MyQLocalServer::InitServer(QString name,
 		// Чтение данных от клиента
 		QObject::connect(client, &QLocalSocket::readyRead, [client, incommingWorker]() {
 			QByteArray data = client->readAll();
-			if(incommingWorker) incommingWorker(std::move(data));
+			if(incommingWorker) incommingWorker(std::move(data), client);
 		});
 
 		// Обработка отключения клиента
