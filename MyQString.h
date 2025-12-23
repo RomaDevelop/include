@@ -14,6 +14,7 @@ struct MyQString
 {
 	inline static QStringList QStringListSized(int size, const QString &value = "");
 	inline static QStringList SizedQStringList(int size, const QString &value = "") { return QStringListSized(size, value); }
+	inline static void EmplaceBack(QStringList &list, QString &&newString);
 
 	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 
@@ -139,6 +140,12 @@ QStringList MyQString::QStringListSized(int size, const QString & value)
 		ret.append(value);
 	/// тут цикл!!! нельзя делать ret[i] = std::move(value)
 	return ret;
+}
+
+void MyQString::EmplaceBack(QStringList &list, QString &&newString)
+{
+	list.append(QString());
+	list.back() = std::move(newString);
 }
 
 QStringList MyQString::ArgsToStrList(int argc, char *argv[])

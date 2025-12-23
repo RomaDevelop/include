@@ -28,6 +28,8 @@
 #include "declare_struct.h"
 #include "CodeMarkers.h"
 //------------------------------------------------------------------------------------------------------------------------------------------
+declare_struct_2_fields_move(mqdMenuItem, QString, text, std::function<void()>, worker);
+
 class MyQDialogs
 {
 public:
@@ -41,12 +43,13 @@ public:
 	/// defaultButtonIndex can take -1 to disable timer mechanics
 	inline static QString CustomDialogWithTimer(QString caption, QString text, QStringList buttons,
 												int defaultButtonIndex, uint secondsToDefaultPressed);
-
-	declare_struct_2_fields_move(MenuItem, QString, text, std::function<void()>, worker);
-	inline static void MenuUnderWidget(QWidget *w, std::vector<MenuItem> &&items);
+	inline static void MenuUnderWidget(QWidget *w, std::vector<mqdMenuItem> &&items);
 	inline static void MenuUnderWidget(QWidget *w, QStringList texts, std::vector<std::function<void()>> workers);
-	inline static MenuItem SeparatorMenuItem() { return MenuItem("SeparatorMenuItem", nullptr); }
-	inline static MenuItem DisabledItem(QString text) { text+=DisabledItemMarker(); return MenuItem(std::move(text), nullptr);  }
+	/// returns QMenu* created on heap
+	/// delAfterHide - connects call menu->deleteLater() in signal aboutToHide
+	inline static QMenu* MenuItemsToQMenu(std::vector<mqdMenuItem> &&items, QWidget *parent, bool delAfterHide = true);
+	inline static mqdMenuItem SeparatorMenuItem() { return mqdMenuItem("SeparatorMenuItem", nullptr); }
+	inline static mqdMenuItem DisabledItem(QString text) { text+=DisabledItemMarker(); return mqdMenuItem(std::move(text), nullptr);  }
 	inline static const QString& DisabledItemMarker() { static QString str = "[!DisabledItem!]"; return str; }
 
 	declare_struct_2_fields_move(InputTextRes, QString, text, bool, accepted);
@@ -268,18 +271,12 @@ QString MyQDialogs::CustomDialogWithTimer(QString caption, QString text, QString
 	return retText;
 }
 
-void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<MenuItem> &&items)
+void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<mqdMenuItem> &&items)
 {
-	std::vector<MenuItem> *itemsPtr = new std::vector<MenuItem>;
-	std::vector<MenuItem> &itemsRef = *itemsPtr;
-	itemsRef = std::move(items);
-	// Без itemsPtr = new ... меню создано и показано, функция отработота - items уничтожены.
-	// Пользователь нажмёт кнопку и будет попытка работы с уничтоженным объектом
-
-	QMenu *menu = new QMenu(w);
-	QObject::connect(menu, &QObject::destroyed, [itemsPtr](){ delete itemsPtr; });
+	QMenu *menu = new QMenu(w); // будет удалено поле того как скроется
+	QObject::connect(menu, &QMenu::aboutToHide, [menu](){ menu->deleteLater(); });
 	auto separator = SeparatorMenuItem();
-	for(auto &item:itemsRef)
+	for(auto &item:items)
 	{
 		if(item.text == separator.text)
 		{
@@ -297,14 +294,10 @@ void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<MenuItem> &&items)
 			if(!item.worker) { QMbError("nullptr worker in action " + item.text); continue; }
 
 			QAction *action = new QAction(item.text, menu);
-			MenuItem *itemPtr = &item;
 			menu->addAction(action);
-			QObject::connect(action, &QAction::triggered, [menu, itemsPtr, itemPtr](){
-				if(itemPtr->worker) itemPtr->worker();
+			QObject::connect(action, &QAction::triggered, [item = std::move(item)](){
+				if(item.worker) item.worker();
 				else QMbError("nullptr worker executed");
-
-				menu->hide();
-				menu->deleteLater();
 			});
 		}
 	}
@@ -314,11 +307,44 @@ void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<MenuItem> &&items)
 void MyQDialogs::MenuUnderWidget(QWidget *w, QStringList texts, std::vector<std::function<void()>> workers)
 {
 	if(texts.size() != (int)workers.size()) { QMbError("MenuUnderWidget menuItems and workers different sizes"); return; }
-	std::vector<MenuItem> items;
+	std::vector<mqdMenuItem> items;
 	for(int i=0; i<texts.size(); i++)
 		items.emplace_back(    std::move(texts[i]), std::move(workers[i])    );
 
 	MenuUnderWidget(w, std::move(items));
+}
+
+QMenu* MyQDialogs::MenuItemsToQMenu(std::vector<mqdMenuItem> &&items, QWidget *parent, bool delAfterHide)
+{
+	QMenu *menu = new QMenu(parent);
+	if(delAfterHide) QObject::connect(menu, &QMenu::aboutToHide, [menu](){ menu->deleteLater(); });
+	auto separator = SeparatorMenuItem();
+	for(auto &item:items)
+	{
+		if(item.text == separator.text)
+		{
+			menu->addSeparator();
+		}
+		else if(item.text.contains(DisabledItemMarker()))
+		{
+			item.text.remove(DisabledItemMarker());
+			QAction *action = new QAction(item.text, menu);
+			action->setEnabled(false);
+			menu->addAction(action);
+		}
+		else
+		{
+			if(!item.worker) { QMbError("nullptr worker in action " + item.text); continue; }
+
+			QAction *action = new QAction(item.text, menu);
+			menu->addAction(action);
+			QObject::connect(action, &QAction::triggered, [item = std::move(item)](){
+				if(item.worker) item.worker();
+				else QMbError("nullptr worker executed");
+			});
+		}
+	}
+	return menu;
 }
 
 MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString startText,  uint w, uint h)
@@ -361,12 +387,11 @@ MyQDialogs::InputTextRes MyQDialogs::InputLine(QString captionDialog, QString te
 MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QString textDialog, QString startText,
 													 QStringList buttons, uint w)
 {
-	QDialog dialog_obj;
-	QDialog *dialog = &dialog_obj;
+	QDialog dialog;
 	InputLineResExt ret;
 	ret.button = Undefined();
-	dialog->setWindowTitle(captionDialog);
-	QVBoxLayout *vloAll  = new QVBoxLayout(dialog);
+	dialog.setWindowTitle(captionDialog);
+	QVBoxLayout *vloAll  = new QVBoxLayout(&dialog);
 
 	QLabel *label = new QLabel(textDialog);
 	vloAll->addWidget(label);
@@ -388,12 +413,12 @@ MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QStr
 			ret.button.chop(1);
 			ret.button.remove(0,1);
 			ret.text = lineEdit->text();
-			dialog->close();
+			dialog.close();
 		});
 	}
 
-	dialog->setFixedWidth(w);
-	dialog->exec();
+	dialog.setFixedWidth(w);
+	dialog.exec();
 
 	return ret;
 }
@@ -402,11 +427,10 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
                                                  QString acceptButton, QString canselButton, uint w, uint h)
 {
 	ListDialogRes res(-1,"", false);
-	QDialog dialog_obj;
-	QDialog *dialog = &dialog_obj;
-	dialog->resize(w, h);
-	dialog->setWindowTitle(caption);
-	QVBoxLayout *vloMain  = new QVBoxLayout(dialog);
+	QDialog dialog;
+	dialog.resize(w, h);
+	dialog.setWindowTitle(caption);
+	QVBoxLayout *vloMain  = new QVBoxLayout(&dialog);
 	QListWidget *listWidget = new QListWidget;
 	listWidget->addItems(valuesList);
 	vloMain->addWidget(listWidget);
@@ -418,7 +442,7 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 			res.chosenIndex = listWidget->currentRow();
 			res.chosenText = item->text();
 			res.accepted = true;
-			dialog->close();
+			dialog.close();
 		}
 		else QMbError("Choose value or press cansel or close");
 	};
@@ -433,9 +457,9 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 	hloBtns->addWidget(new QPushButton(acceptButton));
 	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, acceptAction);
 	hloBtns->addWidget(new QPushButton(canselButton));
-	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog]() { dialog->close(); });
+	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog]() { dialog.close(); });
 
-	dialog->exec();
+	dialog.exec();
 	return res;
 }
 
@@ -470,11 +494,10 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 {
 	CheckBoxDialogResult result;
 
-	QDialog dialog_obj;
-	QDialog *dialog = &dialog_obj;
-	dialog->resize(w, h);
-	dialog->setWindowTitle(caption);
-	auto vloMain = new QVBoxLayout(dialog);
+	QDialog dialog;
+	dialog.resize(w, h);
+	dialog.setWindowTitle(caption);
+	auto vloMain = new QVBoxLayout(&dialog);
 	auto hloHeader = new QHBoxLayout;
 	auto listWidget = new QListWidget;
 	auto chBoxAllCheck = new QCheckBox;
@@ -483,8 +506,8 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	auto hloBottom = new QHBoxLayout;
 	auto btnOk = new QPushButton(Accept());
 	auto btnCansel = new QPushButton(Cansel());
-	QObject::connect(btnOk,&QPushButton::clicked,[&dialog, &result](){ result.accepted = true; dialog->hide(); });
-	QObject::connect(btnCansel,&QPushButton::clicked,[&dialog, &result](){ result.accepted = false; dialog->hide();});
+	QObject::connect(btnOk,&QPushButton::clicked,[&dialog, &result](){ result.accepted = true; dialog.hide(); });
+	QObject::connect(btnCansel,&QPushButton::clicked,[&dialog, &result](){ result.accepted = false; dialog.hide();});
 
 	vloMain->addLayout(hloHeader);
 	hloHeader->addWidget(chBoxAllCheck);
@@ -570,7 +593,7 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	}
 
 	// запуск диалога
-	dialog->exec();
+	dialog.exec();
 
 	// подготовка результата
 	if(result.accepted)
@@ -596,17 +619,16 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::
 											 QStringList horisontalHeader, QStringList verticalHeader,
 											 bool autoColWidths, bool readOnly, uint w, uint h)
 {
-	QDialog dialog_obj;
-	QDialog *dialog = &dialog_obj;
-	dialog->setWindowTitle(caption);
+	QDialog dialog;
+	dialog.setWindowTitle(caption);
 	if(0) CodeMarkers::to_do("кнопки вверх, вниз, отменить изменения, автоподгонка ширины колонок");
 	if(!w) w = 640;
 	if(!h) h = 480;
-	dialog->resize(w, h);
+	dialog.resize(w, h);
 
 	TableDialogRes res;
 
-	QVBoxLayout *vlo_main  = new QVBoxLayout(dialog);
+	QVBoxLayout *vlo_main  = new QVBoxLayout(&dialog);
 
 	QTableWidget *table = new QTableWidget;
 	res.table = std::unique_ptr<QTableWidget>(table);
@@ -674,18 +696,18 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::
 		auto btnAccept = new QPushButton(Accept());
 		btnAccept->setDefault(true);
 		hlo2->addWidget(btnAccept);
-		btnAccept->connect(btnAccept, &QPushButton::clicked, [&dialog, &res](){ res.accepted = true; dialog->close(); });
+		btnAccept->connect(btnAccept, &QPushButton::clicked, [&dialog, &res](){ res.accepted = true; dialog.close(); });
 
 		auto btnCansel = new QPushButton(Cansel());
 		hlo2->addWidget(btnCansel);
-		btnCansel->connect(btnCansel, &QPushButton::clicked, [&dialog](){ dialog->close(); });
+		btnCansel->connect(btnCansel, &QPushButton::clicked, [&dialog](){ dialog.close(); });
 	}
 	else
 	{
 		auto btnAccept = new QPushButton(Close());
 		btnAccept->setDefault(true);
 		hlo2->addWidget(btnAccept);
-		btnAccept->connect(btnAccept, &QPushButton::clicked, [&dialog](){ dialog->close(); });
+		btnAccept->connect(btnAccept, &QPushButton::clicked, [&dialog](){ dialog.close(); });
 	}
 
 	int colsCount = 0;
@@ -726,7 +748,7 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::
 	if(verticalHeader.isEmpty()) table->verticalHeader()->hide();
 	else table->setVerticalHeaderLabels(verticalHeader);
 
-	dialog->exec();
+	dialog.exec();
 
 	table->setParent(nullptr);
 

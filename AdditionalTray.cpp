@@ -27,21 +27,21 @@ AdditionalTrayIcon::AdditionalTrayIcon(const QIcon &icon, QPoint globalPos, QWid
 
 	CreateLogsWidget(false);
 
-	if(!localClient && !localServer1)
-	{
-		localClient = MyQLocalServer::InitSocket("AdditionalTrayServer", 100,
-													[this](QByteArray data){Log("localClient get " + data); },
-													[this](QString log){ Log(std::move(log)); });
-		if(localClient) Log("localClient created " + MyQString::AsDebug(localClient.get()));
-		else
-		{
-			localServer1 = MyQLocalServer::InitServer("AdditionalTrayServer",
-														[this](QByteArray data){ Log("localServer1 get " + data); },
-														[this](QString log){ Log(std::move(log)); });
-			if(localServer1) Log("localServer1 created " + MyQString::AsDebug(localServer1.get()));
-			else Error("cant create sever and client");
-		}
-	}
+//	if(!localClient && !localServer1)
+//	{
+//		localClient = MyQLocalServer::InitSocket("AdditionalTrayServer", 100,
+//													[this](QByteArray data){Log("localClient get " + data); },
+//													[this](QString log){ Log(std::move(log)); });
+//		if(localClient) Log("localClient created " + MyQString::AsDebug(localClient.get()));
+//		else
+//		{
+//			localServer1 = MyQLocalServer::InitServer("AdditionalTrayServer",
+//														[this](QByteArray data){ Log("localServer1 get " + data); },
+//														[this](QString log){ Log(std::move(log)); });
+//			if(localServer1) Log("localServer1 created " + MyQString::AsDebug(localServer1.get()));
+//			else Error("cant create sever and client");
+//		}
+//	}
 
 	/// MyQLocalServer переделать на u_ptr
 	///
@@ -84,7 +84,8 @@ AdditionalTrayIcon::AdditionalTrayIcon(const QIcon &icon, QPoint globalPos, QWid
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(this, &QWidget::customContextMenuRequested, this, &AdditionalTrayIcon::SlotShowContextMenu);
 
-	connect(this, &ClickableQWidget::clicked, [this](){ QTimer::singleShot(0,[this](){ PlatformDependent::SetTopMost(this,true); }); });
+	connect(this, &ClickableQWidget::clicked, [this](){ QTimer::singleShot(0,[this](){
+			PlatformDependent::SetTopMost(this,true); }); });
 
 	//QTimer *timerTopmoster = new QTimer(this);
 	//connect(timerTopmoster, &QTimer::timeout, [this](){ PlatformDependent::SetTopMost(this,true); });
