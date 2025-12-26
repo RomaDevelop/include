@@ -52,10 +52,10 @@ public:
 	inline static mqdMenuItem DisabledItem(QString text) { text+=DisabledItemMarker(); return mqdMenuItem(std::move(text), nullptr);  }
 	inline static const QString& DisabledItemMarker() { static QString str = "[!DisabledItem!]"; return str; }
 
-	declare_struct_2_fields_move(InputTextRes, QString, text, bool, accepted);
+	declare_struct_4_fields_move(InputTextRes, QString, text, bool, textHasChanged, bool, accepted, bool, acceptedAndChanged);
 	inline static InputTextRes InputText(QString captionDialog = "", QString startText = "", uint w = 640, uint h = 480);
 	inline static InputTextRes InputLine(QString captionDialog = "", QString textDialog = "", QString startText = "", uint w = 640);
-	declare_struct_2_fields_move(InputLineResExt, QString, text, QString, button);
+	declare_struct_3_fields_move(InputLineResExt, QString, text, bool, textHasChanged, QString, button);
 	inline static InputLineResExt InputLineExt(QString captionDialog = "", QString textDialog = "", QString startText = "",
 											   QStringList buttons = {Accept(),Cansel()}, uint w = 640);
 
@@ -371,8 +371,13 @@ MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString st
 	hloBtns->addWidget(new QPushButton(Cansel()));
 	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog](){ dialog.close(); });
 
+	QObject::connect(textEdit, &QTextEdit::textChanged, [&res](){ res.textHasChanged = true; });
+
 	dialog.resize(w, h);
 	dialog.exec();
+
+	if(res.textHasChanged) res.textHasChanged = (res.text == startText);
+	res.acceptedAndChanged = (res.accepted and res.textHasChanged);
 
 	return res;
 }
@@ -380,16 +385,17 @@ MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString st
 MyQDialogs::InputTextRes MyQDialogs::InputLine(QString captionDialog, QString textDialog, QString startText, uint w)
 {
 	auto resExt = InputLineExt(captionDialog, textDialog, startText, {Accept(),Cansel()}, w);
-	if(resExt.button == Accept()) return InputTextRes(std::move(resExt.text), true);
-	else return InputTextRes("", false);
+	if(resExt.button == Accept())
+		return InputTextRes(std::move(resExt.text), resExt.textHasChanged, true, resExt.textHasChanged);
+	else return InputTextRes();
 }
 
 MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QString textDialog, QString startText,
 													 QStringList buttons, uint w)
 {
 	QDialog dialog;
-	InputLineResExt ret;
-	ret.button = Undefined();
+	InputLineResExt res;
+	res.button = Undefined();
 	dialog.setWindowTitle(captionDialog);
 	QVBoxLayout *vloAll  = new QVBoxLayout(&dialog);
 
@@ -408,19 +414,23 @@ MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QStr
 	{
 		btnText.prepend(' ').append(' ');
 		hloBtns->addWidget(new QPushButton(btnText));
-		QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog, lineEdit, btnText, &ret](){
-			ret.button = btnText;
-			ret.button.chop(1);
-			ret.button.remove(0,1);
-			ret.text = lineEdit->text();
+		QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog, lineEdit, btnText, &res](){
+			res.button = btnText;
+			res.button.chop(1);
+			res.button.remove(0,1);
+			res.text = lineEdit->text();
 			dialog.close();
 		});
 	}
 
+	QObject::connect(lineEdit, &QLineEdit::textChanged, [&res](){ res.textHasChanged = true; });
+
 	dialog.setFixedWidth(w);
 	dialog.exec();
 
-	return ret;
+	if(res.textHasChanged) res.textHasChanged = (res.text == startText);
+
+	return res;
 }
 
 MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList valuesList,
