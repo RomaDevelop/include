@@ -376,7 +376,7 @@ MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString st
 	dialog.resize(w, h);
 	dialog.exec();
 
-	if(res.textHasChanged) res.textHasChanged = (res.text == startText);
+	if(res.textHasChanged) res.textHasChanged = (res.text != startText);
 	res.acceptedAndChanged = (res.accepted and res.textHasChanged);
 
 	return res;
@@ -428,7 +428,7 @@ MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QStr
 	dialog.setFixedWidth(w);
 	dialog.exec();
 
-	if(res.textHasChanged) res.textHasChanged = (res.text == startText);
+	if(res.textHasChanged) res.textHasChanged = (res.text != startText);
 
 	return res;
 }
