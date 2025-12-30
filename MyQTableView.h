@@ -181,7 +181,7 @@ inline bool MyQTableView::LocateRow(int row, int columnToSet)
 	if(index.isValid())
 	{
 		setCurrentIndex(index);
-		scrollTo(index, QAbstractItemView::PositionAtTop);
+		scrollTo(index, QAbstractItemView::PositionAtCenter);
 		return true;
 	}
 	return false;
