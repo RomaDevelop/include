@@ -22,10 +22,6 @@ struct PlatformDependent
 	static void FlashClickOnTitle(QWidget *w); // делает клик на заголовок окна и возвращает курсор обратно
 
 	static void ShowPropertiesWindow(const QString &file);
-
-	struct CreatePRVWRes { QString error; QImage image; };
-	static CreatePRVWRes CreatePRVW(const QString& file_to_get_prvw);
-	// requires LIBS += -luuid # -lshell32 и -lole32 не понадобились, хотя ИИ писал, что нужны
 };
 
 #endif
