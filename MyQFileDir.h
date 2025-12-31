@@ -51,20 +51,31 @@ struct MyQFileDir
 
 	struct ReadResult { bool success = 0; QString content; };
 
-	inline static bool		WriteFile(const QString &fileName, const QString &content, const char * encoding = "UTF-8");
-	inline static bool		AppendFile(const QString &fileName, const QString &content, const char * encoding = "UTF-8");
-	inline static QString	ReadFile1(const QString &fileName, const char * encoding = "UTF-8", bool *success = nullptr);
+	inline static bool			WriteFile(const QString &fileName, const QString &content, const char * encoding = "UTF-8");
+	inline static bool			AppendFile(const QString &fileName, const QString &content, const char * encoding = "UTF-8");
+	inline static QString		ReadFile1(const QString &fileName, const char * encoding = "UTF-8", bool *success = nullptr);
 	inline static ReadResult	ReadFile2(const QString &fileName, const char * encoding = "UTF-8");
 
-	inline static bool		CopyFileWithReplace(const QString &file, const QString & fileDst);
+	inline static bool CopyFileWithReplace(const QString &file, const QString & fileDst);
 
 private:
-	inline static const QString& RenameErrMarker() { static QString str = "currentFileName:"; return str; }
+	inline static const std::string_view renameErrMarker = "currentFileName:";
 };
 //------------------------------------------------------------------------------------------------------------------------------------------
 
 QString MyQFileDir::Rename(QString oldFile, QString newFile, bool forceCaseSensitiveRename)
 {
+#ifdef _WIN32
+	if(newFile.size() and newFile[0] == ':')
+		return "MyQFileDir::Rename detected char ':' in new file name ("+newFile+")\n\n"+renameErrMarker.data()+oldFile;
+	for(int i=2; i<newFile.size(); i++)
+		if(newFile[i] == ':')
+			return QString("MyQFileDir::Rename detected char ':' in new file name ("+newFile+")\n\n")+renameErrMarker.data()+oldFile;
+	/// terrible behavior: if char : contains in newFile QFile::rename corrupts file and returns true
+#else
+DO_ONCE(qdbg << "MyQFileDir::Rename worked incorrect with ':' in new file on Windows, but not tested for current OS");
+#endif
+
 	if(forceCaseSensitiveRename)
 	{
 		oldFile = QDir::toNativeSeparators(oldFile);
@@ -83,27 +94,32 @@ QString MyQFileDir::Rename(QString oldFile, QString newFile, bool forceCaseSensi
 					break;
 				}
 			if(tmpNewFile.size() != newFile.size())
-				return "Can't create tmp name to forceCaseSensitiveRename\n\n" + oldFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+oldFile;
+				return "Can't create tmp name to forceCaseSensitiveRename\n\n" + oldFile + "\n\nto\n\n" + newFile
+				        + "\n\n"+renameErrMarker.data()+oldFile;
 
 			if(!QFile::rename(oldFile, tmpNewFile))
-				return "QFile::rename returned false for forceCaseSensitiveRename(step1)\n\n" + oldFile + "\n\nto\n\n" + tmpNewFile + "\n\n"+RenameErrMarker()+oldFile;
+				return "QFile::rename returned false for forceCaseSensitiveRename(step1)\n\n" + oldFile + "\n\nto\n\n"
+				        + tmpNewFile + "\n\n"+renameErrMarker.data()+oldFile;
 			if(!QFile::rename(tmpNewFile, newFile))
-				return "QFile::rename returned false for forceCaseSensitiveRename(step2)\n\n" + tmpNewFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+tmpNewFile;
+				return "QFile::rename returned false for forceCaseSensitiveRename(step2)\n\n"
+				        + tmpNewFile + "\n\nto\n\n" + newFile + "\n\n"+renameErrMarker.data()+tmpNewFile;
 			return "";
 		}
 		else
 		{
 			if(QFile::rename(oldFile, newFile)) return "";
-			else return "QFile::rename returned false for rename\n\n" + oldFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+oldFile;
+			else return "QFile::rename returned false for rename\n\n" + oldFile + "\n\nto\n\n" + newFile
+			        + "\n\n"+renameErrMarker.data()+oldFile;
 		}
 	}
 	if(QFile::rename(oldFile, newFile)) return "";
-	else return "QFile::rename returned false for rename\n\n" + oldFile + "\n\nto\n\n" + newFile + "\n\n"+RenameErrMarker()+oldFile;
+	else return "QFile::rename returned false for rename\n\n" + oldFile + "\n\nto\n\n" + newFile
+	        + "\n\n"+renameErrMarker.data()+oldFile;
 }
 
 QString MyQFileDir::GetCurrentFileNameFromRenameError(QString errorStr)
 {
-	return errorStr.remove(0,errorStr.indexOf(RenameErrMarker()) + RenameErrMarker().size());
+	return errorStr.remove(0,errorStr.indexOf(renameErrMarker.data()) + renameErrMarker.size());
 }
 
 QFileInfo MyQFileDir::FindNewest(const QFileInfoList & files)
