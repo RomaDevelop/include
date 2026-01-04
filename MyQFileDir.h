@@ -72,6 +72,7 @@ QString MyQFileDir::Rename(QString oldFile, QString newFile, bool forceCaseSensi
 		if(newFile[i] == ':')
 			return QString("MyQFileDir::Rename detected char ':' in new file name ("+newFile+")\n\n")+renameErrMarker.data()+oldFile;
 	/// terrible behavior: if char : contains in newFile QFile::rename corrupts file and returns true
+	/// because of ADS — Alternate Data Streams
 #else
 DO_ONCE(qdbg << "MyQFileDir::Rename worked incorrect with ':' in new file on Windows, but not tested for current OS");
 #endif

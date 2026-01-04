@@ -28,7 +28,8 @@ struct MyQDifferent
 	inline static bool SaveSettings(QString fileName, const std::vector<QWidget*> &widgets, const QStringList &stringSettings);
 	inline static bool LoadSettings(QString fileName, std::vector<QWidget*> &widgets, QStringList &stringSettings);
 
-	inline static void GetPathName(QString file, QString *path, QString *name);
+	inline static void GetPathName(const QString &file, QString *path, QString *name);
+	inline static std::pair<QString, QString> GetPathName(const QString &file);
 
 	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 
@@ -190,11 +191,18 @@ bool MyQDifferent::LoadSettings(QString fileName, std::vector<QWidget *> & widge
 	return true;
 }
 
-void MyQDifferent::GetPathName(QString file, QString *path, QString *name)
+void MyQDifferent::GetPathName(const QString &file, QString *path, QString *name)
 {
 	QFileInfo fi(file);
 	*path = fi.path();
 	*name = fi.fileName();
+}
+
+std::pair<QString, QString> MyQDifferent::GetPathName(const QString &file)
+{
+	std::pair<QString, QString> res;
+	GetPathName(file, &res.first, &res.second);
+	return res;
 }
 
 QStringList MyQDifferent::ArgsToStrList(int argc, char *argv[])
