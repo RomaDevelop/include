@@ -68,8 +68,10 @@ public:
 	inline static logWorkerFunction logWorker;
 	inline static logWorkerFunction errorWorker;
 
+	/// binds = вектор пар строк - именованная привязка (в запросе размещаем :name)
 	inline static QSqlQuery DoSqlQuery(const QString &strQuery, const QStringPairVector &binds = {},
 	                                   bool doNextAfterExec = false, bool showErrorIfNextNotDid = false);
+	/// binds = массив строк - неименованная привязка по порядку (в запросе размещаем ?)
 	inline static QSqlQuery DoSqlQuery2(const QString &strQuery, const QStringList &binds = {},
 	                                   bool doNextAfterExec = false, bool showErrorIfNextNotDid = false);
 	declare_struct_2_fields_move(DoSqlQueryRes, QSqlQuery, query, QString, errors);
@@ -145,7 +147,8 @@ QSqlQuery MyQSqlDatabase::DoSqlQuery(const QString &strQuery, const QStringPairV
 	return DoSqlQueryExt(strQuery, binds, doNextAfterExec, showErrorIfNextNotDid).query;
 }
 
-QSqlQuery MyQSqlDatabase::DoSqlQuery2(const QString & strQuery, const QStringList & binds, bool doNextAfterExec, bool showErrorIfNextNotDid)
+QSqlQuery MyQSqlDatabase::DoSqlQuery2(const QString & strQuery, const QStringList & binds,
+                                      bool doNextAfterExec, bool showErrorIfNextNotDid)
 {
 	return DoSqlQueryExt2(strQuery, binds, doNextAfterExec, showErrorIfNextNotDid).query;
 }

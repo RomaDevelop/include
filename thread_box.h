@@ -43,6 +43,7 @@ public:
 	std::string name() { return m_name; }
 	destructor_policies finish_policy() { return m_finish_policy; }
 	bool was_started() { return thread_was_started; }
+	bool works_now() { return !thread_was_started ? false : !thread_ended; }
 	bool ended() { return thread_ended; }
 	bool finish_executed() { return m_finish_executed; }
 
