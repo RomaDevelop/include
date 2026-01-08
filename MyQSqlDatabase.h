@@ -49,15 +49,25 @@ struct BaseData
 class MyQSqlDatabase
 {
 public:
+	/// объект основной БД программы, инициализируется вызовом Init
 	inline static QSqlDatabase QSqlDbMain;
+
+	/// указатель на текущий объект БД, все запросы в БД вызываеются через него
+	/// при вызове Init в указатель записываеся QSqlDbMain
+	/// в дальнейшем, если нужно провести работу с другой БД, сюда записать указатель на неё, а потом вернуть обратно QSqlDbMain
 	inline static QSqlDatabase *currentQSqlDb = nullptr;
 
+private:
 	inline static BaseData baseDataMain;
-	inline static BaseData *baseDataCurrent = nullptr;
-	inline static std::vector<BaseData> baseDataAddBases;
+	inline static BaseData baseDataCurrent;
+	//inline static std::vector<BaseData> baseDataAddBases;
+public:
+	static const BaseData& BaseDataMain() { return baseDataMain; }
+	static const BaseData& BaseDataCurrent() { return baseDataCurrent; }
+	static void SetBaseDataCurrent(BaseData baseData) { baseDataCurrent = std::move(baseData); }
 
 	using logWorkerFunction = std::function<void(const QString &str)>;
-	inline static void Init(BaseData mainBase_, std::vector<BaseData> additionalBases_ = {},
+	inline static void Init(BaseData mainBase_, /*std::vector<BaseData> additionalBases_ = {},*/
 	                        logWorkerFunction logWorker_ = {}, logWorkerFunction errorWorker_ = {});
 
 	inline static void MakeBackupBase(bool showSuccessMsg);
@@ -119,26 +129,26 @@ public:
 
 //-------------------------------------------------------------------------------------------------------------------------------------
 
-void MyQSqlDatabase::Init(BaseData mainBase_, std::vector<BaseData> additionalBases_,
+void MyQSqlDatabase::Init(BaseData mainBase_, /*std::vector<BaseData> additionalBases_,*/
                           logWorkerFunction logWorker_, logWorkerFunction errorWorker_)
 {
 	logWorker = std::move(logWorker_);
 	errorWorker = std::move(errorWorker_);
 
 	baseDataMain = std::move(mainBase_);
-	baseDataCurrent = &baseDataMain;
-	baseDataAddBases = std::move(additionalBases_);
+	baseDataCurrent = baseDataMain;
+	//baseDataAddBases = std::move(additionalBases_);
 
 	QSqlDbMain = QSqlDatabase::addDatabase("QODBC");
-	QSqlDbMain.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ="+baseDataCurrent->baseFilePathName+";");
+	QSqlDbMain.setDatabaseName("DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ="+baseDataCurrent.baseFilePathName+";");
 	currentQSqlDb = &QSqlDbMain;
 
 	if (!QSqlDbMain.isOpen() && !QSqlDbMain.open())
 	{
-		Error("MyQSqlDatabase::Init error: " + QSqlDbMain.lastError().text() + "\n(base: "+baseDataCurrent->baseFilePathName+")");
+		Error("MyQSqlDatabase::Init error: " + QSqlDbMain.lastError().text() + "\n(base: "+baseDataCurrent.baseFilePathName+")");
 		return;
 	}
-	else Log("MyQSqlDatabase::Init " + baseDataCurrent->baseName + " success");
+	else Log("MyQSqlDatabase::Init " + baseDataCurrent.baseName + " success");
 }
 
 QSqlQuery MyQSqlDatabase::DoSqlQuery(const QString &strQuery, const QStringPairVector &binds,

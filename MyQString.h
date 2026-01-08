@@ -18,6 +18,8 @@ struct MyQString
 
 	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 
+	inline static void Append(QStringList &list, QString str) { QString &lastStr = *list.insert(list.end(),""); lastStr=std::move(str); }
+
 	inline static QString GetRowOfLetter(const QString& str, int letterIndex);
 	struct RowAndIndex { QString row; int indexInRow = -1; };
 	inline static RowAndIndex GetRowOfLetterExt(const QString& str, int letterIndex);
@@ -130,7 +132,34 @@ private:
 	}
 };
 
-//------------------------------------------------------------------------------------------------------------------------------------------
+///\brief Класс для хранения строковых литералов
+/// для класса определены операторы стравнения на равенство и неравенство с QString
+/// (для голого string_view определять их крайне не рекомендуется, поскольку в конце может не быть /0)
+struct StringLiteral
+{
+	/// передавать только строковые литералы!!!
+	constexpr StringLiteral(const char *str): _str(str) {}
+	constexpr const char * Get() const { return _str.data(); }
+	constexpr size_t Size() const { return _str.size(); }
+
+	/// нужно улучшать: в конструкторе вместо constexpr поставить consteval (C++20),
+	/// сделать проверку наличия \0 в конце
+	/// возможно ли создать надёжную защиту от передачи в конструктор std::string("...").data() ???
+	/// вообще возможно при сравнении QString с const char *str внутри происходит конфертация
+	/// может создать QString_view который будет хранить на стеке строковые литералы?
+
+private:
+	const std::string_view _str;
+};
+
+//-------------------------------------------------------------------------------------------------------------------------------
+
+inline bool operator== (const QString &lhs, const StringLiteral &rhs) { return lhs==rhs.Get(); }
+inline bool operator== (const StringLiteral &lhs, const QString &rhs) { return rhs==lhs; }
+inline bool operator!= (const QString &lhs, const StringLiteral &rhs) { return !(lhs==rhs); }
+inline bool operator!= (const StringLiteral &lhs, const QString &rhs) { return !(lhs==rhs); }
+
+//-------------------------------------------------------------------------------------------------------------------------------
 
 QStringList MyQString::QStringListSized(int size, const QString & value)
 {

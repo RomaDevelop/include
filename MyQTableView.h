@@ -43,6 +43,7 @@ public:
 
 	inline auto currentRecordData(int col) { return model()->index(currentIndex().row(), col).data(); }
 	inline auto currentRecordDataStr(int col) { return currentRecordData(col).toString(); }
+	inline QStringList currentRecordDataStr();
 
 	inline int FindRowByValue(int fieldIndex, const QString &fieldValue);
 	inline bool Locate(const QString &fieldName, const QString &fieldValue, int columnToSet = -1);
@@ -112,6 +113,14 @@ int MyQTableView::RowsCount(bool do_fetch)
 		}
 	}
 	return model->rowCount();
+}
+
+QStringList MyQTableView::currentRecordDataStr()
+{
+	QStringList row;
+	for(int column=0; column<model()->columnCount(); column++)
+		MyQString::Append(row, currentRecordDataStr(column));
+	return row;
 }
 
 int MyQTableView::FindRowByValue(int fieldIndex, const QString &fieldValue)
