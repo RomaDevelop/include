@@ -72,7 +72,7 @@ public:
 	/// эквивалент for (int i = i_start; i < i_less_than; i++)
 	/// но выполняется через интервалы interval
 	/// to_do: сейчас таймеру просто ставится интервал, можно сделать версию с паузами между итерациями
-	void For(int i_start, int i_less_than, int interval, QObject *parent,
+	static void For(int i_start, int i_less_than, int interval, QObject *parent,
 				  std::function<void(int &i)> iteration,
 				  std::function<void()> finishAction);
 

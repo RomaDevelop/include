@@ -70,7 +70,7 @@ public:
 	inline static void Init(BaseData mainBase_, /*std::vector<BaseData> additionalBases_ = {},*/
 	                        logWorkerFunction logWorker_ = {}, logWorkerFunction errorWorker_ = {});
 
-	inline static void MakeBackupBase(bool showSuccessMsg);
+	inline static void MakeBackupBase(bool logSuccess);
 
 	inline static void Log(const QString &str) { if(logWorker) logWorker(str); else qdbg << str; }
 	inline static void Error(const QString &str) { if(errorWorker) errorWorker(str); else qdbg << str; }
@@ -497,20 +497,28 @@ void MyQSqlDatabase::ShowErrorForQuery(QString error, const QString &strQuery, c
 	ShowErrorForQuery(error);
 }
 
-void MyQSqlDatabase::MakeBackupBase(bool showSuccessMsg)
+void MyQSqlDatabase::MakeBackupBase(bool logSuccess)
 {
 	if(!QDir().mkpath(baseDataMain.pathBackup))
-	{ Error("MakeBackubBase Can't mkpath " + baseDataMain.pathBackup); return; }
+	{
+		Error("MakeBackubBase Can't mkpath " + baseDataMain.pathBackup);
+		return;
+	}
+
 	MyQFileDir::RemoveOldFiles(baseDataMain.pathBackup,99);
 	QString backupFile = baseDataMain.pathBackup + "/"
 	        + QDateTime::currentDateTime().toString("yyyy.MM.dd hh-mm-ss-zzz") + " "
 	        + QFileInfo(baseDataMain.baseFilePathName).fileName();
-	if(!QFile::copy(baseDataMain.baseFilePathName, backupFile))
+
+	if(QFile::copy(baseDataMain.baseFilePathName, backupFile))
+	{
+		if(logSuccess) Log("резервная копия создана\n\n" + backupFile);
+	}
+	else
 	{
 		Error("MakeBackubBase Can't copy base to " + baseDataMain.pathBackup);
 		return;
 	}
-	if(showSuccessMsg) Log("резервная копия создана\n\n" + backupFile);
 }
 
 #endif
