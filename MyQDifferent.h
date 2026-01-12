@@ -16,6 +16,9 @@
 #include "MyQShortings.h"
 #include "MyQFileDir.h"
 //------------------------------------------------------------------------------------------------------------------------------------------
+
+struct Time_dhms;
+
 struct MyQDifferent
 {
 	inline static QString PathToExe() { return ExePath(); }
@@ -36,6 +39,33 @@ struct MyQDifferent
 	inline static void DoOnce(const QString &id, std::function<void()> action);
 	
 	inline static void SetSelectedText(QLineEdit *lineEdit, const QString &newText);
+
+	inline static Time_dhms CalcSeconds(uint64_t seconds);
+};
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+
+struct Time_dhms {
+	uint64_t d;
+	uint h;
+	uint m;
+	uint s;
+	QString ToString()
+	{
+//		QString res;
+//		if(d>0) res += QSn(d)+"d";
+//		if(h>0 or !res.isEmpty()) res += QSn(h)+"h";
+//		if(m>0 or !res.isEmpty()) res += QSn(m)+"m";
+//		if(s>0 or !res.isEmpty()) res += QSn(s)+"s";
+//		return res;
+
+		if(d == 0 and h == 0 and m == 0 and s == 0) return "zero time";
+		QString res;
+		if(d>0) res += QSn(d)+" days";
+		if(h == 0 and m == 0 and s == 0) res += " exactly";
+		else res.append(" + ").append(QTime(h,m,s).toString(TimeFormat));
+		return res;
+	}
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -233,6 +263,16 @@ void MyQDifferent::SetSelectedText(QLineEdit *lineEdit, const QString &newText)
 	currentText.replace(start, lineEdit->selectionLength(), newText);
 	lineEdit->setText(currentText);
 	lineEdit->setSelection(start, newText.length());
+}
+
+Time_dhms MyQDifferent::CalcSeconds(uint64_t seconds)
+{
+	Time_dhms time;
+	time.d = seconds / 86400;
+	time.h = (seconds % 86400) / 3600;
+	time.m = (seconds % 3600) / 60;
+	time.s = seconds % 60;
+	return time;
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
