@@ -99,13 +99,30 @@ namespace any_guard {
 			m_foo(startArg);
 		}
 
-		~function_caller()
-		{
-			if(m_foo) m_foo(m_end_value);
-		}
+		~function_caller() { if(m_foo) m_foo(m_end_value); }
 
 	private:
 		Function m_foo;
+		T m_end_value;
+	};
+
+	template <class T>
+	class var_setter
+	{
+	public:
+		/// Sets variable to startValue on construction, and to endValue on destruction
+		/// can be executed without template argument
+		var_setter(T &variable, T startValue, T endValue):
+			m_variable {variable}
+		{
+			m_variable = std::move(startValue);
+			m_end_value = std::move(endValue);
+		}
+
+		~var_setter() { m_variable = std::move(m_end_value); }
+
+	private:
+		T &m_variable;
 		T m_end_value;
 	};
 }

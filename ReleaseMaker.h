@@ -13,13 +13,14 @@ struct MakeReleaseResult { bool success; QString dirOutput; QString pathToOutput
 
 struct ReleaseMaker
 {
-	inline static MakeReleaseResult MakeRelease(const QString &programmName, bool openDirOutput=true, bool launchWindeploy=true);
+	inline static MakeReleaseResult MakeRelease(const QString &programmName, bool copyLinkFile=true, bool openDirOutput=true, bool launchWindeploy=true);
+	inline static void CopyLinkFile(const QString &ExeNameNoPath, const QString &dirOutput);
 	inline static void LaunchWindeploy(const QString &exeFileOutput);
 };
 
 //---------------------------------------------------------------------------------------------------------------------
 
-MakeReleaseResult ReleaseMaker::MakeRelease(const QString &programmName, bool openDirOutput, bool launchWindeploy)
+MakeReleaseResult ReleaseMaker::MakeRelease(const QString &programmName, bool copyLinkFile, bool openDirOutput, bool launchWindeploy)
 {
 	MakeReleaseResult result;
 
@@ -75,13 +76,7 @@ MakeReleaseResult ReleaseMaker::MakeRelease(const QString &programmName, bool op
 		return result;
 	}
 
-	// copy link
-	QString link = LaunchParams::SourcesPath() + "/ReleaseLink_"+MyQDifferent::ExeNameNoPath()+".lnk";
-	if(QFileInfo(link).isFile())
-	{
-		if(!QFile::copy(link, dirOutput+"/Запуск.lnk")) QMbWarning("Can't copy link file " + link);
-	}
-	else QMbWarning("Link file "+link+" to copy not found");
+	if(copyLinkFile) CopyLinkFile(MyQDifferent::ExeNameNoPath(), dirOutput);
 
 	if(openDirOutput) MyQExecute::OpenDir(dirOutput);
 
@@ -89,6 +84,16 @@ MakeReleaseResult ReleaseMaker::MakeRelease(const QString &programmName, bool op
 
 	result.success = true;
 	return result;
+}
+
+void ReleaseMaker::CopyLinkFile(const QString &ExeNameNoPath, const QString &dirOutput)
+{
+	QString link = LaunchParams::SourcesPath() + "/ReleaseLink_"+ExeNameNoPath+".lnk";
+	if(QFileInfo(link).isFile())
+	{
+		if(!QFile::copy(link, dirOutput+"/Запуск.lnk")) QMbWarning("Can't copy link file " + link);
+	}
+	else QMbWarning("Link file "+link+" to copy not found");
 }
 
 void ReleaseMaker::LaunchWindeploy(const QString &exeFileOutput)

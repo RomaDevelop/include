@@ -63,7 +63,11 @@ struct Time_dhms {
 		QString res;
 		if(d>0) res += QSn(d)+" days";
 		if(h == 0 and m == 0 and s == 0) res += " exactly";
-		else res.append(" + ").append(QTime(h,m,s).toString(TimeFormat));
+		else
+		{
+			if(!res.isEmpty()) res.append(" + ");
+			else res.append(QTime(h,m,s).toString(TimeFormat));
+		}
 		return res;
 	}
 };
