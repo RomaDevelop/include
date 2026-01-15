@@ -133,12 +133,14 @@ private:
 };
 
 ///\brief Класс для хранения строковых литералов
-/// для класса определены операторы стравнения на равенство и неравенство с QString
+/// для класса определены операторы стравнения на равенство и неравенство, операторы словжения с QString
 /// (для голого string_view определять их крайне не рекомендуется, поскольку в конце может не быть /0)
 struct StringLiteral
 {
 	/// передавать только строковые литералы!!!
-	constexpr StringLiteral(const char *str): _str(str) {}
+	template<std::size_t N>
+	constexpr StringLiteral(const char (&str)[N]) : _str(str, N - 1) {}
+	//constexpr StringLiteral(const char *str): _str(str) {}
 	constexpr const char * Get() const { return _str.data(); }
 	constexpr size_t Size() const { return _str.size(); }
 
@@ -147,17 +149,31 @@ struct StringLiteral
 	/// возможно ли создать надёжную защиту от передачи в конструктор std::string("...").data() ???
 	/// вообще возможно при сравнении QString с const char *str внутри происходит конфертация
 	/// может создать QString_view который будет хранить на стеке строковые литералы?
+	///		но он ведь всё равно будет принимать const char * и можно будет передать без \0
+	///		зато оперция сравнения будет быстрее. Возможно. Будет ли?
+	/// нужно отказаться от string_view потому что она плохо работает с кириллицей
+	/// и невозможно сделать ранний выход в operator== по размеру
+	///
+	/// после широкого использования провести замер, насколько шаблонный конструктор замедляет и раздувает
 
 private:
 	const std::string_view _str;
 };
 
-//-------------------------------------------------------------------------------------------------------------------------------
-
-inline bool operator== (const QString &lhs, const StringLiteral &rhs) { return lhs==rhs.Get(); }
+inline bool operator== (const QString &lhs, const StringLiteral &rhs) {
+//	if(lhs.size() != rhs.Size()) // нельзя!!! не будет работать с кирилицей
+//		return false;
+	return lhs==rhs.Get();
+}
 inline bool operator== (const StringLiteral &lhs, const QString &rhs) { return rhs==lhs; }
 inline bool operator!= (const QString &lhs, const StringLiteral &rhs) { return !(lhs==rhs); }
 inline bool operator!= (const StringLiteral &lhs, const QString &rhs) { return !(lhs==rhs); }
+
+inline QString operator+ (const char* lhs, const StringLiteral &rhs) { return QString(lhs) + rhs.Get(); }
+inline QString operator+ (const StringLiteral &lhs, const char* rhs) { return QString(lhs.Get()) + rhs; }
+
+inline QString operator+ (const QString &lhs, const StringLiteral &rhs) { return lhs + rhs.Get(); }
+inline QString operator+ (const StringLiteral &lhs, const QString &rhs) { return lhs.Get() + rhs; }
 
 //-------------------------------------------------------------------------------------------------------------------------------
 
