@@ -27,8 +27,36 @@ struct MyQString
 	template<class String, class Splitter>
 	inline static std::pair<QString, QString> SplitOnce(const String &string, const Splitter &splitter);
 
-	/// returns cout removed sybols in the beginginning and in the end
+	/// Returns cout removed sybols in the beginginning and in the end
 	inline static std::pair<int, int> TrimExt(QString &str);
+
+	/// Finds the index of the n-th occurrence of a substring
+	template<class T_substr>
+	inline static int IndexOfNumbered(const QString &str, const T_substr &subStr, int n, int from = 0, bool subIntersections = false);
+
+	struct FoundSubstr { QString substr; std::vector<int> positions; };
+	static std::vector<FoundSubstr> FindSubstrings(const QString &text, const QStringList &keywords) {
+		std::vector<FoundSubstr> result;
+
+		for (const QString &word : keywords) {
+			if (word.isEmpty()) continue;
+
+			FoundSubstr found;
+			found.substr = word;
+
+			int pos = text.indexOf(word, 0);
+			while (pos != -1) {
+				found.positions.push_back(pos);
+				pos = text.indexOf(word, pos + 1); // Ищем следующее вхождение
+			}
+
+			if (!found.positions.empty()) {
+				result.push_back(found);
+			}
+		}
+
+		return result;
+	}
 
 	inline static bool StartsWith(const QString &str, const std::string_view &str_view);
 
@@ -103,11 +131,11 @@ struct MyQString
 	inline static QString ToUpperWordStartLetter(QString str);
 
 private:
-	static constexpr int sepLen(QChar) { return 1; }
-	static constexpr int sepLen(char) { return 1; }
-	static int sepLen(const char* s) { return int(strlen(s)); }
+	static constexpr int get_length_universal(QChar) { return 1; }
+	static constexpr int get_length_universal(char) { return 1; }
+	static int get_length_universal(const char* s) { return s ? int(strlen(s)) : 0; }
 	template<class S>
-	static constexpr int sepLen(const S &s) { return int(s.size()); }
+	static constexpr int get_length_universal(const S &s) { return int(s.size()); }
 
 //	template<typename T>
 //    inline void SmartAppend(QString& s, const T& arg) {
@@ -131,6 +159,8 @@ private:
 		}
 	}
 };
+
+//-------------------------------------------------------------------------------------------------------------------------------
 
 ///\brief Класс для хранения строковых литералов
 /// для класса определены операторы стравнения на равенство и неравенство, операторы словжения с QString
@@ -161,7 +191,7 @@ private:
 };
 
 inline bool operator== (const QString &lhs, const StringLiteral &rhs) {
-//	if(lhs.size() != rhs.Size()) // нельзя!!! не будет работать с кирилицей
+//	if(lhs.size() != rhs.Size()) // нельзя!!! не будет работать с кириллицей
 //		return false;
 	return lhs==rhs.Get();
 }
@@ -254,6 +284,26 @@ std::pair<int, int> MyQString::TrimExt(QString &str)
 	str.remove(0,res.first);
 
 	return res;
+}
+
+template<class T_substr>
+int MyQString::IndexOfNumbered(const QString &str, const T_substr &subStr, int n, int from, bool subIntersections)
+{
+	if (n <= 0) return -1;
+
+	int len = get_length_universal(subStr);
+	if (len <= 0) return -1;
+	int addToPos = subIntersections ? 1 : len;
+
+	// 1. Ищем первое вхождение
+	int pos = str.indexOf(subStr, from);
+
+	// 2. Ищем оставшиеся n-1 вхождений
+	for (int i = 1; i < n && pos != -1; ++i) {
+		pos = str.indexOf(subStr, pos + addToPos);
+	}
+
+	return pos;
 }
 
 bool MyQString::StartsWith(const QString &str, const std::string_view &str_view)
@@ -415,7 +465,7 @@ std::pair<QString, QString> MyQString::SplitOnce(const String &string, const Spl
 	int pos = string.indexOf(splitter);
 	if (pos == -1)
 		return { QString(string), {} };
-	return { string.left(pos), string.mid(pos + sepLen(splitter)) };
+	return { string.left(pos), string.mid(pos + get_length_universal(splitter)) };
 }
 
 #endif
