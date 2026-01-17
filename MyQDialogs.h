@@ -404,6 +404,7 @@ MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QStr
 
 	QLineEdit *lineEdit = new QLineEdit;
 	lineEdit->setText(startText);
+	lineEdit->setSelection(0, startText.size());
 	vloAll->addWidget(lineEdit);
 
 	auto hloBtns = new QHBoxLayout;
