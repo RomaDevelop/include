@@ -2,6 +2,7 @@
 #define MyQWidget_H
 
 #include <QApplication>
+#include <QStyle>
 #include <QScreen>
 #include <QDebug>
 #include <QStringList>
@@ -9,9 +10,14 @@
 #include <QRect>
 #include <QPalette>
 #include <QWidget>
+#include <QLineEdit>
+#include <QToolButton>
+#include <QBoxLayout>
 #include <QAction>
 
 #include "CodeMarkers.h"
+
+struct LineEdit_w_Clear;
 
 struct MyQWidget
 {
@@ -33,6 +39,36 @@ struct MyQWidget
 
 	inline static QScreen* WidgetScreen(QWidget *widget);
 	// когда перейдем на Qt 6 можно будет удалить, там есть готовая
+
+	LineEdit_w_Clear LineEdit_w_Clear_create(QBoxLayout *hloCreateIn, std::function<void(const QString &text)> textChanged);
+};
+
+//------------------------------------------------------------------------------------------------------------------------------------------
+
+struct LineEdit_w_Clear
+{
+	QHBoxLayout *hlo;
+	QLineEdit	*lineEdit;
+	QToolButton *button;
+
+	LineEdit_w_Clear(QBoxLayout *hloCreateIn, std::function<void(const QString &text)> textChanged)
+	{
+		hlo = new QHBoxLayout;
+		hlo->setContentsMargins(0,0,0,0);
+		hlo->setSpacing(0);
+		hloCreateIn->addLayout(hlo);
+
+		// Search
+		lineEdit = new QLineEdit;
+		hlo->addWidget(lineEdit);
+		if(textChanged) QObject::connect(lineEdit , &QLineEdit::textChanged, lineEdit, textChanged);
+
+		// Clear
+		button = new QToolButton;
+		button->setIcon(QApplication::style()->standardIcon(QStyle::StandardPixmap::SP_TitleBarCloseButton));
+		hlo->addWidget(button);
+		QObject::connect(button, &QAbstractButton::clicked, [le = lineEdit](){ le->clear(); });
+	}
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -128,6 +164,11 @@ QScreen *MyQWidget::WidgetScreen(QWidget *widget)
 		if (screenGeometry.contains(currentPos)) { widgetScreen = screen; }
 	}
 	return widgetScreen;
+}
+
+LineEdit_w_Clear MyQWidget::LineEdit_w_Clear_create(QBoxLayout * hloCreateIn, std::function<void (const QString &)> textChanged)
+{
+	return LineEdit_w_Clear(hloCreateIn, textChanged);
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
