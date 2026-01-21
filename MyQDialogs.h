@@ -98,6 +98,10 @@ public:
 
 	inline static void InfoBar(const QString &message, QWidget *widgetToShowIn);
 
+	enum ToastPos { CenterOnPrimary, BottomRightOnPrimary, BottomLeftOnPrimary,
+					CenterOnCurrent, BottomRightOnCurrent, BottomLeftOnCurrent };
+	inline static void ToastMessage(QString caption, QString text, int duration = 3000, ToastPos pos = BottomRightOnPrimary);
+
 	inline static void ShowAllStandartIcons();
 
 	// buttons
@@ -854,6 +858,101 @@ void MyQDialogs::InfoBar(const QString &message, QWidget *widgetToShowIn)
 	widget->show(); // обязательно до resize иначе показывается криво
 	widget->move(0, y);
 	widget->resize(widgetToShowIn->width(), widget->height());
+}
+
+void MyQDialogs::ToastMessage(QString caption, QString text, int duration, MyQDialogs::ToastPos pos)
+{
+	// Основное окно-контейнер (невидимое) (без него не работают закругления)
+	QWidget* toast = new QWidget(nullptr);
+	toast->setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+	toast->setAttribute(Qt::WA_DeleteOnClose);
+	toast->setAttribute(Qt::WA_ShowWithoutActivating);
+	toast->setAttribute(Qt::WA_TranslucentBackground); // Делает системные углы прозрачными
+
+	// Внутренний виджет, который и будет иметь цвет и закругления
+	QWidget* background = new QWidget(toast);
+	background->setObjectName("toastBackground");
+	background->setStyleSheet(
+				"QWidget#toastBackground { "
+				"  background-color: #333333; " // Цвет фона
+				"  border: 1px solid #555555; "
+				"  border-radius: 10px; "
+				"}"
+				"QLabel { color: white; background: transparent; }"
+				"QPushButton { color: #aaa; background: transparent; font-size: 16px; border: none; }"
+				"QPushButton:hover { color: white; }"
+				);
+
+	// Верстка внутреннего контента
+	QVBoxLayout* layout = new QVBoxLayout(background);
+
+	QHBoxLayout* header = new QHBoxLayout();
+	QLabel* lblCaption = new QLabel("<b>" + caption + "</b>");
+	QPushButton* btnClose = new QPushButton("×");
+	btnClose->setFixedSize(20, 20);
+	header->addWidget(lblCaption);
+	header->addStretch();
+	header->addWidget(btnClose);
+
+	QLabel* lblText = new QLabel(text);
+	lblText->setWordWrap(true);
+
+	layout->addLayout(header);
+	layout->addWidget(lblText);
+
+	// Основной layout для toast, чтобы background заполнил всё пространство
+	QVBoxLayout* rootLayout = new QVBoxLayout(toast);
+	rootLayout->setContentsMargins(0, 0, 0, 0); // Убираем отступы внешнего контейнера
+	rootLayout->addWidget(background);
+
+	// Логика закрытия
+	QObject::connect(btnClose, &QPushButton::clicked, toast, &QWidget::close);
+
+	if (duration > 0) { QTimer::singleShot(duration, toast, &QWidget::close); }
+
+	toast->adjustSize();
+
+	// Позиционирование
+	QRect screenRect;
+	int margin = 20;
+
+	if (pos == CenterOnPrimary || pos == BottomRightOnPrimary || pos == BottomLeftOnPrimary) {
+		// Главный экран
+		screenRect = QApplication::primaryScreen()->availableGeometry();
+	} else {
+		// Текущий экран по курсору
+		QScreen *currentScreen = QGuiApplication::screenAt(QCursor::pos());
+		if (!currentScreen)
+		{
+			currentScreen = QApplication::primaryScreen();
+			qCritical() << "ToastMessage: screenAt(QCursor::pos()) is null";
+		}
+		screenRect = currentScreen->availableGeometry();
+	}
+
+	int x, y;
+
+	// нижнее положение
+	// X зависит от стороны
+	if (pos == BottomRightOnPrimary || pos == BottomRightOnCurrent) {
+		x = screenRect.right() - toast->width() - margin;
+	}
+	else {
+		x = screenRect.left() + margin;
+	}
+	// Y одинаковый
+	y = screenRect.bottom() - toast->height() - margin;
+
+	// положение в центре
+	if(pos == CenterOnCurrent || pos == CenterOnPrimary)
+	{
+		x = screenRect.left() + (screenRect.width() - toast->width()) / 2;
+		y = screenRect.top() + (screenRect.height() - toast->height()) / 2;
+	}
+
+	toast->move(x, y);
+
+	toast->show();
 }
 
 void MyQDialogs::ShowAllStandartIcons()
