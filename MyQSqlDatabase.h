@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <set>
+#include <memory>
 
 #include <QDebug>
 #include <QSqlDatabase>
@@ -13,6 +14,7 @@
 #include <QDir>
 
 #include "declare_struct.h"
+#include "MyCppDifferent.h"
 #include "MyQShortings.h"
 #include "MyQString.h"
 #include "MyQFileDir.h"
@@ -44,7 +46,64 @@ struct BaseData
 	}
 };
 
-//-------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------
+#include <QAxObject>
+
+inline QString CompactAccessDatabase(QString fullPath) {
+	fullPath = QDir::toNativeSeparators(fullPath);
+	QFileInfo dbInfo(fullPath);
+	if (!dbInfo.exists()) return fullPath + " doesn't exists";
+
+	QString tempPath = fullPath + ".temp_compact."+dbInfo.suffix();
+	if (QFile::exists(tempPath))
+	{
+		if(not QFile::remove(tempPath)) return "Can't remove old tmp file";
+	}
+
+	// Выбор провайдера (ACE 12.0 — стандарт для большинства систем)
+	auto jro = std::make_unique<QAxObject>("DAO.DBEngine.120"); // Для ACE 12.0
+	if (jro->isNull()) {
+		jro = std::make_unique<QAxObject>("DAO.DBEngine.36"); // Для старых версий .mdb
+		if (jro->isNull()) {
+			return "DAO.DBEngine not found. Install Microsoft Access Database Engine.";
+		}
+	}
+
+	// Используем try-catch для защиты от непредвиденных сбоев COM-сервера
+	try
+	{
+		QVariantList params;
+		params << fullPath << tempPath;
+
+		// dynamicCall вернет пустой QVariant при успехе
+		auto callRes = jro->dynamicCall("CompactDatabase(QString, QString)", params);
+		if(callRes.isValid())
+		{
+			return "jro->dynamicCall(\"CompactDatabase(QString, QString)\", params); result is not empty:\n"
+					+ MyQString::AsDebug(callRes);
+		}
+
+		if (QFile::exists(tempPath))
+		{
+			// Файл создан — значит операция прошла успешно
+			if (QFile::remove(fullPath))
+			{
+				if(not QFile::rename(tempPath, fullPath))
+				{
+					return "Can't rename file "+tempPath+" to "+fullPath;
+				}
+			}
+			else return "Can't remove file "+fullPath+" to replce with "+tempPath;
+		}
+	} catch (...) { return "exception during COM object execution"; }
+
+	if (QFile::exists(tempPath)) {
+		return "Success, but tmp file " + tempPath + " exists at finish function";
+	}
+
+	return "";
+}
+//--------------------------------------------------------------------------------------------------------------------------
 
 class MyQSqlDatabase
 {
@@ -127,7 +186,7 @@ public:
 	inline static void ShowErrorForQuery(QString error, const QString &strQuery, const QStringPairVector &binds = {});
 };
 
-//-------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------
 
 void MyQSqlDatabase::Init(BaseData mainBase_, /*std::vector<BaseData> additionalBases_,*/
                           logWorkerFunction logWorker_, logWorkerFunction errorWorker_)
