@@ -598,8 +598,8 @@ QString AccessDB::CompactDBWithCheck(QString fullPath)
 		auto readRes = MyQFileDir::ReadFile2(compactedFile);
 		if(readRes.success)
 		{
-			QDateTime compacted = QDateTime::fromString(readRes.content, Qt::ISODate);
-			if(compacted.daysTo(QDateTime::currentDateTime()) < 10)
+			QDate compacted = QDate::fromString(readRes.content, DateFormat);
+			if(compacted.daysTo(QDate::currentDate()) < 10)
 				doCompactDB = false;
 		}
 		else
@@ -614,7 +614,7 @@ QString AccessDB::CompactDBWithCheck(QString fullPath)
 		else
 		{
 			qdbg << "CompactAccessDatabase success";
-			if(not MyQFileDir::WriteFile(compactedFile, QDateTime::currentDateTime().toString(Qt::ISODate)))
+			if(not MyQFileDir::WriteFile(compactedFile, QDate::currentDate().toString(DateFormat)))
 				errors.append("Error writing db compacted file "+compactedFile);
 		}
 	}
