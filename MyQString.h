@@ -127,6 +127,29 @@ struct MyQString
 
 	inline static QString TranslitToLatin(const QString &str);
 
+	inline static bool Contains(const QString &str, const QString &subStr, Qt::CaseSensitivity caseSens,
+	                            bool translitToLatin, bool translitWrongLanguage)
+	{
+		if(caseSens == Qt::CaseInsensitive)
+		{
+			QString strLower = str.toLower();
+			QString subStrLower = subStr.toLower();
+			if(strLower.contains(subStrLower)) return true;
+			if(translitToLatin and strLower.contains(TranslitToLatin(subStrLower))) return true;
+			if(translitWrongLanguage and strLower.contains(TranslitWrongLanguage(subStrLower))) return true;
+		}
+		if(str.contains(subStr)) return true;
+		if(translitToLatin and str.contains(TranslitToLatin(subStr))) return true;
+		if(translitWrongLanguage and str.contains(TranslitWrongLanguage(subStr))) return true;
+
+		return false;
+	}
+	/// Qt::CaseInsensitive, translitToLatin true, translitWrongLanguage true
+	inline static bool ContainsWide(const QString &str, const QString &subStr)
+	{
+		return Contains(str, subStr, Qt::CaseInsensitive, true, true);
+	}
+
 	inline static QString ToSentenceCase(QString str);
 	inline static QString ToUpperWordStartLetter(QString str);
 

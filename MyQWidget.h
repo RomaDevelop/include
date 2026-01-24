@@ -40,7 +40,8 @@ struct MyQWidget
 	inline static QScreen* WidgetScreen(QWidget *widget);
 	// когда перейдем на Qt 6 можно будет удалить, там есть готовая
 
-	LineEdit_w_Clear LineEdit_w_Clear_create(QBoxLayout *hloCreateIn, std::function<void(const QString &text)> textChanged);
+	/// params can be empty
+	inline static LineEdit_w_Clear LineEdit_w_Clear_create(QBoxLayout *hloCreateIn, std::function<void(const QString &text)> textChanged);
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -51,12 +52,13 @@ struct LineEdit_w_Clear
 	QLineEdit	*lineEdit;
 	QToolButton *button;
 
-	LineEdit_w_Clear(QBoxLayout *hloCreateIn, std::function<void(const QString &text)> textChanged)
+	/// params can be empty
+	LineEdit_w_Clear(QBoxLayout *loCreateIn, std::function<void(const QString &text)> textChanged)
 	{
 		hlo = new QHBoxLayout;
 		hlo->setContentsMargins(0,0,0,0);
 		hlo->setSpacing(0);
-		hloCreateIn->addLayout(hlo);
+		if(loCreateIn) loCreateIn->addLayout(hlo);
 
 		// Search
 		lineEdit = new QLineEdit;
