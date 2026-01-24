@@ -32,7 +32,7 @@ struct MyQWidget
 
 	inline static void SetFontBold(QWidget *obj, bool enable);
 	inline static void SetFontBold(QAction *obj, bool enable);
-	/* Можно сделать шаблонную функцию, но тогда копилятор будет создавать функции для каждого наследника QWidget, а их очень много
+	/* Можно сделать шаблонную функцию, но тогда копилятор будет создавать функции для каждого потомка QWidget, а их очень много
 	 * Когда перейдем на С++ 20, попробовать через концепты этого избежать */
 
 	inline static void AdjustWidgetPosition(QWidget *widget, int edgeDistance = 0);

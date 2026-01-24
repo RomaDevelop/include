@@ -2,6 +2,8 @@
 #ifndef MYQSHORTINGS_H
 #define MYQSHORTINGS_H
 //------------------------------------------------------------------------------------------------------------------------------------------
+#include <QString>
+
 #include "MyCppShortings.h"
 //------------------------------------------------------------------------------------------------------------------------------------------
 #define QMb  QMessageBox::information
@@ -25,17 +27,19 @@ bool IsUInt(const QStringType &stringVariable) { bool ok; stringVariable.toUInt(
 //------------------------------------------------------------------------------------------------------------------------------------------
 #define LastAddedWidget(Layout, Type) static_cast<Type*>(Layout->itemAt(Layout->count()-1)->widget())
 //------------------------------------------------------------------------------------------------------------------------------------------
-#define TimeFormat "hh:mm:ss"
-#define Time_hms "hh:mm:ss"
-#define Time_hm "hh:mm"
+inline QString TimeFormat 					= QStringLiteral("hh:mm:ss");
+inline QString Time_hms 					= QStringLiteral("hh:mm:ss");
+inline QString Time_hm 						= QStringLiteral("hh:mm");
 
-#define DateTimeFormat "yyyy.MM.dd hh:mm:ss"
-#define DateTimeFormat_ms "yyyy.MM.dd hh:mm:ss.zzz"
-#define DateTimeFormatForFileName "yyyy.MM.dd hh-mm-ss"
-#define DateTimeFormatForFileName_ms "yyyy.MM.dd hh-mm-ss-zzz"
+inline QString DateTimeFormat 				= QStringLiteral("yyyy.MM.dd hh:mm:ss");
+inline QString DateTimeFormat_ms 			= QStringLiteral("yyyy.MM.dd hh:mm:ss.zzz");
+inline QString DateTimeFormatForFileName 	= QStringLiteral("yyyy.MM.dd hh-mm-ss");
+inline QString DateTimeFormatForFileName_ms = QStringLiteral("yyyy.MM.dd hh-mm-ss-zzz");
 
-#define DateFormat_rus "dd MMM yyyy"
-#define DateTimeFormat_rus "dd MMM yyyy hh:mm:ss"
+inline QString DateFormat 					= QStringLiteral("yyyy.MM.dd");
+
+inline QString DateFormat_rus 				= QStringLiteral("dd MMM yyyy");
+inline QString DateTimeFormat_rus 			= QStringLiteral("dd MMM yyyy hh:mm:ss");
 //------------------------------------------------------------------------------------------------------------------------------------------
 #define DO_ONCE(code_to_do) { static bool did = false; if(!did) { code_to_do; did = true; } }
 //------------------------------------------------------------------------------------------------------------------------------------------
