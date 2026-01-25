@@ -420,7 +420,7 @@ QString MyQString::ToSentenceCase(QString str)
 	int size = str.size();
 	if(size >= 1) str[0] = str[0].toUpper();
 	if(size >= 2) str[1] = str[1].toLower();
-	for(int i=4; i<size; i++)
+	for(int i=2; i<size; i++)
 	{
 		if(str[i-2] == '.' && str[i-1] == ' ')
 			str[i] = str[i].toUpper();
