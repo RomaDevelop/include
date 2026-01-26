@@ -66,7 +66,8 @@ struct Time_dhms {
 		else
 		{
 			if(!res.isEmpty()) res.append(" + ");
-			else res.append(QTime(h,m,s).toString(TimeFormat));
+
+			res.append(QTime(h,m,s).toString(TimeFormat));
 		}
 		return res;
 	}
