@@ -63,7 +63,7 @@ public:
 	///\brief Удаление всех окон T
 	static void DeleteAllWindows()
 	{
-		MyCppDifferent::any_guard guard(doClearNow, true, false);
+		any_guard::var_setter guard(doClearNow, true, false);
 		existingWindows.clear();
 	}
 

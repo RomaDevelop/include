@@ -49,49 +49,40 @@ public:
 	inline static std::array<unsigned char,4> to_bytes(float value); // return[0] - нулевой байт value
 	inline static float to_float(std::array<unsigned char,4> bytes); // нулевой байт в return = bytes[0]
 	inline static bool test_float_to_bytes_conversion();
+};
 
-	/// class any_guard: a universal RAII guard that sets and restores a variable or executes custom functions on scope enter and exit
-	struct any_guard_dummy_T {}; // for template deduction at any_guard(std::function<void()> startFoo, std::function<void()> endFoo)
-	template <class T = any_guard_dummy_T>
-	/// A universal RAII guard that sets and restores a variable or executes custom functions on scope enter and exit
-	class any_guard
+/// namespace any_guard contains universal RAII guards that sets and restores a variable
+/// or executes custom functions on scope enter and exit
+namespace any_guard {
+
+	/// class var_setter
+	/// A universal RAII guard that sets and restores a variable
+	template <class T>
+	class var_setter
 	{
 	public:
 		/// Sets variable to startValue on construction, and to endValue on destruction
-		/// can be executed without template argument
-		any_guard(T &variable, T startValue, T endValue):
-			m_variable {&variable}
+		var_setter(T &variable, T startValue, T endValue):
+			m_variable {variable}
 		{
-			*m_variable = std::move(startValue);
+			m_variable = std::move(startValue);
 			m_end_value = std::move(endValue);
 		}
 
-		/// Call startFoo on construction, and endFoo on destruction
-		/// can be executed without template argument
-		any_guard(const std::function<void()> &startFoo, std::function<void()> endFoo):
-			m_endFoo {std::move(endFoo)}
-		{
-			if(startFoo) startFoo();
-		}
-
-		~any_guard()
-		{
-			if(m_variable) *m_variable = std::move(m_end_value.value());
-			if(m_endFoo) m_endFoo();
-		}
+		~var_setter() { m_variable = std::move(m_end_value); }
 
 	private:
-		T *m_variable = nullptr;
-		std::optional<T> m_end_value;
-		std::function<void()> m_endFoo;
+		T &m_variable;
+		T m_end_value;
 	};
-};
 
-namespace any_guard {
+	/// class function_caller
+	/// A universal RAII guard that calls function with args
 	template <class T, typename Function>
 	class function_caller
 	{
 	public:
+		/// Call function with startArg on construction, and endArg on destruction
 		function_caller(Function foo, const T& startArg, T endArg):
 			m_foo {std::move(foo)},
 			m_end_value{std::move(endArg)}
@@ -106,24 +97,26 @@ namespace any_guard {
 		T m_end_value;
 	};
 
-	template <class T>
-	class var_setter
+	/// class functions_caller
+	/// A universal RAII guard that calls functions
+	class functions_caller
 	{
 	public:
-		/// Sets variable to startValue on construction, and to endValue on destruction
-		/// can be executed without template argument
-		var_setter(T &variable, T startValue, T endValue):
-			m_variable {variable}
+
+		/// Call startFoo on construction, and endFoo on destruction
+		functions_caller(const std::function<void()> &startFoo, std::function<void()> endFoo):
+			m_endFoo {std::move(endFoo)}
 		{
-			m_variable = std::move(startValue);
-			m_end_value = std::move(endValue);
+			if(startFoo) startFoo();
 		}
 
-		~var_setter() { m_variable = std::move(m_end_value); }
+		~functions_caller()
+		{
+			if(m_endFoo) m_endFoo();
+		}
 
 	private:
-		T &m_variable;
-		T m_end_value;
+		std::function<void()> m_endFoo;
 	};
 }
 

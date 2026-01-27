@@ -41,7 +41,7 @@ bool CodeTests::DoCodeTests()
 
 bool CodeTests::TestGetTextsInSquareBrackets()
 {
-	MyCppDifferent::any_guard guarg(
+	any_guard::functions_caller guarg(
 				[](){CodeLogs::ActivateTestMode(true);},
 				[](){CodeLogs::ActivateTestMode(false);});
 
@@ -323,7 +323,7 @@ QStringList CodeTests::TestTextToStatements()
 	{
 
 		QStringList errorsThisTest;
-		MyCppDifferent::any_guard guarg(
+		any_guard::functions_caller guarg(
 					[](){CodeLogs::ActivateTestMode(true);},
 					[](){CodeLogs::ActivateTestMode(false);});
 		int countErrInLogBefore = CodeLogs::error.countInTestMode;
