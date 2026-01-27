@@ -416,7 +416,8 @@ QStringList Code::TakeBlock(QStringList &words)
 				if(countNested == 0)
 				{
 					words.removeFirst();
-					break;
+
+					return block; // closer found - correct, exit with return
 				}
 				else countNested--;
 			}
@@ -426,6 +427,10 @@ QStringList Code::TakeBlock(QStringList &words)
 			words.removeFirst();
 		}
 	}
+
+	// closer not found - incorrect, print error
+	CodeLogs::Error("Code::TakeBlock not found block closer");
+
 	return block;
 }
 
