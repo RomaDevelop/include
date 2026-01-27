@@ -19,6 +19,8 @@ struct MyQString
 	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 
 	inline static void Append(QStringList &list, QString str) { QString &lastStr = *list.insert(list.end(),""); lastStr=std::move(str); }
+	template<class Splitter>
+	inline static QList<QStringList> Split(const QStringList &list, const Splitter &splitter);
 
 	inline static QString GetRowOfLetter(const QString& str, int letterIndex);
 	struct RowAndIndex { QString row; int indexInRow = -1; };
@@ -249,6 +251,25 @@ void MyQString::EmplaceBack(QStringList &list, QString &&newString)
 QStringList MyQString::ArgsToStrList(int argc, char *argv[])
 {
 	return MyQDifferent::ArgsToStrList(argc, argv);
+}
+
+template<class Splitter>
+QList<QStringList> MyQString::Split(const QStringList &list, const Splitter &splitter)
+{
+	QList<QStringList> res;
+	if(not list.isEmpty()) res.append(QStringList{});
+	for(auto &str:list)
+	{
+		if(str == splitter)
+		{
+			res.append(QStringList{});
+		}
+		else
+		{
+			res.back().append(str);
+		}
+	}
+	return res;
 }
 
 QString MyQString::GetRowOfLetter(const QString &str, int letterIndex)
