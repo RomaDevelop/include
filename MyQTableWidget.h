@@ -29,8 +29,12 @@ public:
 	inline static bool SwapRows(QTableWidget *table, int row1, int row2);
 	inline static void SetItemEditableState(QTableWidgetItem *item, bool editableNewState);
 	inline static void FitColsWidths(QTableWidget *table); // не проверено!!!
-	inline static std::set<int> SelectedRows(QTableWidget *table, bool onlyVisibleRows);
+
 	inline static std::set<int> RowsInViewPort(QTableWidget* table);
+
+	/// Row is selected if at least one cell in that row is selected.
+	inline static std::set<int> SelectedRows(QTableWidget *table, bool onlyVisibleRows);
+	inline static void SelectRows(QTableWidget *table, int from, int to, bool scrollToFromRow);
 
 public:
 	inline explicit MyQTableWidget(QWidget *parent = nullptr);
@@ -161,6 +165,24 @@ std::set<int> MyQTableWidget::RowsInViewPort(QTableWidget *table)
 	}
 
 	return setOfVisibleRows;
+}
+
+void MyQTableWidget::SelectRows(QTableWidget *table, int from, int to, bool scrollToFromRow)
+{
+	QItemSelectionModel *selectionModel = table->selectionModel();
+	selectionModel->clearSelection();
+
+	if(from < 0 or from >= table->rowCount()) { qdbg << "MyQTableWidget::SelectRows invalid 'from' value"<<from; return; }
+	if(to < 0 or to >= table->rowCount()) { qdbg << "MyQTableWidget::SelectRows invalid 'to' value"<<to; return; }
+
+	QModelIndex topLeft = table->model()->index(from, 0);
+	QModelIndex bottomRight = table->model()->index(to, table->columnCount() - 1);
+
+	QItemSelection selection(topLeft, bottomRight);
+
+	selectionModel->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+
+	if(scrollToFromRow) table->scrollToItem(table->item(from, 0), QAbstractItemView::PositionAtCenter);
 }
 
 MyQTableWidget::MyQTableWidget(QWidget *parent) : QTableWidget(parent)
