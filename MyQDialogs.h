@@ -66,13 +66,16 @@ public:
 	inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter,
 	                                       QString acceptButton = Accept(), QString canselButton = Cansel(), uint w = 640, uint h = 480);
 
-	declare_struct_3_fields_move(CheckBoxDialogItem, QString, text, bool, checkState, bool, enabled);
-	declare_struct_5_fields_move(CheckBoxDialogResult,
-								 std::vector<CheckBoxDialogItem>, allItems,
-								 std::vector<CheckBoxDialogItem>, checkedItems,
-	                             std::vector<int>, checkedIndexes,
-								 QStringList, checkedTexts,
-								 bool, accepted);
+	declare_struct_3_fields_move(CheckBoxDialogItem, QString, text, bool, checked, bool, enabled);
+	struct CheckBoxDialogResult {
+		std::vector<CheckBoxDialogItem> allItems;
+		std::vector<CheckBoxDialogItem> changedItems;
+		std::vector<CheckBoxDialogItem> checkedItems;
+		std::vector<int> checkedIndexes;
+		QStringList checkedTexts;
+		bool accepted;
+		bool hasChanges;
+	};
 
 	inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption, std::vector<CheckBoxDialogItem> items, uint w=640, uint h=480);
 	inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption,
@@ -494,7 +497,7 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	{
 		values += "";
 		values.back() = std::move(item.text);
-		startCheched.emplace_back(item.checkState);
+		startCheched.emplace_back(item.checked);
 		enabled.emplace_back(item.enabled);
 	}
 	return CheckBoxDialog(caption, values, startCheched, enabled, false, w, h);
@@ -600,9 +603,11 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 
 		listWidget->item(i)->setCheckState(Qt::Unchecked);
 		if(startAllChecked) listWidget->item(i)->setCheckState(Qt::Checked);
-		if(startChecked.size() > i and startChecked[i]) listWidget->item(i)->setCheckState(Qt::Checked);
+		if(startChecked.size() > i and startChecked[i])
+			listWidget->item(i)->setCheckState(Qt::Checked);
 
-		if(enabled.size() > i and enabled[i] == false) listWidget->item(i)->setFlags(listWidget->item(i)->flags() ^ Qt::ItemIsEnabled);
+		if(enabled.size() > i and enabled[i] == false)
+			listWidget->item(i)->setFlags(listWidget->item(i)->flags() ^ Qt::ItemIsEnabled);
 
 		i++;
 	}
@@ -618,12 +623,32 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 			result.allItems.emplace_back(listWidget->item(i)->text(),
 			                             listWidget->item(i)->checkState() == Qt::Checked,
 			                             listWidget->item(i)->flags().testFlag(Qt::ItemIsEnabled));
-			if(result.allItems.back().checkState)
+			if(result.allItems.back().checked)
 			{
 				result.checkedItems.emplace_back(result.allItems.back());
 				result.checkedIndexes.emplace_back(i);
 				result.checkedTexts += result.allItems.back().text;
 			}
+		}
+	}
+
+	result.hasChanges = false;
+	for(uint i=0; i<result.allItems.size(); i++)
+	{
+		bool currentChanged = false;
+		if(i < startChecked.size())
+		{
+			if(startChecked[i] != result.allItems[i].checked) currentChanged = true;
+		}
+		else
+		{
+			if(result.allItems[i].checked) currentChanged = true;
+		}
+
+		if(currentChanged)
+		{
+			result.hasChanges = true;
+			result.changedItems.emplace_back(result.allItems[i]);
 		}
 	}
 
