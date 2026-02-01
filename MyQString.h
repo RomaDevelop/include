@@ -446,7 +446,7 @@ QString MyQString::ToSentenceCase(QString str)
 	if(size >= 2) str[1] = str[1].toLower();
 	for(int i=2; i<size; i++)
 	{
-		if(str[i-2] == '.' && str[i-1] == ' ')
+		if(str[i-1] == ' ' && (str[i-2] == '.' || str[i-2] == '!' || str[i-2] == '?'))
 			str[i] = str[i].toUpper();
 		else str[i] = str[i].toLower();
 	}
