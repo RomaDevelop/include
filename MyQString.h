@@ -22,6 +22,8 @@ struct MyQString
 	template<class Splitter>
 	inline static QList<QStringList> Split(const QStringList &list, const Splitter &splitter);
 
+	inline static int IndexOf(const QStringView &stringView, QChar c, int from = 0);
+
 	inline static QString GetRowOfLetter(const QString& str, int letterIndex);
 	struct RowAndIndex { QString row; int indexInRow = -1; };
 	inline static RowAndIndex GetRowOfLetterExt(const QString& str, int letterIndex);
@@ -240,8 +242,7 @@ QStringList MyQString::QStringListSized(int size, const QString & value)
 	QStringList ret;
 	ret.reserve(size);
 	for(int i=0; i<size; i++)
-		ret.append(value);
-	/// тут цикл!!! нельзя делать ret[i] = std::move(value)
+		ret.append(value);		/// тут цикл!!! нельзя делать ret[i] = std::move(value)
 	return ret;
 }
 
@@ -254,6 +255,13 @@ void MyQString::EmplaceBack(QStringList &list, QString &&newString)
 QStringList MyQString::ArgsToStrList(int argc, char *argv[])
 {
 	return MyQDifferent::ArgsToStrList(argc, argv);
+}
+
+int MyQString::IndexOf(const QStringView &stringView, QChar c, int from)
+{
+	for(int i=from; i<stringView.size(); i++)
+		if(stringView[i] == c) return i;
+	return -1;
 }
 
 template<class Splitter>
