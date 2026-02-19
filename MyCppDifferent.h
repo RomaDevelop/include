@@ -58,7 +58,7 @@ namespace any_guard {
 	/// class var_setter
 	/// A universal RAII guard that sets and restores a variable
 	template <class T>
-	class var_setter
+	class [[nodiscard]] var_setter
 	{
 	public:
 		/// Sets variable to startValue on construction, and to endValue on destruction
@@ -79,7 +79,7 @@ namespace any_guard {
 	/// class function_caller
 	/// A universal RAII guard that calls function with args
 	template <class T, typename Function>
-	class function_caller
+	class [[nodiscard]] function_caller
 	{
 	public:
 		/// Call function with startArg on construction, and endArg on destruction
@@ -99,7 +99,7 @@ namespace any_guard {
 
 	/// class functions_caller
 	/// A universal RAII guard that calls functions
-	class functions_caller
+	class [[nodiscard]] functions_caller
 	{
 	public:
 
