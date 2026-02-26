@@ -49,22 +49,22 @@ public:
 	/// delAfterHide - connects call menu->deleteLater() in signal aboutToHide
 	inline static QMenu* MenuItemsToQMenu(std::vector<mqdMenuItem> &&items, QWidget *parent, bool delAfterHide = true);
 	inline static mqdMenuItem SeparatorMenuItem() { return mqdMenuItem("SeparatorMenuItem", nullptr); }
-	inline static mqdMenuItem DisabledItem(QString text) { text+=DisabledItemMarker(); return mqdMenuItem(std::move(text), nullptr);  }
-	inline static const QString& DisabledItemMarker() { static QString str = "[!DisabledItem!]"; return str; }
+	inline static mqdMenuItem DisabledItem(QString text) { text+=DisableMarker; return mqdMenuItem(std::move(text), nullptr);  }
 
 	declare_struct_4_fields_move(InputTextRes, QString, text, bool, textHasChanged, bool, accepted, bool, acceptedAndChanged);
 	inline static InputTextRes InputText(QString captionDialog = "", QString startText = "", uint w = 640, uint h = 480);
 	inline static InputTextRes InputLine(QString captionDialog = "", QString textDialog = "", QString startText = "", uint w = 640);
 	declare_struct_3_fields_move(InputLineResExt, QString, text, bool, textHasChanged, QString, button);
 	inline static InputLineResExt InputLineExt(QString captionDialog = "", QString textDialog = "", QString startText = "",
-											   QStringList buttons = {Accept(),Cansel()}, uint w = 640);
+											   QStringList buttons = {Accept,Cansel}, uint w = 640);
 
-	// -1 index and empty text if cansel or close
+	// returns -1 index and empty text if cansel or close
 	declare_struct_3_fields_move(ListDialogRes, int, chosenIndex, QString, chosenText, bool, accepted);
+	// insert MyQDialogs::DisableMarker in value to disable row
 	inline static ListDialogRes ListDialog(QString caption, QStringList valuesList,
-	                                       QString acceptButton = Accept(), QString canselButton = Cansel(), uint w = 640, uint h = 480);
+										   QString acceptButton = Accept, QString canselButton = Cansel, uint w = 640, uint h = 480);
 	inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter,
-	                                       QString acceptButton = Accept(), QString canselButton = Cansel(), uint w = 640, uint h = 480);
+										   QString acceptButton = Accept, QString canselButton = Cansel, uint w = 640, uint h = 480);
 
 	declare_struct_3_fields_move(CheckBoxDialogItem, QString, text, bool, checked, bool, enabled);
 	struct CheckBoxDialogResult {
@@ -107,12 +107,14 @@ public:
 
 	inline static void ShowAllStandartIcons();
 
-	// buttons
-	inline static const QString& Accept() { static QString str = "Принять"; return str; }
-	inline static const QString& Cansel() { static QString str = "Отмена"; return str; }
-	inline static const QString& Close() { static QString str = "Закрыть"; return str; }
+	inline static const QString DisableMarker = QStringLiteral("[__DisableMarker__]");
 
-	inline static const QString& Undefined() { static QString str = "Undefined"; return str; }
+	// buttons
+	inline static const QString Accept = QStringLiteral("Принять");
+	inline static const QString Cansel = QStringLiteral("Отмена");
+	inline static const QString Close = QStringLiteral("Закрыть");
+
+	inline static const QString Undefined = QStringLiteral("Undefined");
 };
 //------------------------------------------------------------------------------------------------------------------------------------------
 void MyQDialogs::ShowText(const QString & text, uint w, uint h)
@@ -289,9 +291,9 @@ void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<mqdMenuItem> &&items)
 		{
 			menu->addSeparator();
 		}
-		else if(item.text.contains(DisabledItemMarker()))
+		else if(item.text.contains(DisableMarker))
 		{
-			item.text.remove(DisabledItemMarker());
+			item.text.remove(DisableMarker);
 			QAction *action = new QAction(item.text, menu);
 			action->setEnabled(false);
 			menu->addAction(action);
@@ -332,9 +334,9 @@ QMenu* MyQDialogs::MenuItemsToQMenu(std::vector<mqdMenuItem> &&items, QWidget *p
 		{
 			menu->addSeparator();
 		}
-		else if(item.text.contains(DisabledItemMarker()))
+		else if(item.text.contains(DisableMarker))
 		{
-			item.text.remove(DisabledItemMarker());
+			item.text.remove(DisableMarker);
 			QAction *action = new QAction(item.text, menu);
 			action->setEnabled(false);
 			menu->addAction(action);
@@ -369,13 +371,13 @@ MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString st
 	vloAll->addLayout(hloBtns);
 
 	hloBtns->addStretch();
-	hloBtns->addWidget(new QPushButton(Accept()));
+	hloBtns->addWidget(new QPushButton(Accept));
 	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&res, &dialog, textEdit](){
 		res.accepted=true;
 		res.text = textEdit->toPlainText();
 		dialog.close();
 	});
-	hloBtns->addWidget(new QPushButton(Cansel()));
+	hloBtns->addWidget(new QPushButton(Cansel));
 	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog](){ dialog.close(); });
 
 	QObject::connect(textEdit, &QTextEdit::textChanged, [&res](){ res.textHasChanged = true; });
@@ -391,8 +393,8 @@ MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString st
 
 MyQDialogs::InputTextRes MyQDialogs::InputLine(QString captionDialog, QString textDialog, QString startText, uint w)
 {
-	auto resExt = InputLineExt(captionDialog, textDialog, startText, {Accept(),Cansel()}, w);
-	if(resExt.button == Accept())
+	auto resExt = InputLineExt(captionDialog, textDialog, startText, {Accept,Cansel}, w);
+	if(resExt.button == Accept)
 		return InputTextRes(std::move(resExt.text), resExt.textHasChanged, true, resExt.textHasChanged);
 	else return InputTextRes();
 }
@@ -402,7 +404,7 @@ MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QStr
 {
 	QDialog dialog;
 	InputLineResExt res;
-	res.button = Undefined();
+	res.button = Undefined;
 	dialog.setWindowTitle(captionDialog);
 	QVBoxLayout *vloAll  = new QVBoxLayout(&dialog);
 
@@ -450,8 +452,22 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 	dialog.setWindowTitle(caption);
 	QVBoxLayout *vloMain  = new QVBoxLayout(&dialog);
 	QListWidget *listWidget = new QListWidget;
-	listWidget->addItems(valuesList);
 	vloMain->addWidget(listWidget);
+
+	for(int i=0; i<valuesList.size(); i++)
+	{
+		auto item = new QListWidgetItem;
+		if(not valuesList[i].contains(MyQDialogs::DisableMarker))
+		{
+			item->setText(valuesList[i]);
+		}
+		else
+		{
+			item->setText(valuesList[i].remove(MyQDialogs::DisableMarker));
+			item->setFlags(item->flags().setFlag(Qt::ItemIsEnabled, false));
+		}
+		listWidget->addItem(item);
+	}
 
 	auto acceptAction = [&dialog, listWidget, &res]()
 	{
@@ -522,8 +538,8 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	auto chBoxAllUncheck = new QCheckBox;
 
 	auto hloBottom = new QHBoxLayout;
-	auto btnOk = new QPushButton(Accept());
-	auto btnCansel = new QPushButton(Cansel());
+	auto btnOk = new QPushButton(Accept);
+	auto btnCansel = new QPushButton(Cansel);
 	QObject::connect(btnOk,&QPushButton::clicked,[&dialog, &result](){ result.accepted = true; dialog.hide(); });
 	QObject::connect(btnCansel,&QPushButton::clicked,[&dialog, &result](){ result.accepted = false; dialog.hide();});
 
@@ -733,18 +749,18 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::
 
 	if(!readOnly)
 	{
-		auto btnAccept = new QPushButton(Accept());
+		auto btnAccept = new QPushButton(Accept);
 		btnAccept->setDefault(true);
 		hlo2->addWidget(btnAccept);
 		btnAccept->connect(btnAccept, &QPushButton::clicked, [&dialog, &res](){ res.accepted = true; dialog.close(); });
 
-		auto btnCansel = new QPushButton(Cansel());
+		auto btnCansel = new QPushButton(Cansel);
 		hlo2->addWidget(btnCansel);
 		btnCansel->connect(btnCansel, &QPushButton::clicked, [&dialog](){ dialog.close(); });
 	}
 	else
 	{
-		auto btnAccept = new QPushButton(Close());
+		auto btnAccept = new QPushButton(Close);
 		btnAccept->setDefault(true);
 		hlo2->addWidget(btnAccept);
 		btnAccept->connect(btnAccept, &QPushButton::clicked, [&dialog](){ dialog.close(); });

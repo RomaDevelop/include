@@ -1,6 +1,7 @@
 #ifndef MyQDropEvent_H
 #define MyQDropEvent_H
 
+#include <QDebug>
 #include <QFileInfo>
 #include <QDropEvent>
 #include <QMimeData>
@@ -28,28 +29,19 @@ struct MyQDropEvent
 DropedObject MyQDropEvent::GetDropedObject(QDropEvent *event)
 {
 	QString text = event->mimeData()->text();
-	if(text.left(8) == "file:///")
+	if(event->mimeData()->hasUrls()) // обработка файлов
 	{
+		QList<QUrl> urlList = event->mimeData()->urls();
+		if(urlList.size() != 1)
+		{
+			DropedObject obj;
+			obj.error = "Обработка множественной передачи не предусмотрена!\n\nПолученные данные:\n"+text;
+			return obj;
+		}
+
 		DropedObject obj;
-		obj.initialValue = std::move(text);
-		obj.workedValue = obj.initialValue;
-
-		obj.workedValue.remove(0,8);
-		obj.workedValue.replace("/","\\");
-
-		obj.DefineType();
-
-		return obj;
-	}
-	else if(text.left(7) == "file://")
-	{
-		DropedObject obj;
-		obj.initialValue = std::move(text);
-		obj.workedValue = obj.initialValue;
-
-		obj.workedValue.remove(0,7);
-		obj.workedValue.replace("/","\\");
-		obj.workedValue.prepend("\\\\"); // это объект в сети, поэтому он начинается с двух слешей
+		obj.initialValue = event->mimeData()->text();
+		obj.workedValue = urlList.front().toLocalFile();
 
 		obj.DefineType();
 
@@ -58,12 +50,12 @@ DropedObject MyQDropEvent::GetDropedObject(QDropEvent *event)
 	else
 	{
 		DropedObject obj;
-		obj.error = "Ошибка при обработке полученных данных.\n\nПолученные данные:\n"+text;
+		obj.error = "Обработка данных этого типа не предусмотрена.\n\nПолученные данные:\n"+text;
 		return obj;
 	}
 
 	DropedObject obj;
-	obj.error = "Программная ошибка";
+	obj.error = "Программная ошибка, все верки должны возвращать значение";
 	return obj;
 }
 
