@@ -35,6 +35,7 @@ class MyQDialogs
 public:
 	inline static void ShowText(const QString &text, uint w = 800, uint h = 600);
 	inline static void ShowText(const QStringList &text, uint w = 800, uint h = 600);
+	inline static void ShowHtml(const QString &html, uint w = 800, uint h = 600);
 
 	inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
 	inline static QString CustomDialogWithCheckBox(QString caption, QString text, QStringList buttons,
@@ -144,6 +145,22 @@ void MyQDialogs::ShowText(const QStringList &text, uint w, uint h)
 	for(auto &row:text) textBrowser->append(row);
 	QTimer::singleShot(0, textBrowser, [textBrowser]() { textBrowser->verticalScrollBar()->setValue(0); });
 
+	hlo->addWidget(textBrowser);
+
+	if(!w) w = 150;
+	if(!h) h = 150;
+	dialog->resize(w, h);
+	dialog->exec();
+}
+
+void MyQDialogs::ShowHtml(const QString &html, uint w, uint h)
+{
+	QDialog dialog_obj;
+	QDialog *dialog = &dialog_obj;
+	QHBoxLayout *hlo  = new QHBoxLayout(dialog);
+	QTextBrowser *textBrowser = new QTextBrowser;
+	textBrowser->setTabStopDistance(40);
+	textBrowser->setHtml(html);
 	hlo->addWidget(textBrowser);
 
 	if(!w) w = 150;
