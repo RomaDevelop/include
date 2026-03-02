@@ -14,7 +14,8 @@ class MyQScrollArea : public QScrollArea
 	Q_OBJECT
 
 public:
-	bool horisontalScrollingWithShift = true;
+	///\brief Scrolls horisontal if vertical scroll is not visible or with shift pressed
+	bool smartHorisontalScrolling = true;
 
 protected:
 	inline virtual void wheelEvent(QWheelEvent *event) override;
@@ -24,9 +25,9 @@ protected:
 
 void MyQScrollArea::wheelEvent(QWheelEvent * event)
 {
-	if(horisontalScrollingWithShift)
+	if(smartHorisontalScrolling and horizontalScrollBar()->isVisible())
 	{
-		if (event->modifiers() & Qt::ShiftModifier)
+		if(not verticalScrollBar()->isVisible() or event->modifiers() & Qt::ShiftModifier)
 		{
 			QApplication::sendEvent(horizontalScrollBar(), event);
 			return;
