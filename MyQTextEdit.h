@@ -17,7 +17,9 @@ public:
 	inline static void AppendInLastRow(QTextEdit *textEdit, const QString& text);
 	inline static void ColorizeLastRow(QTextEdit *textEdit, const QBrush &brush);
 	inline static void ColorizeLastCount(QTextEdit *textEdit, const QBrush &brush, uint count);
-	inline void Colorize(QTextEdit *textEdit, int from, int to, const QColor &color);
+	inline static void Colorize(QTextEdit *textEdit, int from, int to, const QColor &color);
+	inline static void ColorizeBackground(QTextEdit *textEdit, int from, int to, const QColor &color);
+	inline static void ColorizeBackground(QTextEdit *textEdit, std::vector<std::pair<int, int>> fromTo, const QColor &color);
 
 	inline static QTextCharFormat LetterFormat(QTextEdit *textEdit, int letterIndex);
 	enum direction { up, down };
@@ -72,7 +74,7 @@ void MyQTextEdit::ColorizeLastRow(QTextEdit * textEdit, const QBrush & brush)
     curs.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
     curs.movePosition(QTextCursor::StartOfLine, QTextCursor::KeepAnchor);
     curs.setCharFormat(format);
-    textEdit->repaint();
+	//textEdit->repaint(); вызов repaint отключен за ненадобностью 02.03.2026
 }
 
 void MyQTextEdit::ColorizeLastCount(QTextEdit * textEdit, const QBrush & brush, uint count)
@@ -84,7 +86,7 @@ void MyQTextEdit::ColorizeLastCount(QTextEdit * textEdit, const QBrush & brush, 
     curs.setPosition(textEdit->document()->characterCount() - 1 - count, QTextCursor::MoveAnchor);
     curs.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
     curs.setCharFormat(format);
-    textEdit->repaint();
+	//textEdit->repaint(); вызов repaint отключен за ненадобностью 02.03.2026
 }
 
 void MyQTextEdit::Colorize(QTextEdit * textEdit, int from, int to, const QColor & color)
@@ -96,6 +98,34 @@ void MyQTextEdit::Colorize(QTextEdit * textEdit, int from, int to, const QColor 
     cursor.setPosition(from,QTextCursor::MoveAnchor);
     cursor.setPosition(to,QTextCursor::KeepAnchor);
     cursor.setCharFormat(format);
+	//textEdit->repaint(); вызов repaint отключен за ненадобностью 02.03.2026
+}
+
+void MyQTextEdit::ColorizeBackground(QTextEdit * textEdit, int from, int to, const QColor & color)
+{
+	QTextCharFormat format;
+	format.setBackground(color);
+
+	auto cursor = textEdit->textCursor();
+	cursor.setPosition(from,QTextCursor::MoveAnchor);
+	cursor.setPosition(to,QTextCursor::KeepAnchor);
+	cursor.setCharFormat(format);
+	//textEdit->repaint(); вызов repaint отключен за ненадобностью 02.03.2026
+}
+
+void MyQTextEdit::ColorizeBackground(QTextEdit * textEdit, std::vector<std::pair<int, int>> fromTo, const QColor & color)
+{
+	QTextCharFormat format;
+	format.setBackground(color);
+
+	auto cursor = textEdit->textCursor();
+	for(auto &p:fromTo)
+	{
+		cursor.setPosition(p.first,QTextCursor::MoveAnchor);
+		cursor.setPosition(p.second,QTextCursor::KeepAnchor);
+		cursor.setCharFormat(format);
+	}
+	//textEdit->repaint(); вызов repaint отключен за ненадобностью 02.03.2026
 }
 
 QTextCharFormat MyQTextEdit::LetterFormat(QTextEdit *textEdit, int letterIndex)
