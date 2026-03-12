@@ -36,6 +36,8 @@ public:
 	inline static std::set<int> SelectedRows(QTableWidget *table, bool onlyVisibleRows);
 	inline static void SelectRows(QTableWidget *table, int from, int to, bool scrollToFromRow);
 
+	inline static int FindNearestVisibleRow(QTableWidget *table, int row);
+
 public:
 	inline explicit MyQTableWidget(QWidget *parent = nullptr);
 	inline void CreateContextMenu();
@@ -183,6 +185,34 @@ void MyQTableWidget::SelectRows(QTableWidget *table, int from, int to, bool scro
 	selectionModel->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
 
 	if(scrollToFromRow) table->scrollToItem(table->item(from, 0), QAbstractItemView::PositionAtCenter);
+}
+
+int MyQTableWidget::FindNearestVisibleRow(QTableWidget *table, int row)
+{
+	int rowCount = table->rowCount();
+	if (rowCount == 0 or row < 0 or row >= rowCount) return -1;
+
+	// Ограничиваем входную строку границами таблицы
+	int offset = 0;
+
+	// Цикл продолжается, пока мы не найдем видимую строку или не выйдем за границы всей таблицы
+	while (offset < rowCount) {
+		// Проверяем строку "выше"
+		int upRow = row - offset;
+		if (upRow >= 0 && !table->isRowHidden(upRow)) {
+			return upRow;
+		}
+
+		// Проверяем строку "ниже"
+		int downRow = row + offset;
+		if (downRow < rowCount && !table->isRowHidden(downRow)) {
+			return downRow;
+		}
+
+		offset++;
+	}
+
+	return -1; // Если все строки скрыты
 }
 
 MyQTableWidget::MyQTableWidget(QWidget *parent) : QTableWidget(parent)
