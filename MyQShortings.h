@@ -41,11 +41,11 @@ inline QString DateFormat 					= QStringLiteral("yyyy.MM.dd");
 inline QString DateFormat_rus 				= QStringLiteral("dd MMM yyyy");
 inline QString DateTimeFormat_rus 			= QStringLiteral("dd MMM yyyy hh:mm:ss");
 //------------------------------------------------------------------------------------------------------------------------------------------
-#define DO_ONCE(code_to_do) { static bool did = false; if(!did) { code_to_do; did = true; } }
+#define DO_ONCE(code_to_do) do { static bool did = false; if(!did) { code_to_do; did = true; } } while (0)
 //------------------------------------------------------------------------------------------------------------------------------------------
 #define DECLARE_TIME_MARKER(marker_identtificator) auto marker_identtificator = QDateTime::currentDateTime();
 #define CALC_MILLISECONDS(time_maker) time_maker.msecsTo(QDateTime::currentDateTime())
 #define TIME_CALC_TO_QString(prefix_str, time_maker) \
-	QString(  QString(prefix_str) + " " + QString::number(CALC_MILLISECONDS(time_maker)) + " milliseconds")
+	QString(QString(prefix_str) + " " + QString::number(CALC_MILLISECONDS(time_maker)) + " milliseconds")
 //------------------------------------------------------------------------------------------------------------------------------------------
 #endif
