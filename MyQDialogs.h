@@ -37,6 +37,10 @@ public:
 	inline static void ShowText(const QStringList &text, uint w = 800, uint h = 600);
 	inline static void ShowHtml(const QString &html, uint w = 800, uint h = 600);
 
+	inline static void InfoCopyable(QWidget *parent, const QString &title, const QString& text);
+	inline static void ErrorCopyable(QWidget *parent, const QString &title, const QString& text);
+	inline static void QMessageBoxCopyable(QWidget *parent, const QString &title, const QString& text, QMessageBox::Icon icon);
+
 	inline static QString CustomDialog(QString caption, QString text, QStringList buttons);
 	inline static QString CustomDialogWithCheckBox(QString caption, QString text, QStringList buttons,
 												   bool *chBoxRes=nullptr, QString checkBoxText="Apply to all current");
@@ -167,6 +171,26 @@ void MyQDialogs::ShowHtml(const QString &html, uint w, uint h)
 	if(!h) h = 150;
 	dialog->resize(w, h);
 	dialog->exec();
+}
+
+void MyQDialogs::InfoCopyable(QWidget * parent, const QString & title, const QString & text)
+{
+	QMessageBoxCopyable(parent, title, text, QMessageBox::Information);
+}
+
+void MyQDialogs::ErrorCopyable(QWidget * parent, const QString & title, const QString & text)
+{
+	QMessageBoxCopyable(parent, title, text, QMessageBox::Critical);
+}
+
+void MyQDialogs::QMessageBoxCopyable(QWidget * parent, const QString & title, const QString & text, QMessageBox::Icon icon)
+{
+	QMessageBox msgBox(parent);
+	msgBox.setWindowTitle(title);
+	msgBox.setText(text);
+	msgBox.setIcon(icon);
+	msgBox.setTextInteractionFlags(Qt::TextSelectableByMouse);
+	msgBox.exec();
 }
 
 QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList buttons)
