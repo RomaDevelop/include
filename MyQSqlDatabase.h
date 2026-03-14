@@ -182,6 +182,7 @@ MyQSqlDatabase::DoSqlQueryRes MyQSqlDatabase::DoSqlQueryExt(const QString &strQu
 	query.prepare(strQuery);
 	for(auto &bind:binds)
 		query.bindValue(bind.first, bind.second);
+
 	if(query.exec())
 	{
 		if(doNextAfterExec)

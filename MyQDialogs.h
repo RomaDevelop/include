@@ -176,7 +176,8 @@ QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList butt
 	{
 		btn.prepend(' ').append(' ');
 		messageBox.addButton(btn, QMessageBox::YesRole);  // Role не имеет значения
-		// ' ' + btn + ' ' потому что setContentsMargins для вн.виджетов, а не текста, а setStyleSheet("padding: 6px;") имеет побочные эффекты
+		/// ' ' + btn + ' ' потому что setContentsMargins для вн.виджетов, а не текста,
+		/// а setStyleSheet("padding: 6px;") имеет побочные эффекты
 	}
 	messageBox.exec();
 	QString retText;
@@ -210,6 +211,8 @@ QString MyQDialogs::CustomDialogWithCheckBox(QString caption, QString text, QStr
 
 	QHBoxLayout *hloBtns = new QHBoxLayout;
 	vloMain->addLayout(hloBtns);
+
+	hloBtns->addStretch();
 
 	for(auto &btnText: buttons)
 	{
@@ -246,6 +249,8 @@ QString MyQDialogs::CustomDialogWithTimer(QString caption, QString text, QString
 
 	QHBoxLayout *hloBtns = new QHBoxLayout;
 	vloMain->addLayout(hloBtns);
+
+	hloBtns->addStretch();
 
 	QPushButton* defaultButton = nullptr;
 	QString defaultButtonText;
