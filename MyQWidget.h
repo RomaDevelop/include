@@ -69,7 +69,8 @@ struct LineEdit_w_Clear
 		button = new QToolButton;
 		button->setIcon(QApplication::style()->standardIcon(QStyle::StandardPixmap::SP_TitleBarCloseButton));
 		hlo->addWidget(button);
-		QObject::connect(button, &QAbstractButton::clicked, [this](){ lineEdit->clear(); });
+		QObject::connect(button, &QAbstractButton::clicked, lineEdit, [lineEdit = lineEdit](){ lineEdit->clear(); });
+		// lineEdit = lineEdit нужно, this нельзя, потому что объект LineEdit_w_Clear может быть временным
 	}
 };
 
