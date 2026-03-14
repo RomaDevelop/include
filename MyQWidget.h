@@ -69,7 +69,7 @@ struct LineEdit_w_Clear
 		button = new QToolButton;
 		button->setIcon(QApplication::style()->standardIcon(QStyle::StandardPixmap::SP_TitleBarCloseButton));
 		hlo->addWidget(button);
-		QObject::connect(button, &QAbstractButton::clicked, [le = lineEdit](){ le->clear(); });
+		QObject::connect(button, &QAbstractButton::clicked, [this](){ lineEdit->clear(); });
 	}
 };
 

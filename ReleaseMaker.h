@@ -13,14 +13,20 @@ struct MakeReleaseResult { bool success; QString dirOutput; QString pathToOutput
 
 struct ReleaseMaker
 {
-	inline static MakeReleaseResult MakeRelease(const QString &programmName, bool copyLinkFile=true, bool openDirOutput=true, bool launchWindeploy=true);
+	inline static MakeReleaseResult MakeRelease(const QString &programmName,
+												bool copyLinkFile=true,
+												bool openDirOutput=true,
+												bool launchWindeploy=true);
 	inline static void CopyLinkFile(const QString &ExeNameNoPath, const QString &dirOutput);
 	inline static void LaunchWindeploy(const QString &exeFileOutput);
 };
 
 //---------------------------------------------------------------------------------------------------------------------
 
-MakeReleaseResult ReleaseMaker::MakeRelease(const QString &programmName, bool copyLinkFile, bool openDirOutput, bool launchWindeploy)
+MakeReleaseResult ReleaseMaker::MakeRelease(const QString &programmName,
+											bool copyLinkFile,
+											bool openDirOutput,
+											bool launchWindeploy)
 {
 	MakeReleaseResult result;
 
@@ -80,7 +86,11 @@ MakeReleaseResult ReleaseMaker::MakeRelease(const QString &programmName, bool co
 
 	if(openDirOutput) MyQExecute::OpenDir(dirOutput);
 
-	if(launchWindeploy) LaunchWindeploy(exeFileOutput);
+	if(launchWindeploy)
+	{
+		QTimer::singleShot(300, [exeFileOutput](){ ReleaseMaker::LaunchWindeploy(exeFileOutput); });
+		// singleShot потому что папка открывается после Windeploy и перекрывает его
+	}
 
 	result.success = true;
 	return result;
