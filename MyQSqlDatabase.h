@@ -5,6 +5,7 @@
 #include <set>
 #include <memory>
 
+#include <QStringBuilder>
 #include <QDebug>
 #include <QSqlDatabase>
 #include <QSqlError>
@@ -121,7 +122,7 @@ public:
 	                                                                      std::vector<QStringRefWr_c> whereFields,
 	                                                                      std::vector<QString> whereValues);
 	inline static std::pair<QString, QStringPairVector> MakeUpdateRequestOneField(QString table, QStringRefWr_c field, QString value,
-	                                                                              QStringRefWr_c whereFields, QString whereValue);
+	                                                                              QStringRefWr_c whereField, QString whereValue);
 
 	///\brief for empty feildsIndexes return all fields
 	/// QStringList = row
@@ -328,6 +329,7 @@ std::pair<QString, QStringPairVector> MyQSqlDatabase::MakeInsertRequest(QString 
 	if(fields.size() != values.size()) { Error("MakeInsertRequest fields values sizes differ"); return {}; }
 	QString &sql = table;
 	QStringPairVector binds;
+	binds.reserve(fields.size());
 	sql = "insert into " + table;
 	if(!fields.empty())
 	{
@@ -355,49 +357,53 @@ std::pair<QString, QStringPairVector> MyQSqlDatabase::MakeInsertRequest(QString 
 	return {std::move(sql), std::move(binds)};
 }
 
-std::pair<QString, QStringPairVector> MyQSqlDatabase::MakeUpdateRequest(QString table, std::vector<QStringRefWr_c> fields, std::vector<QString> values,
-                                                                        std::vector<QStringRefWr_c> whereFields, std::vector<QString> whereValues)
+std::pair<QString, QStringPairVector> MyQSqlDatabase::MakeUpdateRequest(QString table, std::vector<QStringRefWr_c> fields,
+                      std::vector<QString> values, std::vector<QStringRefWr_c> whereFields, std::vector<QString> whereValues)
 {
 	if(fields.size() != values.size()) { Error("MakeUpdateRequest fields values sizes differ"); return {}; }
 	if(whereFields.size() != whereValues.size()) { Error("MakeUpdateRequest whereFields whereValues sizes differ"); return {}; }
 	if(fields.empty()) { Error("MakeUpdateRequest empty update fields "); return {}; }
 
-	bool contains = false;
-	for(auto &field:fields)
-	{
-		for(auto &whereField:whereFields)
-			if(whereField == field) {contains = true; break;}
-	}
-	if(contains) { Error("MakeUpdateRequest fields and whereFields have dubles"); return {}; }
-
 	QString &sql = table;
 	QStringPairVector binds;
+	binds.reserve(fields.size() + whereFields.size());
 	sql = "update "+table+" set ";
 	for(uint i=0; i<fields.size(); i++)
 	{
 		QStringRefWr_c &field = fields[i];
-		sql.append(field).append(" = :").append(field).append(", ");
-		binds.emplace_back(std::pair(":" + field, std::move(values[i])));
+		sql.append(field).append(" = :s_").append(field).append(", ");
+		binds.emplace_back(std::pair(":s_" + field, std::move(values[i])));
 	}
-	if(!fields.empty()) sql.chop(2);
+	if(!fields.empty()) sql.chop(2); // удаление ", "
+
 	if(!whereFields.empty())
 	{
 		sql.append("\nwhere ");
 		for(uint i=0; i<whereFields.size(); i++)
 		{
 			QStringRefWr_c &wereField = whereFields[i];
-			sql.append(wereField).append(" = :").append(wereField).append(" and ");
-			binds.emplace_back(std::pair(":" + wereField, std::move(whereValues[i])));
+			sql.append(wereField).append(" = :w_").append(wereField).append(" and ");
+			binds.emplace_back(std::pair(":w_" + wereField, std::move(whereValues[i])));
 		}
-		if(!whereFields.empty()) sql.chop(5);
+		if(!whereFields.empty()) sql.chop(5); // удаление " and "
 	}
 	return {std::move(sql), std::move(binds)};
 }
 
 std::pair<QString, QStringPairVector> MyQSqlDatabase::MakeUpdateRequestOneField(QString table, QStringRefWr_c field, QString value,
-                                                                                QStringRefWr_c whereFields, QString whereValue)
+                                                                                QStringRefWr_c whereField, QString whereValue)
 {
-	return MakeUpdateRequest(std::move(table), {std::move(field)}, {std::move(value)}, {std::move(whereFields)}, {std::move(whereValue)});
+	QString sql = QStringLiteral("UPDATE [") % table %
+	              QStringLiteral("] SET [") % field.get() %
+	              QStringLiteral("] = :s") %
+	              QStringLiteral(" WHERE [") % whereField.get() %
+	              QStringLiteral("] = :w");
+
+	QStringPairVector binds {
+		{":s", std::move(value)},
+		{":w", std::move(whereValue)}
+	};
+	return {std::move(sql), std::move(binds)};
 }
 
 std::vector<QStringList> MyQSqlDatabase::QuetyToTable(QSqlQuery &query, std::vector<int> feildsIndexes)
@@ -481,7 +487,7 @@ double MyQSqlDatabase::ToDouble(QSqlQuery &query, int fieldIndex)
 
 QString MyQSqlDatabase::GenErrorText(QString error, const QString &strQuery, const QStringPairVector &binds)
 {
-	error += "\n\nЗапрос:\n" + strQuery + "\n\nBinds" + ( binds.empty() ? " are empty" : ":\n" );
+	error += "\n\nЗапрос:\n" + strQuery + "\n\nBinds" + ( binds.empty() ? " are empty" : ":" );
 	for(auto &bind:binds)
 		error += "\n" + bind.first + " -> " + bind.second;
 	return error;
