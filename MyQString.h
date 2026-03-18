@@ -125,9 +125,11 @@ struct MyQString
 		return ret;
 	}
 
-	using mapQCHar = std::map<QChar, QChar>;
-	inline static std::pair<mapQCHar, mapQCHar> TranslitWrongLanguageMaps();
 	inline static QString TranslitWrongLanguage(QString str);
+	using mapQCHar = std::map<QChar, QChar>;
+	inline static MyQString::mapQCHar* MapForTranslintWrongLanguage(const QString &str);
+	enum class Language { latin, kirillic, undefined };
+	inline static Language DefineLanguage(const QString &str);
 
 	inline static QString TranslitToLatin(const QString &str);
 
@@ -375,43 +377,65 @@ bool MyQString::StartsWith(const QString &str, const std::string_view &str_view)
 	return true;
 }
 
-std::pair<MyQString::mapQCHar, MyQString::mapQCHar> MyQString::TranslitWrongLanguageMaps()
-{
-	const wchar_t *latin = L"qwertyuiop[]asdfghjkl;'zxcvbnm,./QWERTYUIOP{}ASDFGHJKL:\"" "ZXCVBNM<>"; // разрыв из-за экранирования \"
-	const wchar_t *kiril = L"йцукенгшщзхъфывапролджэячсмитьбю.ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭ"  "ЯЧСМИТЬБЮ";
-	auto len = wcslen(latin);
-	assert(len == wcslen(kiril));
-
-	std::map<QChar, QChar> toLatin;
-	std::map<QChar, QChar> toKiril;
-
-	for(size_t i=0; i<len; i++)
-	{
-		toLatin[*kiril] = *latin;
-		toKiril[*latin] = *kiril;
-		kiril++;
-		latin++;
-	}
-
-	return {std::move(toLatin), std::move(toKiril)};
-}
-
 QString MyQString::TranslitWrongLanguage(QString str)
 {
-	static std::pair<mapQCHar, mapQCHar> translitMaps = TranslitWrongLanguageMaps();
+	auto mapPtr = MapForTranslintWrongLanguage(str);
+	if(not mapPtr) return str;
+
 	for(auto &c:str)
 	{
-		if(auto it = translitMaps.first.find(c); it != translitMaps.first.end())
-		{
-			c = it->second;
-		}
-		else if(auto it = translitMaps.second.find(c); it != translitMaps.second.end())
+		if(auto it = mapPtr->find(c); it != mapPtr->end())
 		{
 			c = it->second;
 		}
 		// else ; // буква остается без изменений
 	}
 	return str;
+}
+
+MyQString::mapQCHar *MyQString::MapForTranslintWrongLanguage(const QString &str)
+{
+	static mapQCHar toLatin;
+	static mapQCHar toKiril;
+
+	DO_ONCE(
+		constexpr std::wstring_view latin = L"qwertyuiop[]asdfghjkl;'zxcvbnm,.`QWERTYUIOP{}ASDFGHJKL:\"" "ZXCVBNM<>~";
+		constexpr std::wstring_view kiril = L"йцукенгшщзхъфывапролджэячсмитьбюёЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭ"  "ЯЧСМИТЬБЮЁ";
+		constexpr auto len = latin.size();
+		static_assert(len == kiril.size(), "MapForTranslintWrongLanguage: latin and kiril lengths differs!");
+		const wchar_t *latin_data = latin.data();
+		const wchar_t *kiril_data = kiril.data();
+		for(size_t i=0; i<len; i++)
+		{
+			toLatin[*kiril_data] = *latin_data;
+			toKiril[*latin_data] = *kiril_data;
+			latin_data++;
+			kiril_data++;
+		}
+	);
+
+	auto lang = DefineLanguage(str);
+	if(lang == Language::latin) return &toKiril;
+	if(lang == Language::kirillic) return &toLatin;
+	return nullptr;
+}
+
+MyQString::Language MyQString::DefineLanguage(const QString &str)
+{
+	static std::set<QChar> latin = {
+		'q','w','e','r','t','y','u','i','o','p','a','s','d','f','g','h','j','k','l','z','x','c','v','b','n','m',
+		'Q','W','E','R','T','Y','U','I','O','P','A','S','D','F','G','H','J','K','L','Z','X','C','V','B','N','M' };
+	static std::set<QChar> kiril = {
+		L'а', L'б', L'в', L'г', L'д', L'е', L'ё', L'ж', L'з', L'и', L'й', L'к', L'л', L'м', L'н', L'о', L'п', L'р',
+		L'с', L'т', L'у', L'ф', L'х', L'ц', L'ч', L'ш', L'щ', L'ъ', L'ы', L'ь', L'э', L'ю', L'я',
+		L'А', L'Б', L'В', L'Г', L'Д', L'Е', L'Ё', L'Ж', L'З', L'И', L'Й', L'К', L'Л', L'М', L'Н', L'О', L'П', L'Р',
+		L'С', L'Т', L'У', L'Ф', L'Х', L'Ц', L'Ч', L'Ш', L'Щ', L'Ъ', L'Ы', L'Ь', L'Э', L'Ю', L'Я' };
+	for(auto &c:str)
+	{
+		if(latin.count(c) > 0) return Language::latin;
+		if(kiril.count(c) > 0) return Language::kirillic;
+	}
+	return Language::undefined;
 }
 
 QString MyQString::TranslitToLatin(const QString &str)

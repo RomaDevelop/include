@@ -127,7 +127,7 @@ public:
 	///\brief Парсинг текста в выражения
 	/// при парсинге текст нормализуется (вызывается Normalize)
 	/// параметры nestedBlockOpener и nestedBlockCloser предназначены для внутреннего рекурсивного вызова
-	/// при внешнем вызове nestedBlockOpener и nestedBlockCloser не используются, оставлять значения по-умолчанию
+	/// при внешнем вызове nestedBlockOpener и nestedBlockCloser не используются, оставлять значения по умолчанию
 	static Statement TextToStatements(const QString &text, int nestedBlockOpener = -1, int *nestedBlockCloser = {});
 
 	static QString GetFirstWord(const QString &text);
