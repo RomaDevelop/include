@@ -95,8 +95,10 @@ struct Statement
 	explicit Statement(QString singleInstruction_);
 	explicit Statement(QString header, QStringList blockSingleInstructions);
 
-	static QString PrintStatements(std::vector<Statement> statements, const QString &indent = {});
-	QString PrintStatement(const QString &indent = {}) const;
+	static QString ToString(std::vector<Statement> statements, const QString &indent = {});
+	QString ToString(const QString &indent = {}) const;
+	void PrintStatementToQDebug();
+
 	void ForEach(const std::function<void(std::pair<Statement*,QString*>)> &function,
 				 bool &statementExitFlag, bool &returnFlag);
 	void Remove_child_if(const std::function<bool(std::pair<Statement*,QString*>)> &condition);

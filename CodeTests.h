@@ -350,14 +350,14 @@ QStringList CodeTests::TestTextToStatements()
 			if(!errorsThisTest.isEmpty())
 				errorsThisTest +=	"============================================================================";
 			errorsThisTest += "Тест i"+QSn(i)+" TestTextToStatements(\""+text+"\") выдал ошибку!"
-					+"\nрезультат <\n" + result.PrintStatement()
-					+ ">\nа ожидается <\n" + resultMustBe.PrintStatement()+ ">";
+					+"\nрезультат <\n" + result.ToString()
+					+ ">\nа ожидается <\n" + resultMustBe.ToString()+ ">";
 
 			if(resultCmpDetails.isEmpty()) errorsThisTest += "resultCmpDetails.isEmpty";
 			else errorsThisTest += "resultCmpDetails: " + resultCmpDetails;
 		}
 		else if(printResAlwause) CodeLogs::Log("Тест TestTextToStatements(\""+text+"\") "
-											 +"выдал ожидаемый результат <" + result.PrintStatement() + ">");
+											 +"выдал ожидаемый результат <" + result.ToString() + ">");
 
 		if(!errorsThisTest.isEmpty())
 		{

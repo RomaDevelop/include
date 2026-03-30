@@ -765,17 +765,17 @@ Statement::Statement(QString header, QStringList blockSingleInstructions): heade
 	}
 }
 
-QString Statement::PrintStatements(std::vector<Statement> statements, const QString &indent)
+QString Statement::ToString(std::vector<Statement> statements, const QString &indent)
 {
 	QString str;
 	for(auto &s:statements)
 	{
-		str += s.PrintStatement(indent);
+		str += s.ToString(indent);
 	}
 	return str;
 }
 
-QString Statement::PrintStatement(const QString &indent) const
+QString Statement::ToString(const QString &indent) const
 {
 	QString str;
 	if(header.isEmpty()) str += indent + "// empty header\n";
@@ -801,7 +801,7 @@ QString Statement::PrintStatement(const QString &indent) const
 		{
 
 			if(auto pNestedS = std::get_if<Statement>(&nestedS))
-				str += pNestedS->PrintStatement(nestedIndent);
+				str += pNestedS->ToString(nestedIndent);
 			else CodeLogs::Error("nestedStatement is not QString or Statement");
 		}
 	}
@@ -810,6 +810,14 @@ QString Statement::PrintStatement(const QString &indent) const
 		str += indent + "}\t\t// closer\n";
 
 	return str;
+}
+
+void Statement::PrintStatementToQDebug()
+{
+	auto printed = ToString();
+	printed.replace('\t', "    ");
+	auto lines = printed.split('\n');
+	for(auto &line:lines) qdbg << line;
 }
 
 void Statement::ForEach(const std::function<void(std::pair<Statement*,QString*>)> &function, bool &statementExitFlag, bool &returnFlag)
