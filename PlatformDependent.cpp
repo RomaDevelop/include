@@ -72,6 +72,38 @@ bool PlatformDependent::IsProcessRunning(uint processID) {
 	return false; // Процесс не запущен или не может быть открыт
 }
 
+bool PlatformDependent::IsFileLocked(const QString & file) {
+	// Преобразуем QString в массив WCHAR для работы с WinAPI
+	const WCHAR* pathPtr = reinterpret_cast<const WCHAR*>(file.utf16());
+
+	// Пытаемся получить дескриптор файла БЕЗ прав на чтение/запись данных (0)
+	// и БЕЗ разрешения другим процессам его использовать (dwShareMode = 0)
+	HANDLE hFile = CreateFileW(
+				pathPtr,
+				DELETE,                      // ЗАПРАШИВАЕМ ПРАВО НА УДАЛЕНИЕ (как при rename)
+				0,                           // Требуем эксклюзивности: если кто-то открыл файл, вызов вернет ошибку
+				NULL,
+				OPEN_EXISTING,               // Только для существующих файлов
+				FILE_ATTRIBUTE_NORMAL,
+				NULL
+				);
+
+	if (hFile == INVALID_HANDLE_VALUE) {
+		DWORD err = GetLastError();
+		if (err == ERROR_SHARING_VIOLATION || err == ERROR_LOCK_VIOLATION || err == ERROR_ACCESS_DENIED) {
+			return true; // Файл занят
+		}
+		else {
+			qdbg << "PlatformDependent::IsFileLocked: unknown error: " + QSn(err);
+			return true; // Другая ошибка (например, файл не найден)
+		}
+	}
+
+	// Если удалось открыть — файл свободен. Обязательно закрываем дескриптор!
+	CloseHandle(hFile);
+	return false;
+}
+
 PlatformDependent::CopyMoveFileRes PlatformDependent::CopyMoveFile(QString SourceFile, QString Destination, CopyMoveFileMode Mode)
 {
 	SourceFile.replace('/','\\');
