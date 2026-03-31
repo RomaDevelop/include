@@ -12,6 +12,8 @@ struct PlatformDependent
 	static QDateTime GetProcessStartTime(uint processID);
 	static bool IsProcessRunning(uint processID);
 
+	static bool IsFileLocked(const QString &file);
+
 	enum CopyMoveFileMode { move, copy };
 	declare_struct_3_fields_no_move(CopyMoveFileRes, bool, success, int, errorCode, QString, errorText);
 	static CopyMoveFileRes CopyMoveFile(QString SourceFile, QString Destination, CopyMoveFileMode Mode);
