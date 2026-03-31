@@ -1,6 +1,6 @@
 #ifndef MYQDIALOGS_H
 #define MYQDIALOGS_H
-//------------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------
 #include <memory>
 
 #include <QApplication>
@@ -723,7 +723,6 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::
 {
 	QDialog dialog;
 	dialog.setWindowTitle(caption);
-	if(0) CodeMarkers::to_do("кнопки вверх, вниз, отменить изменения, автоподгонка ширины колонок");
 	if(!w) w = 640;
 	if(!h) h = 480;
 	dialog.resize(w, h);

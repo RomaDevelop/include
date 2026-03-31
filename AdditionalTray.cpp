@@ -7,61 +7,7 @@
 AdditionalTrayIcon::AdditionalTrayIcon(const QIcon &icon, QPoint globalPos, QWidget *parent)
 	: ClickableQWidget(parent, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint)
 {
-	qdbg << "AdditionalTrayIcon to do: "
-/*			""
-			"в конструктор не должны передаваться координаты "
-			"должен передаваться дисплей на котором создать иконки "
-			"а координаты должны расчитываться автоматом "
-			"если при этом приложение с таким модулем должно локально опрашивать других - есть ли их иконки "
-			"чтобы они не накладывались друг на друга "
-			""
-			"а вообще можно придумать как-то чтобы этот доп.трей был отдельным приложением, но как он тогда"
-			"будет вызывать конкретные функции из этого приложения?"
-			""
-			"например так: должна работать программа AddTray(сервер)"
-			"наша программа(клиент) регистрирует в ней трей иконку с нужными параметрами"
-			"AddTray добавляет её как надо"
-			"затем при взаимодействии с той иконкой в нашу программу приходят сведения что нужно сделать"
-			"при отключении сервер удаляет иконку"
-			"	тот же минус - еще одна программа, еще один процесс"*/;
-
 	CreateLogsWidget(false);
-
-//	if(!localClient && !localServer1)
-//	{
-//		localClient = MyQLocalServer::InitSocket("AdditionalTrayServer", 100,
-//													[this](QByteArray data){Log("localClient get " + data); },
-//													[this](QString log){ Log(std::move(log)); });
-//		if(localClient) Log("localClient created " + MyQString::AsDebug(localClient.get()));
-//		else
-//		{
-//			localServer1 = MyQLocalServer::InitServer("AdditionalTrayServer",
-//														[this](QByteArray data){ Log("localServer1 get " + data); },
-//														[this](QString log){ Log(std::move(log)); });
-//			if(localServer1) Log("localServer1 created " + MyQString::AsDebug(localServer1.get()));
-//			else Error("cant create sever and client");
-//		}
-//	}
-
-	/// MyQLocalServer переделать на u_ptr
-	///
-	/// в программе должен быть и сервер и клиент
-	/// если клиент получает сигнал о том, что он отвалился, он пробует завести сервер
-	/// проблема - это сделают одновременно несколько клиентов
-	///		решение 1 сервер не в клиенте, а стороннее приложение, которое клиент инициирует
-	///						сервер должен сам выключаться если он никому не нужен
-	///		решение 2 сервер в клиенте, но он своим клиентам назначает тайминги ожидания
-	///						для попыток переподключения и подъема сервера -
-	///		решение 2 предпочтительнее,
-	///			во первых не нужно создавать отдельное приложение,
-	///			во вторых систему будет меньше грузить
-	///			в третьих в диспетчере задач меньше говна
-	///		далее сделать функцию - запрос всех координат иконок на сервер
-	///		сервер опрашивает всех клиентов
-	///		клиенты отвечают
-	///		сервер передает обратно запросившему
-	///		на основании полученного запросивший располагает иконку
-
 
 	setAttribute(Qt::WA_TranslucentBackground);
 	setAttribute(Qt::WA_ShowWithoutActivating);
