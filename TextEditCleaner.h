@@ -29,7 +29,7 @@ public:
 	///\brief connect SignalNeedClean -> SlotClean
 	inline explicit TextEditCleaner(QObject *parent = nullptr);
 	///\brief CleanerThread() and StartCleanObject(...)
-	inline explicit TextEditCleaner(QTextEdit  *objToClean_, unsigned int linesThreshold, QObject *parent = nullptr);
+	inline explicit TextEditCleaner(QTextEdit  *objToClean_, int linesThreshold, QObject *parent = nullptr);
 	///\brief Вызывает StopClean()
 	inline ~TextEditCleaner();
 
@@ -42,7 +42,7 @@ public:
 	/// если был забущен ранее - перед запуском вызывает StopClean()
 	///\param[in] objToClean_ - объект, который будет очищаться
 	///\param[in] linesThreshold_ - порог строк, свыше которого верхние удаляются
-	inline void StartClean(QTextEdit  *objToClean_, unsigned int linesThreshold_);
+	inline void StartClean(QTextEdit  *objToClean_, int linesThreshold_);
 	///\brief Если поток существует, то он останавливает и удаляет его
 	inline void StopClean();
 
@@ -59,11 +59,11 @@ public:
 
 private: signals:
 	///\brief Сигнал, который посылает поток если превышен linesThreshold. connect с SlotClean
-	void SignalNeedClean(int count);
+	void SignalNeedClean();
 
 private slots:
 	///\brief Слот очищающий objToClean. connect с SignalNeedClean
-	inline void SlotClean(int count);
+	inline void SlotClean();
 
 private:
 
@@ -72,11 +72,13 @@ private:
 	///\brief Объект, который будет очищаться
 	QTextEdit  *objToClean = nullptr;
 	///\brief Порог строк, свыше которого верхние удаляются
-	unsigned int linesThreshold {1000};
+	int linesThreshold {1000};
 	///\brief Флаг остановки очистки
 	bool stopClean = false;
 	///\brief Флаг приостановки очистки
 	bool doClean = true;
+
+	inline int LinesCount();
 };
 
 TextEditCleaner::TextEditCleaner(QObject * parent):
@@ -85,7 +87,7 @@ TextEditCleaner::TextEditCleaner(QObject * parent):
 	connect(this, &TextEditCleaner::SignalNeedClean, this, &TextEditCleaner::SlotClean);
 }
 
-TextEditCleaner::TextEditCleaner(QTextEdit * objToClean_, unsigned int linesThreshold, QObject * parent):
+TextEditCleaner::TextEditCleaner(QTextEdit * objToClean_, int linesThreshold, QObject * parent):
 	TextEditCleaner(parent)
 {
 	StartClean(objToClean_, linesThreshold);
@@ -96,7 +98,7 @@ TextEditCleaner::~TextEditCleaner()
 	StopClean();
 }
 
-void TextEditCleaner::StartClean(QTextEdit * objToClean_, unsigned int linesThreshold_)
+void TextEditCleaner::StartClean(QTextEdit * objToClean_, int linesThreshold_)
 {
 	objToClean = objToClean_;
 	stopClean = false;
@@ -106,16 +108,13 @@ void TextEditCleaner::StartClean(QTextEdit * objToClean_, unsigned int linesThre
 
 	threadCleaner = new std::thread([this]
 	{
-		unsigned int count;
 		while(!stopClean)
 		{
-			count = objToClean->document()->lineCount();
-			// document()->lineCount() подходит для этой задачи,
-			// он не анализирует весь текст, а возвращает имеющееся внутри объекта значение
-			// альтернативой может быть document()->blockCount()
+			int count = LinesCount();
+
 			if(doClean && count > linesThreshold)
 			{
-				emit SignalNeedClean(count - linesThreshold);
+				emit SignalNeedClean();
 			}
 
 			if(!stopClean) std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -154,12 +153,27 @@ unsigned int TextEditCleaner::GetLinesThreshold()
 	return linesThreshold;
 }
 
-void TextEditCleaner::SlotClean(int count)
+void TextEditCleaner::SlotClean()
 {
+	int count = LinesCount();
+	int countToRemove = count - linesThreshold;
+	if(countToRemove <= 0) return;
+	/// Проверка нужна, на случай если заполнение текста идет долго, занимая поток.
+	/// В этом случае сигнал будет выброшен несколько раз, слот поставлен в очередь,
+	/// а когда заполнение текста закончится слот будет вызван несколько раз и удалит всё.
+
 	QTextCursor cursor = objToClean->textCursor();
 	cursor.setPosition(0);
-	cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, count);
+	cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, countToRemove);
 	cursor.removeSelectedText();
+}
+
+int TextEditCleaner::LinesCount()
+{
+	return objToClean->document()->lineCount();
+	// document()->lineCount() подходит для этой задачи,
+	// он не анализирует весь текст, а возвращает имеющееся внутри объекта значение
+	// альтернативой может быть document()->blockCount()
 }
 
 //--------------------------------------------------------------------------------------------------------------------------
