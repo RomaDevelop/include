@@ -646,9 +646,9 @@ std::vector<int> Code::DecodeStrNumbers(const QString &strNumbers, bool printErr
 
 		if(!ok)
 		{
-			if(element.count('-') == 1)
+			if(element.count(CodeKeyWords::diapasonSplitter) == 1)
 			{
-				QString first = element.left(element.indexOf('-'));
+				QString first = element.left(element.indexOf(CodeKeyWords::diapasonSplitter));
 				QString second = element.remove(0,first.length()+1);
 				bool ok1, ok2;
 				int start = first.toInt(&ok1);

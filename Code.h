@@ -38,6 +38,8 @@ namespace CodeKeyWords
 
 	const QChar assign = '=';
 
+	const QChar diapasonSplitter = '-';
+
 	constexpr std::string_view binCodePrefix = "0b";
 	constexpr std::string_view hexCodePrefix = "0x";
 	const int encodingPrefixSize = binCodePrefix.size();
@@ -143,7 +145,7 @@ public:
 	static std::vector<int> DecodeStrNumbers(const QString &strNumbers, bool printErrorIfEmpty);
 
 	///\brief Разбирает содержимое квадратных кобок в строке
-	/// var[1][0,2,5][3-7] -> { {1}, {0,2,5}, {3,4,5} }
+	/// var[1][0,2,5][3-7] -> { {1}, {0,2,5}, {3,4,5,6,7} }
 	static AllIndexes GetAllIndexes(const QString &text);
 	static QString AllIndexesToStr(const AllIndexes &indexes);
 	static QStringList GetTextsInSquareBrackets(const QString &text);
