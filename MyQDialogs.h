@@ -78,8 +78,9 @@ public:
 		std::vector<CheckBoxDialogItem> checkedItems;
 		std::vector<int> checkedIndexes;
 		QStringList checkedTexts;
-		bool accepted;
-		bool hasChanges;
+		bool accepted = false;
+		bool hasChanges = false;
+		bool acceptedAndChanged = false;
 	};
 
 	inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption, std::vector<CheckBoxDialogItem> items, uint w=640, uint h=480);
@@ -713,6 +714,8 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 			result.changedItems.emplace_back(result.allItems[i]);
 		}
 	}
+
+	result.acceptedAndChanged = (result.accepted and result.hasChanges);
 
 	return result;
 }
