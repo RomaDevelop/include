@@ -141,6 +141,7 @@ public:
 	/// извлекает содержимое первого блока (блок может содержать вложенные блоки)
 	/// всё что до него и сам блок (включая {}) из words будут удалены
 	static QStringList TakeBlock(QStringList &words);
+	static QStringList TakeBlock(QStringList &words, QChar blockOpener, QChar blockCloser);
 
 	static std::vector<int> DecodeStrNumbers(const QString &strNumbers, bool printErrorIfEmpty);
 

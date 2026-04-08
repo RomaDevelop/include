@@ -398,20 +398,25 @@ QString Code::GetNextWord(const QString & text, int charIndexInText)
 
 QStringList Code::TakeBlock(QStringList &words)
 {
+	return TakeBlock(words, CodeKeyWords::blockOpener, CodeKeyWords::blockCloser);
+}
+
+QStringList Code::TakeBlock(QStringList &words, QChar blockOpener, QChar blockCloser)
+{
 	QStringList block;
 	bool started = false;
 	int countNested = 0;
-	while (words.isEmpty() == false) {
+	while (not words.isEmpty()) {
 		if(!started)
 		{
-			if(words.front() == CodeKeyWords::blockOpener) started = true;
+			if(words.front() == blockOpener) started = true;
 			words.removeFirst();
 		}
 		else
 		{
-			if(words.front() == CodeKeyWords::blockOpener)
+			if(words.front() == blockOpener)
 				countNested++;
-			if(words.front() == CodeKeyWords::blockCloser)
+			if(words.front() == blockCloser)
 			{
 				if(countNested == 0)
 				{
@@ -429,7 +434,8 @@ QStringList Code::TakeBlock(QStringList &words)
 	}
 
 	// closer not found - incorrect, print error
-	CodeLogs::Error("Code::TakeBlock not found block closer");
+	if(started)
+		CodeLogs::Error("Code::TakeBlock not found block closer");
 
 	return block;
 }
