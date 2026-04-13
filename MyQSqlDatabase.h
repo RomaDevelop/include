@@ -19,7 +19,6 @@
 #include "MyCppDifferent.h"
 #include "MyQShortings.h"
 #include "MyQString.h"
-#include "MyQFileDir.h"
 
 using QStringPair = std::pair<QString,QString>;
 using QStringPairVector = std::vector<QStringPair>;
@@ -595,34 +594,10 @@ QString AccessDB::CompactDB(QString fullPath)
 	return "";
 }
 
-inline std::pair<bool, QString> CheckFileWithDaysTimeStamp(QString file, int daysInterval)
-{
-	QString error;
-	QFileInfo fi(file);
-	if(!fi.exists()) return { true, "" };
-
-	auto readRes = MyQFileDir::ReadFile2(file);
-	if(readRes.success)
-	{
-		QDate compacted = QDate::fromString(readRes.content, DateFormat);
-		bool res = (compacted.daysTo(QDate::currentDate()) >= daysInterval);
-		return { res, "" };
-	}
-	else
-	{
-		return { true, "Error reading db compacted file "+file };
-	}
-}
-
-inline bool WriteCurrentDateToFile(QString file)
-{
-	return MyQFileDir::WriteFile(file, QDate::currentDate().toString(DateFormat));
-}
-
 QString AccessDB::CompactDBWithCheck(QString fullPath)
 {
 	QString compactedFile = fullPath+".compacted.txt";
-	auto chRes = CheckFileWithDaysTimeStamp(compactedFile, 10);
+	auto chRes = MyQFileDir::FileDateStampCheck(compactedFile, 10);
 	if(chRes.second != "") return chRes.second;
 	if(not chRes.first) { qdbg << "CompactAccessDatabase is not necessary"; return ""; }
 
@@ -630,7 +605,7 @@ QString AccessDB::CompactDBWithCheck(QString fullPath)
 	if(not compactDbRes.isEmpty()) return "CompactAccessDatabase error: "+compactDbRes;
 	else qdbg << "CompactAccessDatabase success";
 
-	if(not WriteCurrentDateToFile(compactedFile))
+	if(not MyQFileDir::FileDateStampWriteCurrentDate(compactedFile))
 		return "Error writing file "+compactedFile;
 
 	return "";

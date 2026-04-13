@@ -58,6 +58,10 @@ struct MyQFileDir
 
 	inline static bool CopyFileWithReplace(const QString &file, const QString & fileDst);
 
+	///\brief returns true if can't read or interval [readed_date-now] is bigger than daysInterval
+	inline static std::pair<bool, QString> FileDateStampCheck(QString file, int daysInterval);
+	inline static bool FileDateStampWriteCurrentDate(QString file);
+
 private:
 	inline static const std::string_view renameErrMarker = "currentFileName:";
 };
@@ -512,6 +516,30 @@ bool MyQFileDir::CopyFileWithReplace(const QString & fileSrc, const QString & fi
 	}
 
 	return true;
+}
+
+std::pair<bool, QString> MyQFileDir::FileDateStampCheck(QString file, int daysInterval)
+{
+	QString error;
+	QFileInfo fi(file);
+	if(!fi.exists()) return { true, "" };
+
+	auto readRes = MyQFileDir::ReadFile2(file);
+	if(readRes.success)
+	{
+		QDate compacted = QDate::fromString(readRes.content, DateFormat);
+		bool res = (compacted.daysTo(QDate::currentDate()) >= daysInterval);
+		return { res, "" };
+	}
+	else
+	{
+		return { true, "Error reading db compacted file "+file };
+	}
+}
+
+bool MyQFileDir::FileDateStampWriteCurrentDate(QString file)
+{
+	return MyQFileDir::WriteFile(file, QDate::currentDate().toString(DateFormat));
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
