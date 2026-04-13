@@ -1,6 +1,8 @@
-.h-lib can be used* just with #include "lib_name.h"
+.h-lib can be used just with INCLUDEPATH and #include "lib_name.h" (*)
 in that case, if .h-lib not added into the make (or other) file
 the compiler may not see the changes in the library, 
 because the project file to which the library was added has not been changed.
+
+To fix this problem you should make minor changes to the file that uses the library.
 
 * libs with QObject children will not work just with #include, they must be added into the project
