@@ -12,6 +12,8 @@ struct PlatformDependent
 	static QDateTime GetProcessStartTime(uint processID);
 	static bool IsProcessRunning(uint processID);
 
+	static bool OpenWithDialog(const QString &filePath);
+
 	static bool IsFileLocked(const QString &file);
 
 	enum CopyMoveFileMode { move, copy };
