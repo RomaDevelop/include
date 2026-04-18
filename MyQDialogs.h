@@ -91,7 +91,13 @@ public:
 	                                                  bool startAllChecked  = false,
 													  uint w = 640, uint h = 480);
 
-	declare_struct_2_fields_move(TableDialogRes, std::unique_ptr<QTableWidget>, table, bool, accepted);
+
+	struct TableDialogRes {
+		std::unique_ptr<QTableWidget> table;
+		bool accepted = false;
+
+		inline std::vector<QStringList> ExtractRows() const;
+	};
 	inline static TableDialogRes Table(const QString &caption, const std::vector<QStringList> &rows,
 									   QStringList horisontalHeader = {}, QStringList verticalHeader = {},
 									   bool autoColWidths = true, bool readOnly = false,
@@ -104,6 +110,7 @@ public:
 											 QStringList horisontalHeader = {}, QStringList verticalHeader = {},
 											 bool autoColWidths = true, bool readOnly = false,
 											 uint w = 800, uint h = 600);
+
 
 	inline static void InfoBar(const QString &message, QWidget *widgetToShowIn);
 
@@ -718,6 +725,26 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	result.acceptedAndChanged = (result.accepted and result.hasChanges);
 
 	return result;
+}
+
+std::vector<QStringList> MyQDialogs::TableDialogRes::ExtractRows() const
+{
+	std::vector<QStringList> rows;
+	if(!table) return rows;
+
+	rows.reserve(table->rowCount());
+	for(int r = 0; r < table->rowCount(); r++)
+	{
+		QStringList row;
+		for(int c = 0; c < table->columnCount(); c++)
+		{
+			auto item = table->item(r, c);
+			row << (item ? item->text() : "");
+		}
+		rows.emplace_back(std::move(row));
+	}
+
+	return rows;
 }
 
 MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::vector<QStringList> &rows,
