@@ -9,7 +9,7 @@
 #include "LaunchParams.h"
 #include "AppDataWork.h"
 
-struct MakeReleaseResult { bool success; QString dirOutput; QString pathToOutputExe; QString exeFileOutput; };
+struct MakeReleaseResult { bool success = false; QString dirOutput; QString pathToOutputExe; QString exeFileOutput; };
 
 struct ReleaseMaker
 {

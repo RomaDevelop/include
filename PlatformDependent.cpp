@@ -10,6 +10,7 @@
 
 #include <QApplication>
 #include <QDebug>
+#include <QDir>
 
 #include "MyQShortings.h"
 
@@ -70,6 +71,28 @@ bool PlatformDependent::IsProcessRunning(uint processID) {
 		else qdbg << "IsProcessRunning::OpenProcess unknown error " + QSn(err);
 	}
 	return false; // Процесс не запущен или не может быть открыт
+}
+
+bool PlatformDependent::OpenWithDialog(const QString &filePath) {
+	if (filePath.isEmpty()) return false;
+
+	std::wstring nativePath = QDir::toNativeSeparators(filePath).toStdWString();
+
+	SHELLEXECUTEINFOW sei {};
+	sei.cbSize = sizeof(SHELLEXECUTEINFOW);
+	sei.fMask = SEE_MASK_ASYNCOK | SEE_MASK_INVOKEIDLIST;
+	sei.lpVerb = L"openas";
+	sei.lpFile = nativePath.c_str();
+	sei.nShow = SW_SHOWNORMAL;
+
+	// от ИИ
+	// Важно: ShellExecuteEx требует инициализации COM для некоторых функций
+	// Если в приложении еще нет CoInitialize, добавьте:
+	// CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+	
+	// дополнение от меня - с CoInitializeEx не линкуется, для него требуется какая-то dll
+
+	return ShellExecuteExW(&sei);
 }
 
 bool PlatformDependent::IsFileLocked(const QString & file) {
