@@ -1,6 +1,8 @@
 #ifndef MyQStrring_H
 #define MyQStrring_H
 
+#include <cstring>
+
 #include <QDebug>
 #include <QStringList>
 #include <QFontMetrics>
@@ -200,7 +202,9 @@ struct StringLiteral
 	template<std::size_t N>
 	constexpr StringLiteral(const char (&str)[N]) : _str(str, N - 1) {}
 	//constexpr StringLiteral(const char *str): _str(str) {}
-	constexpr const char * Get() const { return _str.data(); }
+    static StringLiteral FromCString(const char *str) { return StringLiteral(str, std::strlen(str)); }
+    constexpr const char * GetCString() const { return _str.data(); }
+	constexpr std::string_view GetStringView() const { return _str; }
 	constexpr size_t Size() const { return _str.size(); }
 
 	/// нужно улучшать: в конструкторе вместо constexpr поставить consteval (C++20),
@@ -219,23 +223,28 @@ struct StringLiteral
 	/// могут быть проблемы если использовать это в плагинах, после выгрузки копии будут ссылаться на уничтоженное
 
 private:
+	constexpr StringLiteral(const char *str, size_t size) : _str(str, size) {}
 	const std::string_view _str;
 };
+
+inline bool operator== (const StringLiteral &lhs, const StringLiteral &rhs) { return lhs.GetStringView() == rhs.GetStringView(); }
+inline bool operator!= (const StringLiteral &lhs, const StringLiteral &rhs) { return !(lhs == rhs); }
+inline bool operator< (const StringLiteral &lhs, const StringLiteral &rhs) { return lhs.GetStringView() < rhs.GetStringView(); }
 
 inline bool operator== (const QString &lhs, const StringLiteral &rhs) {
 //	if(lhs.size() != rhs.Size()) // нельзя!!! не будет работать с кириллицей
 //		return false;
-	return lhs==rhs.Get();
+    return lhs==rhs.GetCString();
 }
 inline bool operator== (const StringLiteral &lhs, const QString &rhs) { return rhs==lhs; }
 inline bool operator!= (const QString &lhs, const StringLiteral &rhs) { return !(lhs==rhs); }
 inline bool operator!= (const StringLiteral &lhs, const QString &rhs) { return !(lhs==rhs); }
 
-inline QString operator+ (const char* lhs, const StringLiteral &rhs) { return QString(lhs) + rhs.Get(); }
-inline QString operator+ (const StringLiteral &lhs, const char* rhs) { return QString(lhs.Get()) + rhs; }
+inline QString operator+ (const char* lhs, const StringLiteral &rhs) { return QString(lhs) + rhs.GetCString(); }
+inline QString operator+ (const StringLiteral &lhs, const char* rhs) { return QString(lhs.GetCString()) + rhs; }
 
-inline QString operator+ (const QString &lhs, const StringLiteral &rhs) { return lhs + rhs.Get(); }
-inline QString operator+ (const StringLiteral &lhs, const QString &rhs) { return lhs.Get() + rhs; }
+inline QString operator+ (const QString &lhs, const StringLiteral &rhs) { return lhs + rhs.GetCString(); }
+inline QString operator+ (const StringLiteral &lhs, const QString &rhs) { return lhs.GetCString() + rhs; }
 
 //-------------------------------------------------------------------------------------------------------------------------------
 
