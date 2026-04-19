@@ -40,7 +40,9 @@ struct MyQFileDir
 	inline static QStringList GetAllNestedDirs(QString path,
 											   QDir::Filters filters = QDir::Dirs | QDir::NoDotAndDotDot,
 											   QDir::SortFlag sort = QDir::NoSort);
-	inline static QFileInfoList GetAllFilesIncludeSubcats(QString path, const QStringList &extFilter = {});
+	inline static QFileInfoList GetAllFiles(QString path, const QStringList &extFilter = {}, bool includeSubcats = true);
+    //inline static QFileInfoList GetAllFilesIncludeSubcats(QString path, const QStringList &extFilter = {})
+    // { return GetAllFiles(std::move(path), extFilter, true); }
 
 	inline static QStringList FileInfoListToStrList(const QFileInfoList &fileInfoList);
 	inline static QFileInfoList StrListToFileInfoList(const QStringList &fileInfoList);
@@ -294,9 +296,11 @@ QStringList MyQFileDir::GetAllNestedDirs(QString path, QDir::Filters filters, QD
 	return res;
 }
 
-QFileInfoList MyQFileDir::GetAllFilesIncludeSubcats(QString path, const QStringList &extFilter)
+QFileInfoList MyQFileDir::GetAllFiles(QString path, const QStringList &extFilter, bool includeSubcats)
 {
 	QDir dir(path);
+	if(!dir.exists()) return {};
+
 	QFileInfoList files = dir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
 
 	if(!extFilter.isEmpty())
@@ -306,10 +310,13 @@ QFileInfoList MyQFileDir::GetAllFilesIncludeSubcats(QString path, const QStringL
 		files.erase(removeRes, files.end());
 	}
 
-	QStringList subdirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-	for (const auto &subdir : subdirs)
+	if(includeSubcats)
 	{
-		files += GetAllFilesIncludeSubcats(path + "/" + subdir, extFilter);
+		QStringList subdirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+		for (const auto &subdir : subdirs)
+		{
+			files += GetAllFiles(path + "/" + subdir, extFilter, true);
+		}
 	}
 
 	return files;
