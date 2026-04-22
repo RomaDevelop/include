@@ -30,17 +30,16 @@ public:
 	inline static void SelectText(QTextEdit *textEdit, int index, int length);
 
 public:
-	enum richTextPasteValue { richTextPasteDisabled = 0, richTextPasteEnabled = 1 };
 
 	inline explicit MyQTextEdit(QWidget *parent = nullptr) : QTextEdit(parent)
 	{ }
-	inline explicit MyQTextEdit(MyQTextEdit::richTextPasteValue aRichTextPaste, QWidget *parent = nullptr) :
+	inline explicit MyQTextEdit(bool aRichTextPasteEnabled, QWidget *parent = nullptr) :
 		QTextEdit(parent),
-		richTextPaste{aRichTextPaste == richTextPasteEnabled}
+		richTextPasteEnabled { aRichTextPasteEnabled }
 	{ }
 	virtual ~MyQTextEdit() = default;
 
-	bool richTextPaste = true; // если флаг установлен - текст будет вставляться с сохранением его форматирования
+	bool richTextPasteEnabled = true; // если флаг установлен - текст будет вставляться с сохранением его форматирования
 
 	inline QTextCharFormat LetterFormat(int letterIndex) { return LetterFormat(this, letterIndex); }
 
@@ -203,7 +202,7 @@ void MyQTextEdit::SelectText(QTextEdit *textEdit, int index, int length)
 
 void MyQTextEdit::insertFromMimeData(const QMimeData * source)
 {
-	if(richTextPaste) QTextEdit::insertFromMimeData(source);
+	if(richTextPasteEnabled) QTextEdit::insertFromMimeData(source);
 	else
 	{
 		QString text = source->text(); // Получаем текст из буфера обмена без форматирования
@@ -269,7 +268,11 @@ bool MyQTextEdit::IndentingOnEnterMechanic(QKeyEvent *event)
 
 bool MyQTextEdit::IndentingMultirowMechanic(QKeyEvent *event)
 {
-	if (event->key() != Qt::Key_Tab) return false;
+	const bool removeIndent =
+		event->key() == Qt::Key_Backtab ||
+		(event->key() == Qt::Key_Tab && event->modifiers().testFlag(Qt::ShiftModifier));
+	const bool addIndent = event->key() == Qt::Key_Tab && !removeIndent;
+	if (!addIndent && !removeIndent) return false;
 
 	QTextCursor cursor = textCursor();
 	if (!cursor.hasSelection()) return false;
@@ -286,30 +289,70 @@ bool MyQTextEdit::IndentingMultirowMechanic(QKeyEvent *event)
 	cursor.setPosition(end_pos);
 	int end_block_number = cursor.blockNumber();
 
-	for (int block_n = start_block_number; block_n <= end_block_number; ++block_n) {
-		QTextBlock block = document()->findBlockByNumber(block_n);
+	if(addIndent)
+	{
+		for (int block_n = start_block_number; block_n <= end_block_number; ++block_n)
+		{
+			QTextBlock block = document()->findBlockByNumber(block_n);
 
-		if(block_n == start_block_number) // если это первый выбранный блок
-			selectionFromRowBegin = start_pos == block.position();
+			if(block_n == start_block_number)
+				selectionFromRowBegin = start_pos == block.position();
 
-		QTextCursor block_cursor(block);
-		block_cursor.movePosition(QTextCursor::StartOfBlock);
-		block_cursor.insertText("\t");
+			QTextCursor block_cursor(block);
+			block_cursor.movePosition(QTextCursor::StartOfBlock);
+			block_cursor.insertText("\t");
+		}
+
+		cursor.endEditBlock();
+
+		const int oneTabLen = 1;
+
+		// Update selection
+		if(selectionFromRowBegin) cursor.setPosition(start_pos);
+		else cursor.setPosition(start_pos+oneTabLen);
+		int added_length_total = (end_block_number - start_block_number + 1) * oneTabLen;
+		cursor.setPosition(end_pos + added_length_total, QTextCursor::KeepAnchor);
+		setTextCursor(cursor);
 	}
+	else if(removeIndent)
+	{
+		int removed_length_total = 0;
+		int removed_length_before_start = 0;
+		for (int block_n = start_block_number; block_n <= end_block_number; ++block_n)
+		{
+			QTextBlock block = document()->findBlockByNumber(block_n);
 
-	cursor.endEditBlock();
+			if(block_n == start_block_number)
+				selectionFromRowBegin = start_pos == block.position();
 
-	const int oneTabLen = 1;
+			QTextCursor block_cursor(block);
+			block_cursor.movePosition(QTextCursor::StartOfBlock);
 
-	// Восстанавливаем выделение
-	// начало выделения
-	if(selectionFromRowBegin) cursor.setPosition(start_pos);
-	else cursor.setPosition(start_pos+oneTabLen); // с учетом добавленных отступов
+			const QString blockText = block.text();
+			if (blockText.isEmpty()) continue;
 
-	// конец выделения с учетом добавленных отступов
-	int added_length_total = (end_block_number - start_block_number + 1) * oneTabLen;
-	cursor.setPosition(end_pos + added_length_total, QTextCursor::KeepAnchor);
-	setTextCursor(cursor);
+			int removed_length = 0;
+			if (blockText.front() == '\t') removed_length = 1;
+			else if (blockText.startsWith("    ")) removed_length = 4;
+
+			if (removed_length == 0) continue;
+
+			block_cursor.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor, removed_length);
+			block_cursor.removeSelectedText();
+			removed_length_total += removed_length;
+			if (block_n == start_block_number && !selectionFromRowBegin)
+				removed_length_before_start = removed_length;
+		}
+
+		cursor.endEditBlock();
+
+		// Update selection
+		if(selectionFromRowBegin) cursor.setPosition(start_pos);
+		else cursor.setPosition(start_pos-removed_length_before_start);
+		cursor.setPosition(end_pos - removed_length_total, QTextCursor::KeepAnchor);
+		setTextCursor(cursor);
+	}
+	else qdbg << "MyQTextEdit::IndentingMultirowMechanic: !addIndent and !removeIndent";
 
 	return true;
 }
