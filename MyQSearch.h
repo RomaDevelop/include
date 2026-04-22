@@ -28,6 +28,7 @@ public:
 
     inline std::array<QWidget*, 3> AllButtons();
     inline QLineEdit* LineEdit() { return lineEditTextToFind; }
+	inline QCheckBox* CheckBoxCaseSense() { return chBoxCaseSense; }
 
     inline void Place(QTextEdit *textEdit, QHBoxLayout *hlo);
     inline void SetTextEdit(QTextEdit *textEdit);
@@ -42,7 +43,7 @@ private:
     QPushButton *btnSearch;
     QPushButton *btnBack;
     QPushButton *btnForward;
-    QCheckBox *chBoxSearchCaseSense = nullptr;
+	QCheckBox *chBoxCaseSense = nullptr;
     Qt::CaseSensitivity caseSenseForFind = Qt::CaseInsensitive;
     ///\brief Вектор в котором хранятся результаты поиска (индексы найденного)
     std::vector<int> foundIndexes;
@@ -61,11 +62,11 @@ MyQSearch::MyQSearch()
     btnBack->setIcon(QApplication::style()->standardIcon(QStyle::StandardPixmap::SP_ArrowBack));
     btnForward = new QPushButton();
     btnForward->setIcon(QApplication::style()->standardIcon(QStyle::StandardPixmap::SP_ArrowForward));
-    chBoxSearchCaseSense = new QCheckBox("Учитывать регистр");
+	chBoxCaseSense = new QCheckBox("Учитывать регистр");
     QObject::connect(btnSearch, &QPushButton::clicked, btnSearch, [this]() { SlotBtnFind(); });
     QObject::connect(btnBack, &QPushButton::clicked, btnBack, [this]() { SlotBtnPrev(); });
     QObject::connect(btnForward, &QPushButton::clicked, btnForward, [this]() { SlotBtnNext(); });
-    QObject::connect(chBoxSearchCaseSense, &QCheckBox::stateChanged, [this](int state)
+	QObject::connect(chBoxCaseSense, &QCheckBox::stateChanged, [this](int state)
     {
         if(state == Qt::Unchecked) caseSenseForFind = Qt::CaseInsensitive;
         else if(state == Qt::Checked) caseSenseForFind = Qt::CaseSensitive;
@@ -89,7 +90,7 @@ void MyQSearch::Place(QTextEdit * textEdit, QHBoxLayout * hlo)
     hlo->addWidget(btnBack);
     hlo->addWidget(btnSearch);
     hlo->addWidget(btnForward);
-    hlo->addWidget(chBoxSearchCaseSense);
+	hlo->addWidget(chBoxCaseSense);
 }
 
 void MyQSearch::SetTextEdit(QTextEdit * textEdit)

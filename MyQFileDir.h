@@ -40,7 +40,7 @@ struct MyQFileDir
 	inline static QStringList GetAllNestedDirs(QString path,
 											   QDir::Filters filters = QDir::Dirs | QDir::NoDotAndDotDot,
 											   QDir::SortFlag sort = QDir::NoSort);
-	inline static QFileInfoList GetAllFiles(QString path, const QStringList &extFilter = {}, bool includeSubcats = true);
+	inline static QFileInfoList GetAllFiles(QString path, bool includeSubcats, const QStringList &extFilter = {});
     //inline static QFileInfoList GetAllFilesIncludeSubcats(QString path, const QStringList &extFilter = {})
     // { return GetAllFiles(std::move(path), extFilter, true); }
 
@@ -296,7 +296,7 @@ QStringList MyQFileDir::GetAllNestedDirs(QString path, QDir::Filters filters, QD
 	return res;
 }
 
-QFileInfoList MyQFileDir::GetAllFiles(QString path, const QStringList &extFilter, bool includeSubcats)
+QFileInfoList MyQFileDir::GetAllFiles(QString path, bool includeSubcats, const QStringList &extFilter)
 {
 	QDir dir(path);
 	if(!dir.exists()) return {};
@@ -315,7 +315,7 @@ QFileInfoList MyQFileDir::GetAllFiles(QString path, const QStringList &extFilter
 		QStringList subdirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
 		for (const auto &subdir : subdirs)
 		{
-			files += GetAllFiles(path + "/" + subdir, extFilter, true);
+			files += GetAllFiles(path + "/" + subdir, includeSubcats, extFilter);
 		}
 	}
 
