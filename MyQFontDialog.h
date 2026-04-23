@@ -4,6 +4,7 @@
 #include <climits>
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFont>
@@ -15,6 +16,7 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QTextEdit>
 #include <QVBoxLayout>
 
 #include "MyQDialogs.h"
@@ -42,7 +44,25 @@ private:
 	inline static void SelectRow(QListWidget *listWidget, int row);
 	inline static void SyncEditWithList(QLineEdit *lineEdit, QListWidget *listWidget);
 	inline static void FillList(QListWidget *listWidget, const QStringList &values);
+	inline static std::vector<std::pair<QString, QString>> SampleTexts();
 };
+//--------------------------------------------------------------------------------------------------------------------------
+std::vector<std::pair<QString, QString>> MyQFontDialog::SampleTexts()
+{
+	return {
+		{QStringLiteral("Arabic"), QStringLiteral("ابتثجحخ دذرزسشصض")},
+		{QStringLiteral("Armenian"), QStringLiteral("ԱաԲբԳգԴդԵեԶզ")},
+		{QStringLiteral("Cyrillic"), QStringLiteral("АаБбВвГгДд ЕеЖжЗз")},
+		{QStringLiteral("Digits"), QStringLiteral("0123456789")},
+		{QStringLiteral("Greek"), QStringLiteral("ΑαΒβΓγΔδ ΕεΖζΗηΘθ")},
+		{QStringLiteral("Hex"), QStringLiteral("0123456789ABCDEF abcdef")},
+		{QStringLiteral("Latin"), QStringLiteral("AaBbYyZz")},
+		{QStringLiteral("Latin Extended"), QStringLiteral("ÀàÄäÇçÑñØøŽž")},
+		{QStringLiteral("Mixed"), QStringLiteral("AaБбΓγԱա123")},
+		{QStringLiteral("Symbols"), QStringLiteral("@#&%!?+-=*/()[]{}")}
+	};
+}
+
 //--------------------------------------------------------------------------------------------------------------------------
 QStringList MyQFontDialog::SizeValues(const QString &family)
 {
@@ -176,6 +196,26 @@ MyQFontDialog::Result MyQFontDialog::GetFontExt(const QFont &startFont, QWidget 
 	vloSize->addWidget(listSize);
 	hloTop->addLayout(vloSize);
 
+	QHBoxLayout *hloBottomLevel = new QHBoxLayout;
+	vloMain->addLayout(hloBottomLevel);
+
+	QVBoxLayout *vloSampleInput = new QVBoxLayout;
+	QLineEdit *editSampleText = new QLineEdit(QStringLiteral("AaBbYyZz"));
+	QComboBox *comboSampleText = new QComboBox;
+	editSampleText->setClearButtonEnabled(true);
+	vloSampleInput->addWidget(new QLabel(QStringLiteral("Sample text")));
+	vloSampleInput->addWidget(editSampleText);
+	vloSampleInput->addWidget(comboSampleText);
+	hloBottomLevel->addLayout(vloSampleInput, 1);
+
+	QVBoxLayout *vloPreview = new QVBoxLayout;
+	QTextEdit *textPreview = new QTextEdit;
+	textPreview->setReadOnly(true);
+	textPreview->setMinimumHeight(140);
+	vloPreview->addWidget(new QLabel(QStringLiteral("Preview")));
+	vloPreview->addWidget(textPreview, 1);
+	hloBottomLevel->addLayout(vloPreview, 1);
+
 	QDialogButtonBox *buttonBox = new QDialogButtonBox;
 	QPushButton *btnAccept = buttonBox->addButton(MyQDialogs::Accept, QDialogButtonBox::AcceptRole);
 	QPushButton *btnCansel = buttonBox->addButton(MyQDialogs::Cansel, QDialogButtonBox::RejectRole);
@@ -185,6 +225,7 @@ MyQFontDialog::Result MyQFontDialog::GetFontExt(const QFont &startFont, QWidget 
 	FillList(listFamily, families);
 	listFamily->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 	listSize->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+	for(const auto &sample : SampleTexts()) comboSampleText->addItem(sample.first, sample.second);
 
 	auto rebuildSizes = [listSize, editSize](const QString &family, int preferredSize)
 	{
@@ -197,6 +238,28 @@ MyQFontDialog::Result MyQFontDialog::GetFontExt(const QFont &startFont, QWidget 
 		if(row == -1 and listSize->count()) row = 0;
 		SelectRow(listSize, row);
 		SyncEditWithList(editSize, listSize);
+	};
+
+	auto buildCurrentFont = [&]() {
+		QFont font = startFont;
+
+		if(auto familyItem = listFamily->currentItem(); familyItem)
+			font.setFamily(familyItem->text());
+
+		bool sizeOk = false;
+		const int sizeValue = editSize->text().toInt(&sizeOk);
+		if(sizeOk and sizeValue > 0) font.setPointSize(sizeValue);
+
+		font.setStrikeOut(chStrikeOut->isChecked());
+		font.setUnderline(chUnderline->isChecked());
+		font.setItalic(chItalic->isChecked());
+		font.setBold(chBold->isChecked());
+		return font;
+	};
+
+	auto updatePreview = [&]() {
+		textPreview->setFont(buildCurrentFont());
+		textPreview->setPlainText(editSampleText->text());
 	};
 
 	auto familyChanged = [listFamily, editFamily, listSize, editSize, &rebuildSizes]()
@@ -231,6 +294,22 @@ MyQFontDialog::Result MyQFontDialog::GetFontExt(const QFont &startFont, QWidget 
 	QObject::connect(editSize, &QLineEdit::textChanged, &dialog, [listSize](const QString &text) {
 		SelectRow(listSize, FindNearestSizeRow(listSize, text));
 	});
+	QObject::connect(editSampleText, &QLineEdit::textChanged, &dialog, updatePreview);
+	QObject::connect(comboSampleText, QOverload<int>::of(&QComboBox::currentIndexChanged), &dialog,
+					 [comboSampleText, editSampleText, updatePreview](int index) {
+		if(index < 0) return;
+		const QString value = comboSampleText->itemData(index).toString();
+		if(editSampleText->text() != value) editSampleText->setText(value);
+		else updatePreview();
+	});
+	QObject::connect(listFamily, &QListWidget::currentRowChanged, &dialog, updatePreview);
+	QObject::connect(listSize, &QListWidget::currentRowChanged, &dialog, updatePreview);
+	QObject::connect(editFamily, &QLineEdit::textChanged, &dialog, updatePreview);
+	QObject::connect(editSize, &QLineEdit::textChanged, &dialog, updatePreview);
+	QObject::connect(chStrikeOut, &QCheckBox::toggled, &dialog, updatePreview);
+	QObject::connect(chUnderline, &QCheckBox::toggled, &dialog, updatePreview);
+	QObject::connect(chItalic, &QCheckBox::toggled, &dialog, updatePreview);
+	QObject::connect(chBold, &QCheckBox::toggled, &dialog, updatePreview);
 
 	QObject::connect(listFamily, &QListWidget::itemDoubleClicked, &dialog, [btnAccept]() { btnAccept->click(); });
 	QObject::connect(listSize, &QListWidget::itemDoubleClicked, &dialog, [btnAccept]() { btnAccept->click(); });
@@ -246,12 +325,7 @@ MyQFontDialog::Result MyQFontDialog::GetFontExt(const QFont &startFont, QWidget 
 		const int sizeValue = sizeItem->text().toInt(&ok);
 		if(!ok or sizeValue <= 0) { QMbError(QStringLiteral("Wrong font size")); return; }
 
-		result.font.setFamily(familyItem->text());
-		result.font.setPointSize(sizeValue);
-		result.font.setStrikeOut(chStrikeOut->isChecked());
-		result.font.setUnderline(chUnderline->isChecked());
-		result.font.setItalic(chItalic->isChecked());
-		result.font.setBold(chBold->isChecked());
+		result.font = buildCurrentFont();
 		result.accepted = true;
 		dialog.accept();
 	});
@@ -270,6 +344,7 @@ MyQFontDialog::Result MyQFontDialog::GetFontExt(const QFont &startFont, QWidget 
 	chUnderline->setChecked(startFont.underline());
 	chItalic->setChecked(startFont.italic());
 	chBold->setChecked(startFont.bold());
+	updatePreview();
 
 	dialog.exec();
 	return result;
