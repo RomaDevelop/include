@@ -4,5 +4,7 @@ the compiler may not see the changes in the library,
 because the project file to which the library was added has not been changed.
 
 To fix this problem you should make minor changes to the file that uses the library.
+Sometimes changes will be accepted after changing only one file from all files including lib,
+so in pig projects highly recommended add lib in project adding it in HEADERS.
 
-* libs with QObject children will not work just with #include, they must be added into the project
+* libs with QObject children will not work just with INCLUDEPATH + #include, they must be added into the project
