@@ -65,11 +65,12 @@ public:
 
 	// returns -1 index and empty text if cansel or close
 	declare_struct_3_fields_move(ListDialogRes, int, chosenIndex, QString, chosenText, bool, accepted);
-	// insert MyQDialogs::DisableMarker in value to disable row
+	/// insert MyQDialogs::DisableMarker in value to disable row
+	/// if canselButton is empty, window close button will be disabled
 	inline static ListDialogRes ListDialog(QString caption, QStringList valuesList,
-										   QString acceptButton = Accept, QString canselButton = Cansel, uint w = 640, uint h = 480);
-	inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter,
-										   QString acceptButton = Accept, QString canselButton = Cansel, uint w = 640, uint h = 480);
+										   QString acceptButton = Accept, QString canselButton = Cansel,
+										   uint w = 640, uint h = 480,
+										   int selectedRow = -1);
 
 	declare_struct_3_fields_move(CheckBoxDialogItem, QString, text, bool, checked, bool, enabled);
 	struct CheckBoxDialogResult {
@@ -498,9 +499,9 @@ MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QStr
 }
 
 MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList valuesList,
-                                                 QString acceptButton, QString canselButton, uint w, uint h)
+												 QString acceptButton, QString canselButton, uint w, uint h, int selectedRow)
 {
-	ListDialogRes res(-1,"", false);
+	ListDialogRes res(-1, "", false);
 	QDialog dialog;
 	dialog.resize(w, h);
 	dialog.setWindowTitle(caption);
@@ -508,20 +509,25 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 	QListWidget *listWidget = new QListWidget;
 	vloMain->addWidget(listWidget);
 
+	int firstEnabledRow = -1;
 	for(int i=0; i<valuesList.size(); i++)
 	{
 		auto item = new QListWidgetItem;
 		if(not valuesList[i].contains(MyQDialogs::DisableMarker))
 		{
 			item->setText(valuesList[i]);
+			if(firstEnabledRow == -1) firstEnabledRow = i;
 		}
 		else
 		{
+			if(selectedRow == i) qdbg << "ListDialog get arg selectedRow = "+QSn(selectedRow)+", but this row is disabled";
 			item->setText(valuesList[i].remove(MyQDialogs::DisableMarker));
 			item->setFlags(item->flags().setFlag(Qt::ItemIsEnabled, false));
 		}
 		listWidget->addItem(item);
 	}
+
+	if(selectedRow != -1) listWidget->setCurrentRow(selectedRow);
 
 	auto acceptAction = [&dialog, listWidget, &res]()
 	{
@@ -537,25 +543,44 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 	QObject::connect(listWidget, &QListWidget::itemDoubleClicked, acceptAction);
 
 	acceptButton.prepend(' ').append(' ');
-	canselButton.prepend(' ').append(' ');
 
 	auto hloBtns = new QHBoxLayout();
 	vloMain->addLayout(hloBtns);
 	hloBtns->addStretch();
 	hloBtns->addWidget(new QPushButton(acceptButton));
 	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, acceptAction);
-	hloBtns->addWidget(new QPushButton(canselButton));
-	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog]() { dialog.close(); });
+
+	if(not canselButton.isEmpty())
+	{
+		canselButton.prepend(' ').append(' ');
+		hloBtns->addWidget(new QPushButton(canselButton));
+		QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog]() { dialog.close(); });
+	}
+	else
+	{
+		dialog.setWindowFlags(dialog.windowFlags() & ~Qt::WindowCloseButtonHint);
+	}
+
+	if(selectedRow != -1)
+		listWidget->setCurrentRow(selectedRow);
+	else
+		listWidget->setCurrentRow(firstEnabledRow);
+		/// For some reason, after the dialog displays (more than 100 ms after exec),
+		/// the first available item is implicitly set as the current. It's not even highlighted.
+		/// I couldn't find a way to disable it. I set it as explicitly selected, highlighte it.
+
+	// to check whether an item is implicitly set as current
+//	QObject::connect(listWidget, &QListWidget::currentItemChanged,
+//					 [listWidget](){ qdbg << "cic" << listWidget->currentRow() << listWidget->currentItem(); });
+//	QObject::connect(listWidget, &QListWidget::itemActivated,
+//					 [listWidget](){ qdbg << "itemActivated"; });
+
+//	QTimer::singleShot(100, [listWidget](){ qdbg << listWidget->currentRow() << listWidget->currentItem(); });
+//	QTimer::singleShot(200, [listWidget](){ qdbg << listWidget->currentRow() << listWidget->currentItem(); });
+//	QTimer::singleShot(300, [listWidget](){ qdbg << listWidget->currentRow() << listWidget->currentItem(); });
 
 	dialog.exec();
 	return res;
-}
-
-MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QString valuesList, QString splitter,
-                                                 QString acceptButton, QString canselButton, uint w, uint h)
-{
-	if(valuesList.endsWith(splitter)) valuesList.chop(splitter.size());
-	return ListDialog(std::move(caption), valuesList.split(splitter), std::move(acceptButton), std::move(canselButton), w, h);
 }
 
 MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &caption, std::vector<CheckBoxDialogItem> items, uint w, uint h)
