@@ -24,15 +24,21 @@ public:
 	/// disables detaching if detachDistance <= 0
 	/// can be called repeatedly to reset detachDistance
 	inline virtual void EnableDetaching(int detachDistance = 50);
-
-	inline bool IsOverTabs(const QPoint &globalPos);
-	inline void UpdatePlaceholder(const QPoint &globalPos, const QString &text);
-	inline void ReplacePlaceholder(QString caption, QWidget *window);
+	QWidget* TabPlaceholder() { return tabPlaceholder; }
 
 private:
+	/// Checks position is over tabs sector of QTabWidget
+	inline bool IsOverTabs(const QPoint &globalPos);
+	/// Creates, moves or removes tab placeholder
+	inline void UpdatePlaceholder(const QPoint &globalPos, const QString &text);
+	/// Replaces tab placeholder with given tab. Placeholder deletes after.
+	inline void ReplacePlaceholder(QString caption, QWidget *window);
+
 	DetachFilter *detachFilter {};
 
 	QWidget *tabPlaceholder = {};
+
+	friend class DetachableWindow;
 };
 
 //--------------------------------------------------------------------------------------------------------------------------
