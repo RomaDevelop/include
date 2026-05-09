@@ -12,6 +12,8 @@
 #define QMbc QMessageBox::critical
 #define QMbe QMessageBox::critical
 #define QMbq QMessageBox::question
+#define QMbYes QMessageBox::Yes
+#define QMbNo QMessageBox::No
 #define QMbInfo(text) QMessageBox::information(nullptr, "Information", text)
 #define QMbWarning(text) QMessageBox::warning(nullptr, "Warning", text)
 #define QMbError(text) QMessageBox::critical(nullptr, "Error", text)

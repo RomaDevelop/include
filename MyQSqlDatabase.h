@@ -78,7 +78,7 @@ private:
 public:
 	static const BaseData& BaseDataMain() { return baseDataMain; }
 	static const BaseData& BaseDataCurrent() { return baseDataCurrent; }
-	//static void SetBaseDataCurrent(BaseData baseData) { baseDataCurrent = std::move(baseData); }
+    static void SetBaseDataCurrent(BaseData baseData) { baseDataCurrent = std::move(baseData); }
 
 	inline static bool InitDB(const BaseData &data, QSqlDatabase &db)
 	{
