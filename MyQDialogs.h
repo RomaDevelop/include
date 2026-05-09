@@ -71,6 +71,8 @@ public:
 										   QString acceptButton = Accept, QString canselButton = Cansel,
 										   uint w = 640, uint h = 480,
 										   int selectedRow = -1);
+	inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter,
+										   QString acceptButton = Accept, QString canselButton = Cansel, uint w = 640, uint h = 480);
 
 	declare_struct_3_fields_move(CheckBoxDialogItem, QString, text, bool, checked, bool, enabled);
 	struct CheckBoxDialogResult {
@@ -581,6 +583,13 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 
 	dialog.exec();
 	return res;
+}
+
+MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QString valuesList, QString splitter,
+                                                 QString acceptButton, QString canselButton, uint w, uint h)
+{
+	if(valuesList.endsWith(splitter)) valuesList.chop(splitter.size());
+	return ListDialog(std::move(caption), valuesList.split(splitter), std::move(acceptButton), std::move(canselButton), w, h);
 }
 
 MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &caption, std::vector<CheckBoxDialogItem> items, uint w, uint h)
