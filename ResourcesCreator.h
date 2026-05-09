@@ -10,12 +10,14 @@
 #include <QFile>
 #include <QDir>
 #include <QFileInfo>
+#include <QIcon>
 
 #include "MyQShortings.h"
 
 struct Resource
 {
-	QString GetPathName() const { return pathNameInDistib; }
+	QString PathName() const { return pathNameInDistib; }
+	QIcon Icon() const { return QIcon(pathNameInDistib); }
 
 	inline static QStringList errors;
 	Resource(QString pathStorageInSources, const QString &pathStorageInDistrib, const QString &filename, bool copyResourcesInDistib)
