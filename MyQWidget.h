@@ -21,6 +21,8 @@ struct LineEdit_w_Clear;
 
 struct MyQWidget
 {
+	inline static void ShowExtended(QWidget *widget, bool setActive);
+
 	inline static void SetFontFamily(QWidget *obj, const QString &fontName);
 
 	inline static void SetFontPointSize(QWidget *obj, int fontSize);
@@ -75,6 +77,18 @@ struct LineEdit_w_Clear
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
+
+void MyQWidget::ShowExtended(QWidget *widget, bool setActive)
+{
+	widget->show(); // если окно свернуто в трей, если нет - вреда нет
+
+	auto state = widget->windowState();
+	state.setFlag(Qt::WindowMinimized, false);				// если окно свернуто в плашку, если нет - вреда нет
+	if(setActive) state.setFlag(Qt::WindowActive, true);	// для активации
+	widget->setWindowState(state);
+
+	if(setActive) widget->activateWindow(); // для активации, той не достаточно
+}
 
 void MyQWidget::SetFontFamily(QWidget *obj, const QString &fontName)
 {
