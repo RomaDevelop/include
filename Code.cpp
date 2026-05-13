@@ -710,6 +710,11 @@ TextConstant::Result TextConstant::GetTextConstVal(const QString & txtConst)
 	return res;
 }
 
+QString TextConstant::GetTextConstantValSmart(const QString & text)
+{
+	return TextConstant::IsItTextConstant(text, false) ? GetTextConstVal(text, false) : text;
+}
+
 bool TextConstant::IsItTextConstant(const QString &text, bool printLog = false)
 {
 	if(text.size() > 1)
