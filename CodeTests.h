@@ -537,7 +537,7 @@ QStringList CodeTests::TestTextToStatements()
 //		return false;
 //	});
 
-//	if(!errorsAllTests.isEmpty()) MyQDialogs::ShowText(errorsAllTests);
+//	if(!errorsAllTests.isEmpty()) MyQDialogs::ShowText("", errorsAllTests);
 
 	return errorsAllTests;
 }

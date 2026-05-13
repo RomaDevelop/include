@@ -33,9 +33,9 @@ declare_struct_2_fields_move(mqdMenuItem, QString, text, std::function<void()>, 
 class MyQDialogs
 {
 public:
-	inline static void ShowText(const QString &text, uint w = 800, uint h = 600);
-	inline static void ShowText(const QStringList &text, uint w = 800, uint h = 600);
-	inline static void ShowHtml(const QString &html, uint w = 800, uint h = 600);
+	inline static void ShowText(const QString &title, const QString &text, uint w = 800, uint h = 600);
+	inline static void ShowText(const QString &title, const QStringList &text, uint w = 800, uint h = 600);
+	inline static void ShowHtml(const QString &title, const QString &html, uint w = 800, uint h = 600);
 
 	inline static void InfoCopyable(QWidget *parent, const QString &title, const QString& text);
 	inline static void ErrorCopyable(QWidget *parent, const QString &title, const QString& text);
@@ -57,7 +57,8 @@ public:
 	inline static mqdMenuItem DisabledItem(QString text) { text+=DisableMarker; return mqdMenuItem(std::move(text), nullptr);  }
 
 	declare_struct_4_fields_move(InputTextRes, QString, text, bool, textHasChanged, bool, accepted, bool, acceptedAndChanged);
-	inline static InputTextRes InputText(QString captionDialog = "", QString startText = "", uint w = 640, uint h = 480);
+	/// helpText supports html
+	inline static InputTextRes InputText(QString captionDialog = "", QString startText = "", QString helpText = "", uint w = 640, uint h = 480);
 	inline static InputTextRes InputLine(QString captionDialog = "", QString textDialog = "", QString startText = "", uint w = 640);
 	declare_struct_3_fields_move(InputLineResExt, QString, text, bool, textHasChanged, QString, button);
 	inline static InputLineResExt InputLineExt(QString captionDialog = "", QString textDialog = "", QString startText = "",
@@ -126,17 +127,20 @@ public:
 	inline static const QString DisableMarker = QStringLiteral("[__DisableMarker__]");
 
 	// buttons
-	inline static const QString Accept = QStringLiteral("Принять");
-	inline static const QString Cansel = QStringLiteral("Отмена");
-	inline static const QString Close = QStringLiteral("Закрыть");
+	inline static const QString Accept = QStringLiteral("Accept");
+	inline static const QString Cansel = QStringLiteral("Cansel");
+	inline static const QString Close = QStringLiteral("Close");
+	inline static const QString Help = QStringLiteral("Help");
 
 	inline static const QString Undefined = QStringLiteral("Undefined");
 };
 //--------------------------------------------------------------------------------------------------------------------------
-void MyQDialogs::ShowText(const QString & text, uint w, uint h)
+void MyQDialogs::ShowText(const QString &title, const QString & text, uint w, uint h)
 {
 	QDialog dialog_obj;
 	QDialog *dialog = &dialog_obj;
+	dialog->setWindowTitle(title);
+	dialog->setWindowFlag(Qt::WindowContextHelpButtonHint, false);
 	QHBoxLayout *hlo  = new QHBoxLayout(dialog);
 	QTextBrowser *textBrowser = new QTextBrowser;
 	textBrowser->setTabStopDistance(40);
@@ -149,10 +153,11 @@ void MyQDialogs::ShowText(const QString & text, uint w, uint h)
 	dialog->exec();
 }
 
-void MyQDialogs::ShowText(const QStringList &text, uint w, uint h)
+void MyQDialogs::ShowText(const QString &title, const QStringList &text, uint w, uint h)
 {
 	QDialog dialog_obj;
 	QDialog *dialog = &dialog_obj;
+	dialog->setWindowTitle(title);
 	QHBoxLayout *hlo  = new QHBoxLayout(dialog);
 	QTextBrowser *textBrowser = new QTextBrowser;
 	textBrowser->setTabStopDistance(40);
@@ -168,10 +173,12 @@ void MyQDialogs::ShowText(const QStringList &text, uint w, uint h)
 	dialog->exec();
 }
 
-void MyQDialogs::ShowHtml(const QString &html, uint w, uint h)
+void MyQDialogs::ShowHtml(const QString &title, const QString &html, uint w, uint h)
 {
 	QDialog dialog_obj;
 	QDialog *dialog = &dialog_obj;
+	dialog->setWindowTitle(title);
+	dialog->setWindowFlag(Qt::WindowContextHelpButtonHint, false);
 	QHBoxLayout *hlo  = new QHBoxLayout(dialog);
 	QTextBrowser *textBrowser = new QTextBrowser;
 	textBrowser->setTabStopDistance(40);
@@ -413,11 +420,13 @@ QMenu* MyQDialogs::MenuItemsToQMenu(std::vector<mqdMenuItem> &&items, QWidget *p
 	return menu;
 }
 
-MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString startText,  uint w, uint h)
+MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString startText, QString helpText, uint w, uint h)
 {
-	QDialog dialog;
 	InputTextRes res;
+	QDialog dialog;
 	dialog.setWindowTitle(captionDialog);
+	dialog.setWindowFlag(Qt::WindowContextHelpButtonHint, false);
+
 	QVBoxLayout *vloAll  = new QVBoxLayout(&dialog);
 	QTextEdit *textEdit = new QTextEdit;
 	textEdit->setTabStopDistance(40);
@@ -427,7 +436,16 @@ MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString st
 	auto hloBtns = new QHBoxLayout;
 	vloAll->addLayout(hloBtns);
 
+	if(!helpText.isEmpty())
+	{
+		hloBtns->addWidget(new QPushButton(Help));
+		QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog, &helpText](){
+			MyQDialogs::ShowHtml("Help", dialog.width()*0.9, dialog.height()*0.9);
+		});
+	}
+
 	hloBtns->addStretch();
+
 	hloBtns->addWidget(new QPushButton(Accept));
 	QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&res, &dialog, textEdit](){
 		res.accepted=true;
@@ -460,6 +478,7 @@ MyQDialogs::InputLineResExt MyQDialogs::InputLineExt(QString captionDialog, QStr
 													 QStringList buttons, uint w)
 {
 	QDialog dialog;
+	dialog.setWindowFlag(Qt::WindowContextHelpButtonHint, false);
 	InputLineResExt res;
 	res.button = Undefined;
 	dialog.setWindowTitle(captionDialog);
@@ -505,6 +524,7 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 {
 	ListDialogRes res(-1, "", false);
 	QDialog dialog;
+	dialog.setWindowFlag(Qt::WindowContextHelpButtonHint, false);
 	dialog.resize(w, h);
 	dialog.setWindowTitle(caption);
 	QVBoxLayout *vloMain  = new QVBoxLayout(&dialog);
@@ -617,6 +637,7 @@ MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &capti
 	CheckBoxDialogResult result;
 
 	QDialog dialog;
+	dialog.setWindowFlag(Qt::WindowContextHelpButtonHint, false);
 	dialog.resize(w, h);
 	dialog.setWindowTitle(caption);
 	auto vloMain = new QVBoxLayout(&dialog);
@@ -786,6 +807,7 @@ MyQDialogs::TableDialogRes MyQDialogs::Table(const QString &caption, const std::
 											 bool autoColWidths, bool readOnly, uint w, uint h)
 {
 	QDialog dialog;
+	dialog.setWindowFlag(Qt::WindowContextHelpButtonHint, false);
 	dialog.setWindowTitle(caption);
 	if(!w) w = 640;
 	if(!h) h = 480;
@@ -1055,7 +1077,6 @@ void MyQDialogs::ToastMessage(QString caption, QString text, int duration, MyQDi
 	rootLayout->setContentsMargins(0, 0, 0, 0); // Убираем отступы внешнего контейнера
 	rootLayout->addWidget(background);
 
-	// Логика закрытия
 	QObject::connect(btnClose, &QPushButton::clicked, toast, &QWidget::close);
 
 	if (duration > 0) { QTimer::singleShot(duration, toast, &QWidget::close); }
