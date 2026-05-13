@@ -57,7 +57,6 @@ public:
 	inline static mqdMenuItem DisabledItem(QString text) { text+=DisableMarker; return mqdMenuItem(std::move(text), nullptr);  }
 
 	declare_struct_4_fields_move(InputTextRes, QString, text, bool, textHasChanged, bool, accepted, bool, acceptedAndChanged);
-	/// helpText supports html
 	inline static InputTextRes InputText(QString captionDialog = "", QString startText = "", QString helpText = "", uint w = 640, uint h = 480);
 	inline static InputTextRes InputLine(QString captionDialog = "", QString textDialog = "", QString startText = "", uint w = 640);
 	declare_struct_3_fields_move(InputLineResExt, QString, text, bool, textHasChanged, QString, button);
@@ -440,7 +439,7 @@ MyQDialogs::InputTextRes MyQDialogs::InputText(QString captionDialog, QString st
 	{
 		hloBtns->addWidget(new QPushButton(Help));
 		QObject::connect(LastAddedWidget(hloBtns,QPushButton), &QPushButton::clicked, [&dialog, &helpText](){
-			MyQDialogs::ShowHtml("Help", dialog.width()*0.9, dialog.height()*0.9);
+			MyQDialogs::ShowText("Help", helpText, dialog.width()*0.9, dialog.height()*0.9);
 		});
 	}
 
