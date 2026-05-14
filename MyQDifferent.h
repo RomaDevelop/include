@@ -1,7 +1,7 @@
-//------------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------
 #ifndef MYQDIFFERENT_H
 #define MYQDIFFERENT_H
-//------------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------
 #include <set>
 
 #include <QCoreApplication>
@@ -15,7 +15,7 @@
 
 #include "MyQShortings.h"
 #include "MyQFileDir.h"
-//------------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------
 
 struct Time_dhms;
 
@@ -45,32 +45,17 @@ struct MyQDifferent
 
 //------------------------------------------------------------------------------------------------------------------------------------------
 
-struct Time_dhms {
-	uint64_t d;
-	uint h;
-	uint m;
-	uint s;
-	QString ToString()
-	{
-//		QString res;
-//		if(d>0) res += QSn(d)+"d";
-//		if(h>0 or !res.isEmpty()) res += QSn(h)+"h";
-//		if(m>0 or !res.isEmpty()) res += QSn(m)+"m";
-//		if(s>0 or !res.isEmpty()) res += QSn(s)+"s";
-//		return res;
+struct Time_dhms
+{
+	uint64_t d = 0;
+	uint h = 0;
+	uint m = 0;
+	uint s = 0;
 
-		if(d == 0 and h == 0 and m == 0 and s == 0) return "zero time";
-		QString res;
-		if(d>0) res += QSn(d)+" days";
-		if(h == 0 and m == 0 and s == 0) res += " exactly";
-		else
-		{
-			if(!res.isEmpty()) res.append(" + ");
+	inline Time_dhms() = default;
+	inline Time_dhms(uint64_t seconds);
 
-			res.append(QTime(h,m,s).toString(TimeFormat));
-		}
-		return res;
-	}
+	inline QString ToString() const;
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -272,15 +257,46 @@ void MyQDifferent::SetSelectedText(QLineEdit *lineEdit, const QString &newText)
 
 Time_dhms MyQDifferent::CalcSeconds(uint64_t seconds)
 {
-	Time_dhms time;
-	time.d = seconds / 86400;
-	time.h = (seconds % 86400) / 3600;
-	time.m = (seconds % 3600) / 60;
-	time.s = seconds % 60;
-	return time;
+	return Time_dhms(seconds);
 }
 
-//------------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------
+
+Time_dhms::Time_dhms(uint64_t seconds):
+	d { uint(seconds / 86400) },
+	h { uint((seconds % 86400) / 3600) },
+	m { uint((seconds % 3600) / 60) },
+	s { uint(seconds % 60) }
+{}
+
+QString Time_dhms::ToString() const
+{
+	//		QString res;
+	//		if(d>0) res += QSn(d)+"d";
+	//		if(h>0 or !res.isEmpty()) res += QSn(h)+"h";
+	//		if(m>0 or !res.isEmpty()) res += QSn(m)+"m";
+	//		if(s>0 or !res.isEmpty()) res += QSn(s)+"s";
+	//		return res;
+
+	if(d == 0 and h == 0 and m == 0 and s == 0) return "zero time";
+	QString res;
+
+	if(d>0) res += d == 1 ? QSn(d)+" day"	// d == 1
+						  : QSn(d)+" days";	// d > 1
+
+	if(h == 0 and m == 0 and s == 0) res += " exactly";
+	else
+	{
+		if(!res.isEmpty()) res.append(" + ");
+
+		res.append(QTime(h,m,s).toString(TimeFormat));
+	}
+	return res;
+}
+
+//--------------------------------------------------------------------------------------------------------------------------
 #endif
-//------------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------------------------
+
+
 
