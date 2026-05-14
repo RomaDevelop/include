@@ -64,6 +64,8 @@ struct TextConstant
 
 	static QString GetTextConstVal(const QString &txtConst, bool doCheck);
 	static Result GetTextConstVal(const QString &txtConst);
+	/// returns text if arg is not text constant and GetTextConstVal if arg is text constant
+	static QString GetTextConstantValSmart(const QString &text);
 
 	static bool IsItTextConstant(const QString &text, bool printLog);
 	static bool IsItNotTextConstant(const QString &text);
