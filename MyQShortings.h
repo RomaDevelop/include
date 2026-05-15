@@ -45,6 +45,7 @@ inline QString DateFormat 					= QStringLiteral("yyyy.MM.dd");
 
 inline QString DateFormat_rus 				= QStringLiteral("dd MMM yyyy");
 inline QString DateTimeFormat_rus 			= QStringLiteral("dd MMM yyyy hh:mm:ss");
+inline QString DateTimeFormat_rus_ddd 		= QStringLiteral("dd MMM yyyy (ddd) hh:mm:ss");
 //--------------------------------------------------------------------------------------------------------------------------
 #define DO_ONCE(code_to_do) do { static bool did = false; if(!did) { code_to_do; did = true; } } while (0)
 //--------------------------------------------------------------------------------------------------------------------------
