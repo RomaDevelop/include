@@ -37,6 +37,8 @@ public:
 	inline static void ShowText(const QString &title, const QStringList &text, uint w = 800, uint h = 600);
 	inline static void ShowHtml(const QString &title, const QString &html, uint w = 800, uint h = 600);
 
+	inline static void ShowTexts(const QString &title, const QStringList &text1, const QStringList &text2, uint w = 1100, uint h = 600);
+
 	inline static void InfoCopyable(QWidget *parent, const QString &title, const QString& text);
 	inline static void ErrorCopyable(QWidget *parent, const QString &title, const QString& text);
 	inline static void QMessageBoxCopyable(QWidget *parent, const QString &title, const QString& text, QMessageBox::Icon icon);
@@ -185,6 +187,33 @@ void MyQDialogs::ShowHtml(const QString &title, const QString &html, uint w, uin
 	hlo->addWidget(textBrowser);
 
 	if(!w) w = 150;
+	if(!h) h = 150;
+	dialog->resize(w, h);
+	dialog->exec();
+}
+
+void MyQDialogs::ShowTexts(const QString & title, const QStringList & text1, const QStringList & text2, uint w, uint h)
+{
+	QDialog dialog_obj;
+	QDialog *dialog = &dialog_obj;
+	dialog->setWindowTitle(title);
+	QHBoxLayout *hlo  = new QHBoxLayout(dialog);
+	QTextBrowser *textBrowser1 = new QTextBrowser;
+	textBrowser1->setTabStopDistance(40);
+	QTextBrowser *textBrowser2 = new QTextBrowser;
+	textBrowser2->setTabStopDistance(40);
+
+	hlo->addWidget(textBrowser1);
+	hlo->addWidget(textBrowser2);
+
+	for(auto &row:text1) textBrowser1->append(row);
+	for(auto &row:text2) textBrowser2->append(row);
+	QTimer::singleShot(0, dialog, [textBrowser1, textBrowser2]() {
+		textBrowser1->verticalScrollBar()->setValue(0);
+		textBrowser2->verticalScrollBar()->setValue(0);
+	});
+
+	if(!w) w = 300;
 	if(!h) h = 150;
 	dialog->resize(w, h);
 	dialog->exec();
