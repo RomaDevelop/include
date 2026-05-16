@@ -223,6 +223,7 @@ public:
 	inline static std::map<QString,QString> MapFromQuery(QSqlQuery &query, int filedIndexMakeKey, int filedIndexMakeValue);
 	inline static double ToDouble(QSqlQuery &query, QString fieldName);
 	inline static double ToDouble(QSqlQuery &query, int fieldIndex);
+	inline static double ToDouble(QString fieldValue);
 
 	inline static QString GenErrorText(QString error, const QString &strQuery, const QStringPairVector &binds = {});
 	inline static QString GenErrorText(QString error, const QString &strQuery, const QStringList &binds = {});
@@ -555,17 +556,19 @@ std::map<QString, QString> MyQSqlDatabase::MapFromQuery(QSqlQuery &query, int fi
 
 double MyQSqlDatabase::ToDouble(QSqlQuery &query, QString fieldName)
 {
-	bool ch;
-	double d = query.value(fieldName).toString().replace(',','.').toDouble(&ch);
-	if(!ch) Error("Ошибка ToDouble ["+query.value(fieldName).toString()+"]");
-	return d;
+	return ToDouble(query.value(fieldName).toString());
 }
 
 double MyQSqlDatabase::ToDouble(QSqlQuery &query, int fieldIndex)
 {
+	return ToDouble(query.value(fieldIndex).toString());
+}
+
+double MyQSqlDatabase::ToDouble(QString fieldValue)
+{
 	bool ch;
-	double d = query.value(fieldIndex).toString().replace(',','.').toDouble(&ch);
-	if(!ch) Error("Ошибка ToDouble ["+query.value(fieldIndex).toString()+"]");
+	double d = fieldValue.replace(',','.').toDouble(&ch);
+	if(!ch) Error("Ошибка ToDouble ["+fieldValue+"]");
 	return d;
 }
 
