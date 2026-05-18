@@ -133,17 +133,17 @@ std::string MyCppDifferent::ToDiapasons(std::vector<int> vect)
 		{
 			if(vect[i] - vect[i-1] == 1)
 			{
-				if(resOff[resOff.size()-1] != '-') resOff += "-";
+				if(resOff[static_cast<int>(resOff.size())-1] != '-') resOff += "-";
 				interval++;
 
 			}
 			else
 			{
-				if(resOff[resOff.size()-1] == '-')
+				if(resOff[static_cast<int>(resOff.size())-1] == '-')
 				{
 					if(interval == 2)
 					{
-						resOff[resOff.size()-1] = ',';
+						resOff[static_cast<int>(resOff.size())-1] = ',';
 						resOff += " ";
 					}
 					resOff += std::to_string(vect[i-1]) + ", " + std::to_string(vect[i]);
@@ -153,7 +153,7 @@ std::string MyCppDifferent::ToDiapasons(std::vector<int> vect)
 			}
 		}
 
-		if(resOff[resOff.size()-1] == '-') resOff += std::to_string(vect.back());
+		if(resOff[static_cast<int>(resOff.size())-1] == '-') resOff += std::to_string(vect.back());
 	}
 	return resOff;
 }

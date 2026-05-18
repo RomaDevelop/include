@@ -24,7 +24,7 @@ bool MyQSplitter::SetSize(QSplitter * splitter, QWidget *widget, int size)
 	{
 	    if(i == index) continue;
 
-	    sizes[i] -= difference / (sizes.size()-1);
+	    sizes[i] -= difference / (static_cast<int>(sizes.size())-1);
 	}
 	splitter->setSizes(sizes);
 	return true;

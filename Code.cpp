@@ -475,7 +475,7 @@ QString Code::AllIndexesToStr(const AllIndexes &indexes)
 			}
 			str += "}";
 		}
-		if(i != indexes.size()-1) str += ',';
+		if(i != static_cast<int>(indexes.size())-1) str += ',';
 		str += ' ';
 	}
 	if(indexes.empty() == false) str += "}";

@@ -121,7 +121,7 @@ void XmlHighlighter::highlightBlock(const QString & text)
 
     if(quatsAt.size() == 1)
     {
-	if(quatsAt[0] == text.size()-1)
+	if(quatsAt[0] == static_cast<int>(text.size())-1)
 	    setFormat(0, text.length(), formatValue);
 	if(text.endsWith("\"/>"))
 	    setFormat(0, quatsAt[0]+1, formatValue);

@@ -92,7 +92,7 @@ struct MyQString
 	{
 		static_assert(std::is_integral<int_type>::value, "AsNumberDigits accepts only integral type");
 		QString result = QString::number(n);
-		for(int i=result.size()-1, j=1; i>=0; i--, j++)
+		for(int i=static_cast<int>(result.size())-1, j=1; i>=0; i--, j++)
 		{
 			if(j%3 == 0) result.insert(i, separator);
 		}

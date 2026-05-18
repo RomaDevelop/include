@@ -188,7 +188,7 @@ void MyQSearch::SlotBtnPrev()
     auto curs = textEdit->textCursor();
     int curPos = textEdit->textCursor().selectionStart();
     bool find = false;
-    for(int i=foundIndexes.size()-1; i>=0; i--)
+    for(int i=static_cast<int>(foundIndexes.size())-1; i>=0; i--)
         if(foundIndexes[i] < curPos)
         {
             curPos = foundIndexes[i];

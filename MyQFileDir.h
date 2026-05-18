@@ -152,7 +152,7 @@ QString MyQFileDir::RemoveOldFiles(QString directory, int remainCount, SortFlags
 	}
 
 	QFileInfoList content = dir.entryInfoList(QDir::Files);
-	for(int i=content.size()-1; i>=0; i--)
+	for(int i=static_cast<int>(content.size())-1; i>=0; i--)
 		if(!content[i].isFile()) content.removeAt(i);
 
 	static auto cmpName = [](const QFileInfo &a, const QFileInfo &b){
