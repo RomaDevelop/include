@@ -76,6 +76,8 @@ struct TextConstant
 	}
 	static bool ContainsQuate(const QString &str);
 	static QString AddQuates(const QString &text, char quates = CodeKeyWords::quatsSymbol1);
+	/// returns text with added quates if text contains words splitter ( !!! preliminary implementation, checks only spaces !!! )
+	static QString AddQuatesSmart(const QString &text, char quates = CodeKeyWords::quatsSymbol1);
 	static void RemoveQuates(QString &text);
 };
 

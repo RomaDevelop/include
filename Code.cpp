@@ -754,6 +754,16 @@ QString TextConstant::AddQuates(const QString & str, char quates)
 	return QString(str).prepend(quates).append(quates);
 }
 
+QString TextConstant::AddQuatesSmart(const QString & text, char quates)
+{
+	if(text.contains(' '))
+		return AddQuates(text, quates);
+
+	DO_ONCE(qdbg << "Warning !!! AddQuatesSmart preliminary implementation, checks only spaces !!!";);
+
+	return text;
+}
+
 void TextConstant::RemoveQuates(QString &text)
 {
 	text.chop(CodeKeyWords::quatsSymbolLength);
