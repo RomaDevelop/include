@@ -37,12 +37,12 @@ public:
 
 	inline int RowsCount(bool do_fetch);
 
-	inline auto currentRow() { return currentIndex().row(); }
-	inline auto cellData(int row, int col) { return model()->index(row, col).data(); }
-	inline auto cellDataStr(int row, int col) { return cellData(row, col).toString(); }
+	inline int currentRow() { return currentIndex().row(); }
+	inline QVariant cellData(int row, int col) { return model() ? model()->index(row, col).data() : QVariant{}; }
+	inline QString cellDataStr(int row, int col) { return cellData(row, col).toString(); }
 
-	inline auto currentRecordData(int col) { return model()->index(currentIndex().row(), col).data(); }
-	inline auto currentRecordDataStr(int col) { return currentRecordData(col).toString(); }
+	inline QVariant currentRecordData(int col) { return model() ? model()->index(currentIndex().row(), col).data() : QVariant{}; }
+	inline QString currentRecordDataStr(int col) { return currentRecordData(col).toString(); }
 	inline QStringList currentRecordDataStr();
 
 	inline int FindRowByValue(int fieldIndex, const QString &fieldValue);
@@ -105,7 +105,8 @@ MyQTableView::MyQTableView(QWidget *parent) : QTableView{parent}
 
 int MyQTableView::RowsCount(bool do_fetch)
 {
-	QAbstractItemModel *model = this->model();
+	auto model = this->model();
+	if(model) return -1;
 	if(do_fetch)
 	{
 		while (model->canFetchMore(QModelIndex())) {
@@ -117,15 +118,18 @@ int MyQTableView::RowsCount(bool do_fetch)
 
 QStringList MyQTableView::currentRecordDataStr()
 {
+	auto model = this->model();
+	if(model) return {};
+
 	QStringList row;
-	for(int column=0; column<model()->columnCount(); column++)
+	for(int column=0; column<model->columnCount(); column++)
 		MyQString::Append(row, currentRecordDataStr(column));
 	return row;
 }
 
 int MyQTableView::FindRowByValue(int fieldIndex, const QString &fieldValue)
 {
-	QAbstractItemModel *model = this->model();
+	auto model = this->model();
 	if (!model) return -3;
 
 	if(fieldIndex >= model->columnCount()) return -2;
@@ -145,7 +149,7 @@ int MyQTableView::FindRowByValue(int fieldIndex, const QString &fieldValue)
 
 inline bool MyQTableView::Locate(const QString &fieldName, const QString &fieldValue, int columnToSet)
 {
-	QAbstractItemModel *model = this->model();
+	auto model = this->model();
 	if (!model) return false;
 
 	// определение колонки для этого поля
@@ -165,7 +169,7 @@ inline bool MyQTableView::Locate(const QString &fieldName, const QString &fieldV
 
 bool MyQTableView::Locate(int fieldIndex, const QString &fieldValue, int columnToSet)
 {
-	QAbstractItemModel *model = this->model();
+	auto model = this->model();
 	if (!model) return false;
 
 	if(columnToSet == -1) columnToSet = this->currentIndex().column();
@@ -178,7 +182,7 @@ bool MyQTableView::Locate(int fieldIndex, const QString &fieldValue, int columnT
 
 inline bool MyQTableView::LocateRow(int row, int columnToSet)
 {
-	QAbstractItemModel *model = this->model();
+	auto model = this->model();
 	if (!model) return false;
 
 	if(columnToSet == -1) columnToSet = this->currentIndex().column();
@@ -202,13 +206,17 @@ QStringList MyQTableView::Field(int index)
 	QStringList res = MyQString::QStringListSized(table.size());
 	for(uint i=0; i<table.size(); i++)
 		res[i] = std::move(table[i][0]);
+
+	// CodeMarkers::can_be_optimized("extracts full table to get fields, but it is not nesessary");
+
 	return res;
 }
 
 std::vector<QStringList> MyQTableView::ToTable(std::vector<int> feildsIndexes)
 {
-	QAbstractItemModel *model = this->model();
+	auto model = this->model();
 	if (!model) return {};
+
 	std::vector<QStringList> table;
 	int colCount = model->columnCount();
 	if(feildsIndexes.empty())
@@ -283,7 +291,8 @@ void MyQTableView::keyPressEvent(QKeyEvent *event)
 	QTableView::keyPressEvent(event);
 }
 
-void MyQTableView::wheelEvent(QWheelEvent *event) {
+void MyQTableView::wheelEvent(QWheelEvent *event)
+{
 	if(wheelScrollBehavior == moveScrollBar)
 	{
 		QTableView::wheelEvent(event);
@@ -291,6 +300,9 @@ void MyQTableView::wheelEvent(QWheelEvent *event) {
 	}
 	else if(wheelScrollBehavior == moveCurrentIndex)
 	{
+		auto model = this->model();
+		if (!model) return;
+
 		QModelIndex current = currentIndex();
 		int row = current.row();
 
@@ -298,11 +310,11 @@ void MyQTableView::wheelEvent(QWheelEvent *event) {
 		int delta = event->angleDelta().y(); // положительное — вверх, отрицательное — вниз
 
 		int newRow = row + (delta < 0 ? 1 : -1);
-		int rowCount = model()->rowCount();
+		int rowCount = model->rowCount();
 
 		// Проверка границ
 		if (newRow >= 0 && newRow < rowCount) {
-			QModelIndex newIndex = model()->index(newRow, current.column());
+			QModelIndex newIndex = model->index(newRow, current.column());
 			setCurrentIndex(newIndex);
 			scrollTo(newIndex);
 		}
