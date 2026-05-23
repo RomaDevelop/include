@@ -106,7 +106,7 @@ MyQTableView::MyQTableView(QWidget *parent) : QTableView{parent}
 int MyQTableView::RowsCount(bool do_fetch)
 {
 	auto model = this->model();
-	if(model) return -1;
+	if(not model) return -1;
 	if(do_fetch)
 	{
 		while (model->canFetchMore(QModelIndex())) {
@@ -119,7 +119,7 @@ int MyQTableView::RowsCount(bool do_fetch)
 QStringList MyQTableView::currentRecordDataStr()
 {
 	auto model = this->model();
-	if(model) return {};
+	if(not model) return {};
 
 	QStringList row;
 	for(int column=0; column<model->columnCount(); column++)
