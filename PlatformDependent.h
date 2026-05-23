@@ -20,10 +20,10 @@ struct PlatformDependent
 	declare_struct_3_fields_no_move(CopyMoveFileRes, bool, success, int, errorCode, QString, errorText);
 	static CopyMoveFileRes CopyMoveFile(QString SourceFile, QString Destination, CopyMoveFileMode Mode);
 
-	static void SetTopMost(QWidget *w, bool topMost);
-	static void SetTopMostFlash(QWidget *w); // set topMost in true and immitietly sets false
+	static void SetTopMost(QWidget *w, bool topMost = true);
+	static void SetTopMostFlash(QWidget *w); // set topMost in true and immediately sets false
 
-	static void FlashClickOnTitle(QWidget *w); // делает клик на заголовок окна и возвращает курсор обратно
+	static void FlashClickOnTitle(QWidget *w); // clicks on the window title and returns cursor back
 
 	static void ShowPropertiesWindow(const QString &file);
 };
