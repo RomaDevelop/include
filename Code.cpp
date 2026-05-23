@@ -770,6 +770,16 @@ void TextConstant::RemoveQuates(QString &text)
 	text.remove(0, CodeKeyWords::quatsSymbolLength);
 }
 
+bool TextConstant::RemoveQuatesSmart(QString & text)
+{
+	if(TextConstant::IsItTextConstant(text, false))
+	{
+		RemoveQuates(text);
+		return true;
+	}
+	return false;
+}
+
 Statement::Statement(QString header, Statement::VectorStatementOrQString nestedStatements):
 	header{std::move(header)}, nestedStatements{std::move(nestedStatements)}
 {}
