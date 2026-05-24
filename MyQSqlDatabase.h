@@ -215,6 +215,7 @@ public:
 	inline static std::pair<QString, QStringPairVector> MakeUpdateRequestOneField(QString table, QStringRefWr_c field, QString value,
 	                                                                              QStringRefWr_c whereField, QString whereValue);
 
+	inline static QStringList CurrentRecord(QSqlQuery &query);
 	///\brief for empty feildsIndexes return all fields
 	/// QStringList = row
 	inline static std::vector<QStringList> QuetyToTable(QSqlQuery &query, std::vector<int> feildsIndexes = {});
@@ -357,13 +358,8 @@ QString MyQSqlDatabase::DoSqlQueryGetFirstCell(const QString &strQuery, const QS
 QStringList MyQSqlDatabase::DoSqlQueryGetFirstRec(const QString &strQuery, const QStringPairVector &binds)
 {
 	auto query = DoSqlQuery(strQuery, binds);
-	QStringList record;
-	if(query.next())
-	{
-		for(int i=0; i<query.record().count(); i++)
-			record += query.value(i).toString();
-	}
-	return record;
+	if(query.next()) return CurrentRecord(query);
+	else return {};
 }
 
 QStringList MyQSqlDatabase::DoSqlQueryGetFirstField(const QString &strQuery, const QStringPairVector &binds)
@@ -491,6 +487,15 @@ std::pair<QString, QStringPairVector> MyQSqlDatabase::MakeUpdateRequestOneField(
 	return {std::move(sql), std::move(binds)};
 }
 
+QStringList MyQSqlDatabase::CurrentRecord(QSqlQuery & query)
+{
+	int colCount = query.record().count();
+	QStringList record;
+	for(int i=0; i<colCount; i++)
+		record += query.value(i).toString();
+	return record;
+}
+
 std::vector<QStringList> MyQSqlDatabase::QuetyToTable(QSqlQuery &query, std::vector<int> feildsIndexes)
 {
 	std::vector<QStringList> table;
@@ -566,9 +571,9 @@ double MyQSqlDatabase::ToDouble(QSqlQuery &query, int fieldIndex)
 
 double MyQSqlDatabase::ToDouble(QString fieldValue)
 {
-	bool ch;
-	double d = fieldValue.replace(',','.').toDouble(&ch);
-	if(!ch) Error("Ошибка ToDouble ["+fieldValue+"]");
+	bool ok;
+	double d = fieldValue.replace(',','.').toDouble(&ok);
+	if(!ok) Error("Ошибка ToDouble ["+fieldValue+"]");
 	return d;
 }
 
