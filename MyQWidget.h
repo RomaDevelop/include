@@ -38,6 +38,7 @@ struct MyQWidget
 	 * Когда перейдем на С++ 20, попробовать через концепты этого избежать */
 
 	inline static void AdjustWidgetPosition(QWidget *widget, int edgeDistance = 0);
+	inline static void MoveInCenter(QWidget *widgetToMove, QWidget *centerOfWidget);
 
 	inline static QScreen* WidgetScreen(QWidget *widget);
 	// когда перейдем на Qt 6 можно будет удалить, там есть готовая
@@ -167,6 +168,13 @@ void MyQWidget::AdjustWidgetPosition(QWidget *widget, int edgeDistance) {
 		// Устанавливаем новую позицию виджета
 		widget->move(pos);
 	}
+}
+
+void MyQWidget::MoveInCenter(QWidget *widgetToMove, QWidget *centerOfWidget)
+{
+	QPoint parentCenter = centerOfWidget->mapToGlobal(centerOfWidget->rect().center());
+	QPoint targetPos = parentCenter - QPoint(widgetToMove->width() / 2, widgetToMove->height() / 2);
+	widgetToMove->move(targetPos);
 }
 
 QScreen *MyQWidget::WidgetScreen(QWidget *widget)
