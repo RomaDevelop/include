@@ -37,7 +37,8 @@ public:
 	inline static void ShowText(const QString &title, const QStringList &text, uint w = 800, uint h = 600);
 	inline static void ShowHtml(const QString &title, const QString &html, uint w = 800, uint h = 600);
 
-	inline static void ShowTexts(const QString &title, const QStringList &text1, const QStringList &text2, uint w = 1100, uint h = 600);
+	inline static void ShowTexts(const QString &title, const QStringList &text1, const QStringList &text2,
+								 uint w = 1100, uint h = 600);
 
 	inline static void InfoCopyable(QWidget *parent, const QString &title, const QString& text);
 	inline static void ErrorCopyable(QWidget *parent, const QString &title, const QString& text);
@@ -59,8 +60,10 @@ public:
 	inline static mqdMenuItem DisabledItem(QString text) { text+=DisableMarker; return mqdMenuItem(std::move(text), nullptr);  }
 
 	declare_struct_4_fields_move(InputTextRes, QString, text, bool, textHasChanged, bool, accepted, bool, acceptedAndChanged);
-	inline static InputTextRes InputText(QString captionDialog = "", QString startText = "", QString helpText = "", uint w = 640, uint h = 480);
-	inline static InputTextRes InputLine(QString captionDialog = "", QString textDialog = "", QString startText = "", uint w = 640);
+	inline static InputTextRes InputText(QString captionDialog = "", QString startText = "", QString helpText = "",
+										 uint w = 640, uint h = 480);
+	inline static InputTextRes InputLine(QString captionDialog = "", QString textDialog = "", QString startText = "",
+										 uint w = 640);
 	declare_struct_3_fields_move(InputLineResExt, QString, text, bool, textHasChanged, QString, button);
 	inline static InputLineResExt InputLineExt(QString captionDialog = "", QString textDialog = "", QString startText = "",
 											   QStringList buttons = {Accept,Cansel}, uint w = 640);
@@ -74,7 +77,8 @@ public:
 										   uint w = 640, uint h = 480,
 										   int selectedRow = -1);
 	inline static ListDialogRes ListDialog(QString caption, QString valuesList, QString splitter,
-										   QString acceptButton = Accept, QString canselButton = Cansel, uint w = 640, uint h = 480);
+										   QString acceptButton = Accept, QString canselButton = Cansel,
+										   uint w = 640, uint h = 480);
 
 	declare_struct_3_fields_move(CheckBoxDialogItem, QString, text, bool, checked, bool, enabled);
 	struct CheckBoxDialogResult {
@@ -88,7 +92,8 @@ public:
 		bool acceptedAndChanged = false;
 	};
 
-	inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption, std::vector<CheckBoxDialogItem> items, uint w=640, uint h=480);
+	inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption, std::vector<CheckBoxDialogItem> items,
+													  uint w=640, uint h=480);
 	inline static CheckBoxDialogResult CheckBoxDialog(const QString &caption,
 													  const QStringList &values,
 	                                                  const std::vector<bool> &startChecked = {},
@@ -121,7 +126,11 @@ public:
 
 	enum ToastPos { CenterOnPrimary, BottomRightOnPrimary, BottomLeftOnPrimary,
 					CenterOnCurrent, BottomRightOnCurrent, BottomLeftOnCurrent };
-	inline static void ToastMessage(QString caption, QString text, int duration = 3000, ToastPos pos = BottomRightOnPrimary);
+	inline static void ToastMessage(QString caption, QString text, ToastPos pos, int duration = 3000);
+	inline static void ToastMessage(QString caption, QString text, QPoint pos, int duration = 3000);
+	inline static void ToastMessage(QString caption, QString text, QWidget *posInCenterOfWidget, int duration = 3000);
+	inline static QWidget* ToastMessageMakeWidget(QString caption, QString text, int duration);
+
 
 	inline static void ShowAllStandartIcons();
 
@@ -260,7 +269,8 @@ QString MyQDialogs::CustomDialog(QString caption, QString text, QStringList butt
 	return retText;
 }
 
-QString MyQDialogs::CustomDialogWithCheckBox(QString caption, QString text, QStringList buttons, bool *chBoxRes, QString checkBoxText)
+QString MyQDialogs::CustomDialogWithCheckBox(QString caption, QString text, QStringList buttons, bool *chBoxRes,
+											 QString checkBoxText)
 {
 	QString retText;
 	QDialog dialog;
@@ -640,7 +650,8 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QString values
 	return ListDialog(std::move(caption), valuesList.split(splitter), std::move(acceptButton), std::move(canselButton), w, h);
 }
 
-MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &caption, std::vector<CheckBoxDialogItem> items, uint w, uint h)
+MyQDialogs::CheckBoxDialogResult MyQDialogs::CheckBoxDialog(const QString &caption, std::vector<CheckBoxDialogItem> items,
+															uint w, uint h)
 {
 	QStringList values;
 	std::vector<bool> startCheched;
@@ -1018,7 +1029,7 @@ void MyQDialogs::InfoBar(const QString &message, QWidget *widgetToShowIn)
 							   "QPushButton:hover { background-color: #00838f; }");
 	QObject::connect(closeButton, &QPushButton::clicked, widget, [widget](){ widget->close(); widget->deleteLater(); });
 
-	hloMain->addWidget(label);
+	hloMain->addWidget(label, 1);
 	hloMain->addStretch();
 	hloMain->addLayout(vloClose);
 	vloClose->addWidget(closeButton, 0, Qt::AlignTop);
@@ -1060,7 +1071,67 @@ void MyQDialogs::InfoBar(const QString &message, QWidget *widgetToShowIn)
 	widget->resize(widgetToShowIn->width(), widget->height());
 }
 
-void MyQDialogs::ToastMessage(QString caption, QString text, int duration, MyQDialogs::ToastPos pos)
+void MyQDialogs::ToastMessage(QString caption, QString text, MyQDialogs::ToastPos pos, int duration)
+{
+	auto toast = ToastMessageMakeWidget(caption, text, duration);
+
+	// Позиционирование
+	QRect screenRect;
+	int margin = 20;
+
+	if (pos == CenterOnPrimary || pos == BottomRightOnPrimary || pos == BottomLeftOnPrimary) {
+		// Главный экран
+		screenRect = QApplication::primaryScreen()->availableGeometry();
+	} else {
+		// Текущий экран по курсору
+		QScreen *currentScreen = QGuiApplication::screenAt(QCursor::pos());
+		if (!currentScreen)
+		{
+			currentScreen = QApplication::primaryScreen();
+			qCritical() << "ToastMessage: screenAt(QCursor::pos()) is null";
+		}
+		screenRect = currentScreen->availableGeometry();
+	}
+
+	int x, y;
+
+	// нижнее положение
+	// X зависит от стороны
+	if (pos == BottomRightOnPrimary || pos == BottomRightOnCurrent) {
+		x = screenRect.right() - toast->width() - margin;
+	}
+	else {
+		x = screenRect.left() + margin;
+	}
+	// Y одинаковый
+	y = screenRect.bottom() - toast->height() - margin;
+
+	// положение в центре
+	if(pos == CenterOnCurrent || pos == CenterOnPrimary)
+	{
+		x = screenRect.left() + (screenRect.width() - toast->width()) / 2;
+		y = screenRect.top() + (screenRect.height() - toast->height()) / 2;
+	}
+
+	ToastMessage(caption, text, QPoint(x,y), duration);
+}
+
+
+void MyQDialogs::ToastMessage(QString caption, QString text, QPoint pos, int duration)
+{
+	auto toast = ToastMessageMakeWidget(caption, text, duration);
+	toast->move(pos.x(), pos.y());
+	toast->show();
+}
+
+void MyQDialogs::ToastMessage(QString caption, QString text, QWidget *posInCenterOfWidget, int duration)
+{
+	auto toast = ToastMessageMakeWidget(caption, text, duration);
+	MyQWidget::MoveInCenter(toast, posInCenterOfWidget);
+	toast->show();
+}
+
+QWidget *MyQDialogs::ToastMessageMakeWidget(QString caption, QString text, int duration)
 {
 	// Основное окно-контейнер (невидимое) (без него не работают закругления)
 	QWidget* toast = new QWidget(nullptr);
@@ -1111,47 +1182,7 @@ void MyQDialogs::ToastMessage(QString caption, QString text, int duration, MyQDi
 
 	toast->adjustSize();
 
-	// Позиционирование
-	QRect screenRect;
-	int margin = 20;
-
-	if (pos == CenterOnPrimary || pos == BottomRightOnPrimary || pos == BottomLeftOnPrimary) {
-		// Главный экран
-		screenRect = QApplication::primaryScreen()->availableGeometry();
-	} else {
-		// Текущий экран по курсору
-		QScreen *currentScreen = QGuiApplication::screenAt(QCursor::pos());
-		if (!currentScreen)
-		{
-			currentScreen = QApplication::primaryScreen();
-			qCritical() << "ToastMessage: screenAt(QCursor::pos()) is null";
-		}
-		screenRect = currentScreen->availableGeometry();
-	}
-
-	int x, y;
-
-	// нижнее положение
-	// X зависит от стороны
-	if (pos == BottomRightOnPrimary || pos == BottomRightOnCurrent) {
-		x = screenRect.right() - toast->width() - margin;
-	}
-	else {
-		x = screenRect.left() + margin;
-	}
-	// Y одинаковый
-	y = screenRect.bottom() - toast->height() - margin;
-
-	// положение в центре
-	if(pos == CenterOnCurrent || pos == CenterOnPrimary)
-	{
-		x = screenRect.left() + (screenRect.width() - toast->width()) / 2;
-		y = screenRect.top() + (screenRect.height() - toast->height()) / 2;
-	}
-
-	toast->move(x, y);
-
-	toast->show();
+	return toast;
 }
 
 void MyQDialogs::ShowAllStandartIcons()
