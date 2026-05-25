@@ -9,31 +9,54 @@
 #include <QTextEdit>
 #include <QPushButton>
 #include <QCheckBox>
+#include <QToolTip>
 #include <QTimer>
 #include <QHBoxLayout>
 
 #include "MyQShortings.h"
 #include "MyQDifferent.h"
+#include "MyQDialogs.h"
 
-//--------------------------------------------------------------------------------------------------------------------------
+//==========================================================================================================================
+/*
+ * Если объект MyQSearch создается на стеке, он должен существовать, пока существуют виджеты объекта.
+ * Если он будет уничтожен, при взаимодействии с виджетами будет работа с мёртвым this.
+ * Поэтому объект стоит делать членом класса окна в котором он расположен, либо создавать в куче.
+ *
+ * Если объект MyQSearch создается в куче, можно использовать механику deleteThisOnLineEditDestroyed,
+ * тогда созданный MyQSearch будет уничтожен при уничтожении LineEdit-а.
+ * Либо уничтожить его самостоятельно в нужный момент.
+ *
+ * Альтернатива на будущее: перенести все члены класса MyQSearch в property LineEdit-а, нигде не использовать this.
+ *
+*/
+//==========================================================================================================================
 
 struct MyQSearch
 {
 public:
 
-    inline MyQSearch();
+	inline static MyQSearch MakeOnStack() { return MyQSearch(true); }
+	inline static MyQSearch* MakeInHeap(bool deleteThisOnLineEditDestroyed);
+
+	inline void DeleteThisOnLineEditDestroyed(bool enable);
 
     std::function<void()> cbSearchFinished;
     QString searchResult;
 
     inline std::array<QWidget*, 3> AllButtons();
+	inline std::array<QWidget*, 5> AllWidgets();
     inline QLineEdit* LineEdit() { return lineEditTextToFind; }
-	inline QCheckBox* CheckBoxCaseSense() { return chBoxCaseSense; }
+	inline QCheckBox* CheckBoxCaseSense() { return checkBoxCaseSense; }
 
     inline void Place(QTextEdit *textEdit, QHBoxLayout *hlo);
     inline void SetTextEdit(QTextEdit *textEdit);
 
+	inline ~MyQSearch();
+
 private:
+
+	inline MyQSearch(bool onStack);
 	
     inline void SlotBtnFind();
     inline void SlotBtnNext();
@@ -43,7 +66,8 @@ private:
     QPushButton *btnSearch;
     QPushButton *btnBack;
     QPushButton *btnForward;
-	QCheckBox *chBoxCaseSense = nullptr;
+	QCheckBox *checkBoxCaseSense = nullptr;
+
     Qt::CaseSensitivity caseSenseForFind = Qt::CaseInsensitive;
     ///\brief Вектор в котором хранятся результаты поиска (индексы найденного)
     std::vector<int> foundIndexes;
@@ -51,46 +75,84 @@ private:
     ulong promptLength {0};
 
     QTextEdit *textEdit = nullptr;
+
+	bool existOnStack = false;
+	inline static const char *deleteMyQSearchOnLineEditDestroyed = "deleteMyQSearchOnLineEditDestroyed";
+	inline static const char *MyQSearch_has_been_deleted = "MyQSearch_has_been_deleted";
+	inline static const char *widgets_destroy_called = "widgets_destroy_called";
 };
 
-MyQSearch::MyQSearch()
+MyQSearch::MyQSearch(bool onStack)
 {
-    lineEditTextToFind = new QLineEdit;
+	existOnStack = onStack;
+
+	lineEditTextToFind = new QLineEdit();
     btnSearch = new QPushButton();
     btnSearch->setIcon(QApplication::style()->standardIcon(QStyle::StandardPixmap::SP_FileDialogContentsView));
     btnBack = new QPushButton(); // 🡸 🡺   🠴 🠶   🡄 🡆 🠬 🠮 🠨 🠪 🠤 🠦 🠠 🠢
     btnBack->setIcon(QApplication::style()->standardIcon(QStyle::StandardPixmap::SP_ArrowBack));
     btnForward = new QPushButton();
     btnForward->setIcon(QApplication::style()->standardIcon(QStyle::StandardPixmap::SP_ArrowForward));
-	chBoxCaseSense = new QCheckBox("Учитывать регистр");
+	checkBoxCaseSense = new QCheckBox("Учитывать регистр");
+	QObject::connect(lineEditTextToFind, &QLineEdit::returnPressed, [this]() { SlotBtnFind(); });
     QObject::connect(btnSearch, &QPushButton::clicked, btnSearch, [this]() { SlotBtnFind(); });
     QObject::connect(btnBack, &QPushButton::clicked, btnBack, [this]() { SlotBtnPrev(); });
     QObject::connect(btnForward, &QPushButton::clicked, btnForward, [this]() { SlotBtnNext(); });
-	QObject::connect(chBoxCaseSense, &QCheckBox::stateChanged, [this](int state)
+	QObject::connect(checkBoxCaseSense, &QCheckBox::stateChanged, [this](int state)
     {
         if(state == Qt::Unchecked) caseSenseForFind = Qt::CaseInsensitive;
         else if(state == Qt::Checked) caseSenseForFind = Qt::CaseSensitive;
-        qdbg << "wrong checkstate for logs filter";
+		qCritical() << "wrong checkstate for logs filter";
     });
+
+	QObject::connect(lineEditTextToFind, &QObject::destroyed, lineEditTextToFind, [le = lineEditTextToFind, thisPtr = this]()
+	{
+		le->setProperty(widgets_destroy_called, true);
+		if(le->property(deleteMyQSearchOnLineEditDestroyed).toBool())
+		{
+			if(not le->property(MyQSearch_has_been_deleted).toBool())
+				delete thisPtr;
+			else qCritical() << "MyQSearch: mechanic deleteThisOnLineEditDestroyed should delete MyQSearch object, "
+								"but it has already been destroyed";
+		}
+	});
 }
 
-std::array<QWidget *, 3> MyQSearch::AllButtons()
+MyQSearch *MyQSearch::MakeInHeap(bool deleteThisOnLineEditDestroyed) {
+	auto obj = new MyQSearch(false);
+	obj->DeleteThisOnLineEditDestroyed(deleteThisOnLineEditDestroyed);
+	return obj;
+}
+
+MyQSearch::~MyQSearch()
 {
-    std::array<QWidget*, 3> buttons {
-        btnSearch, btnBack, btnForward
-    };
-    return buttons;
+	if(not lineEditTextToFind->property(widgets_destroy_called).toBool())
+	{
+		for(auto w:AllWidgets())
+		{
+			w->setToolTip("MyQSearch object has been destroyed");
+			w->setDisabled(true);
+		}
+	}
+
+	lineEditTextToFind->setProperty(MyQSearch_has_been_deleted, true);
+}
+
+void MyQSearch::DeleteThisOnLineEditDestroyed(bool enable)
+{
+	if(not existOnStack) lineEditTextToFind->setProperty(deleteMyQSearchOnLineEditDestroyed, enable);
+	else qCritical() << "MyQSearch::DeleteThisOnLineEditDestroyed called for object on stack";
 }
 
 void MyQSearch::Place(QTextEdit * textEdit, QHBoxLayout * hlo)
 {
-    this->textEdit = textEdit;
+	this->textEdit = textEdit;
 
-    hlo->addWidget(lineEditTextToFind);
-    hlo->addWidget(btnBack);
-    hlo->addWidget(btnSearch);
+	hlo->addWidget(lineEditTextToFind);
+	hlo->addWidget(btnBack);
+	hlo->addWidget(btnSearch);
     hlo->addWidget(btnForward);
-	hlo->addWidget(chBoxCaseSense);
+	hlo->addWidget(checkBoxCaseSense);
 }
 
 void MyQSearch::SetTextEdit(QTextEdit * textEdit)
@@ -101,10 +163,26 @@ void MyQSearch::SetTextEdit(QTextEdit * textEdit)
     promptLength = 0;
 }
 
+std::array<QWidget *, 3> MyQSearch::AllButtons()
+{
+	std::array<QWidget*, 3> buttons {
+		btnSearch, btnBack, btnForward
+	};
+	return buttons;
+}
+
+std::array<QWidget *, 5> MyQSearch::AllWidgets()
+{
+	std::array<QWidget*, 5> widgets {
+		lineEditTextToFind, btnSearch, btnBack, btnForward, checkBoxCaseSense
+	};
+	return widgets;
+}
+
 void MyQSearch::SlotBtnFind()
 {
-    QString toFind = lineEditTextToFind->text();
-    if(toFind.isEmpty()) return;
+	QString toFind = lineEditTextToFind->text();
+	if(toFind.isEmpty()) return;
 
     foundIndexes.clear();
     searchResult.clear();
@@ -139,7 +217,7 @@ void MyQSearch::SlotBtnFind()
         }
     }
 
-    if(not searchResult.isEmpty()) searchResult = "Найдено совпадений: " + QSn(foundIndexes.size());
+	if(searchResult.isEmpty()) searchResult = "Найдено совпадений: " + QSn(foundIndexes.size());
 
     if(foundIndexes.size())
     {
@@ -156,6 +234,8 @@ void MyQSearch::SlotBtnFind()
     textEdit->setFocus();
 
     if(cbSearchFinished) cbSearchFinished();
+
+	MyQDialogs::ToastMessage("Поиск", searchResult, textEdit, 3000);
 }
 
 void MyQSearch::SlotBtnNext()
