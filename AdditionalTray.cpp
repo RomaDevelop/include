@@ -96,15 +96,12 @@ QString GetPosForClient(QLocalSocket *client, bool forceResetAll = false)
 			return abort_send;
 		}
 
-		const int fixed_y = 1001;
-		const int step = 30;
-		int x;
 		if(distributedPoses.empty()) // нет существующих
 		{
 			auto screen2 = screens[1];
-			const int startX = 1890;
-			x = startX;
-			QPoint posOnSct2(x, fixed_y);
+			const int fixed_y = 1001;
+			const int start_x = 1890;
+			QPoint posOnSct2(start_x, fixed_y);
 			globalPosForIcon = screen2->geometry().topLeft() + posOnSct2;
 		}
 		else
@@ -112,11 +109,11 @@ QString GetPosForClient(QLocalSocket *client, bool forceResetAll = false)
 			int minX = INT32_MAX;
 			for(auto &node:distributedPoses)
 			{
-				int x = node.second.x();
-				minX = std::min(minX, x);
+				minX = std::min(minX, node.second.x());
 			}
-			x = minX-step;
-			globalPosForIcon = QPoint(x, fixed_y);
+			const int step = 30;
+			int x = minX-step;
+			globalPosForIcon = QPoint(x, distributedPoses.begin()->second.y());
 		}
 
 		//qdbg << "GetPosForClient" << globalPosForIcon;
@@ -205,6 +202,9 @@ AdditionalTrayIcon::AdditionalTrayIcon(const QIcon &icon)
 		else {
 			move(pos);
 			show();
+//			QTimer::singleShot(0, [pos](){
+//				QMbInfo("moved to "+MyQString::AsDebug(pos));
+//			});
 		}
 	};
 }
