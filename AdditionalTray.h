@@ -23,8 +23,10 @@
 
 class AdditionalTrayIcon : public ClickableQWidget
 {
+	Q_OBJECT
+
 public:
-	explicit AdditionalTrayIcon(const QIcon &icon, QPoint globalPos, QWidget *parent);
+	explicit AdditionalTrayIcon(const QIcon &icon);
 	AdditionalTrayIcon(const AdditionalTrayIcon &) = delete;
 	AdditionalTrayIcon(AdditionalTrayIcon &&) = delete;
 	AdditionalTrayIcon& operator= (const AdditionalTrayIcon &) = delete;
@@ -38,11 +40,14 @@ public:
 
 	void CreateMousePosShower(bool moveWithMouse, QWidget *parent);
 	void CreateLogsWidget(bool show);
-	std::unique_ptr<QWidget> widget;
+	std::unique_ptr<QWidget> widgetLogs;
 	QTextEdit *textEditLogs;
 	void Log(const QString &str);
 	void Error(const QString &str);
 	void Warning(const QString &str);
+
+	inline static std::function<void(QPoint pos)> fnClientGetCommandSetPos;
+	inline static void CallFnClientGetCommandSetPos(QPoint pos);
 
 private:
 	QMenu *menu = nullptr;
@@ -52,9 +57,6 @@ private:
 	}
 
 	inline static std::set<AdditionalTrayIcon*> existingIcons;
-	inline static std::shared_ptr<QLocalServer> localServer1;
-	inline static std::shared_ptr<QLocalServer> localServer2;
-	inline static std::shared_ptr<QLocalSocket> localClient;
 };
 
 
