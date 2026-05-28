@@ -587,7 +587,13 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 		listWidget->addItem(item);
 	}
 
-	if(selectedRow != -1) listWidget->setCurrentRow(selectedRow);
+	if(selectedRow != -1)
+		listWidget->setCurrentRow(selectedRow);
+	else
+		listWidget->setCurrentRow(firstEnabledRow);
+		/// For some reason, after the dialog displays (more than 100 ms after exec),
+		/// the first available item is implicitly set as the current. It's not even highlighted.
+		/// I couldn't find a way to disable it. I set it as explicitly selected, highlighte it.
 
 	auto acceptAction = [&dialog, listWidget, &res]()
 	{
@@ -620,14 +626,6 @@ MyQDialogs::ListDialogRes MyQDialogs::ListDialog(QString caption, QStringList va
 	{
 		dialog.setWindowFlags(dialog.windowFlags() & ~Qt::WindowCloseButtonHint);
 	}
-
-	if(selectedRow != -1)
-		listWidget->setCurrentRow(selectedRow);
-	else
-		listWidget->setCurrentRow(firstEnabledRow);
-		/// For some reason, after the dialog displays (more than 100 ms after exec),
-		/// the first available item is implicitly set as the current. It's not even highlighted.
-		/// I couldn't find a way to disable it. I set it as explicitly selected, highlighte it.
 
 	// to check whether an item is implicitly set as current
 //	QObject::connect(listWidget, &QListWidget::currentItemChanged,
