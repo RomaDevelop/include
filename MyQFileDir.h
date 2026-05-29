@@ -23,10 +23,18 @@ struct MyQFileDir
 
 	inline static QFileInfo FindNewest(const QFileInfoList &files);
 
-	enum SortFlags { noSort, name, modified, read };
-	inline static QString RemoveOldFiles(QString directory, int remainCount, SortFlags sortFlag = MyQFileDir::modified);
+	enum RemoveWay {
+		byNativeOrder,		// Native order file system
+		byName,				// By name (1, 2, 3, A, B, C...)
+		byModified,			// The most recently modified (oldest first)
+		byRead,				// The most recently read (oldest first)
+		smartModified,		// Maintains a remainCount of which 50% are today's, 20% are yesterday's, 10% are weekly, etc.
+		smartRead			// Same, but sort by last read. For details see std::vector<FilesGroup> groups
+	};
+	inline static QString RemoveFiles(QString directory, int remainCount, RemoveWay removeWay = MyQFileDir::byModified);
 
 	///\brief removes in all subcategories
+	enum SortFlags { noSort, name, modified, read };
 	inline static void RemoveOldFilesByDaysThreshold(const QString &directory, int daysThresholdToRemove, bool removeEmptySubcats,
 									   SortFlags daysThresholdType = modified);
 
@@ -142,7 +150,7 @@ QFileInfo MyQFileDir::FindNewest(const QFileInfoList & files)
 	return newestModifFI;
 }
 
-QString MyQFileDir::RemoveOldFiles(QString directory, int remainCount, SortFlags sortFlag)
+QString MyQFileDir::RemoveFiles(QString directory, int remainCount, RemoveWay removeWay)
 {
 	QString ret;
 	QDir dir(directory);
@@ -151,40 +159,146 @@ QString MyQFileDir::RemoveOldFiles(QString directory, int remainCount, SortFlags
 		ret += "directory ["+directory+"] not exists";
 	}
 
-	QFileInfoList content = dir.entryInfoList(QDir::Files);
-	for(int i=static_cast<int>(content.size())-1; i>=0; i--)
-		if(!content[i].isFile()) content.removeAt(i);
+	QFileInfoList files = dir.entryInfoList(QDir::Files);
+	for(int i=static_cast<int>(files.size())-1; i>=0; i--)
+		if(!files[i].isFile()) files.removeAt(i);
 
+	// All sorts descending, from new to old, to remove from the end
 	static auto cmpName = [](const QFileInfo &a, const QFileInfo &b){
-		return a.fileName() < b.fileName(); // сортировка по имени (по возрастанию)
+		return a.fileName() > b.fileName(); // sort by name (descending, i.e. Z Y X 5 4 3)
 	};
-
 	static auto cmpModified = [](const QFileInfo &a, const QFileInfo &b){
-		if (a.lastModified() != b.lastModified()) {
-			return a.lastModified() < b.lastModified(); // Сортировка по дате (от ранней к поздней)
-		}
-		return a.fileName() < b.fileName(); // Если даты одинаковые, сортировка по имени (по возрастанию)
+		return a.lastModified() > b.lastModified(); // sort by date modified (descending, i.e. 31 30 29)
 	};
 	static auto cmpRead = [](const QFileInfo &a, const QFileInfo &b){
-		if (a.lastModified() != b.lastModified()) {
-			return a.lastRead() < b.lastRead(); // Сортировка по дате (от ранней к поздней)
-		}
-		return a.fileName() < b.fileName(); // Если даты одинаковые, сортировка по имени (по возрастанию)
+		return a.lastRead() > b.lastRead(); // sort by date read (descending, i.e. 31 30 29)
 	};
+	/// Remove secondary compare by name in modified and read comparators,
+	/// because no matter what old file will be removed if they date is same
+	/// 29.05.2026
 
-	if(sortFlag == name)
-		std::sort(content.begin(),content.end(),cmpName);
-	else if(sortFlag == modified)
-		std::sort(content.begin(),content.end(),cmpModified);
-	else if(sortFlag == read)
-		std::sort(content.begin(),content.end(),cmpRead);
-	else if(sortFlag == noSort) {}
-	else ret += "unrealesed sort flag ("+QString::number(sortFlag)+")";
+	if(removeWay == RemoveWay::byName)
+		std::sort(files.begin(),files.end(),cmpName);
+	else if(removeWay == RemoveWay::byModified)
+		std::sort(files.begin(),files.end(),cmpModified);
+	else if(removeWay == RemoveWay::byRead)
+		std::sort(files.begin(),files.end(),cmpRead);
+	else if(removeWay == RemoveWay::byNativeOrder) {}
+	else if(removeWay == RemoveWay::smartModified or removeWay == RemoveWay::smartRead)
+	{
+		if(removeWay == RemoveWay::smartModified) std::sort(files.begin(), files.end(), cmpModified);
+		else std::sort(files.begin(), files.end(), cmpRead);
 
-	while (content.size() > remainCount) {
-		if(!QFile(content.front().filePath()).remove())
-			ret += "can't remove file ["+content.back().filePath()+"]\n";
-		content.removeFirst();
+		struct FilesGroup {
+			int64_t maxDays;
+			int64_t maxCount;
+			FilesGroup(int64_t maxDaysTo, int64_t maxCount): maxDays{maxDaysTo}, maxCount{maxCount} {
+				if(maxCount == 0) maxCount = 1;
+			}
+
+			int from = -1;
+			int to = -1;
+			int countBeforeRemove;
+			int countToRemove;
+			void CalcCount() {
+				if (from == -1 || to == -1) {
+					countBeforeRemove = 0;
+					countToRemove = 0;
+					return;
+				}
+
+				countBeforeRemove = to - from + 1;
+				countToRemove = countBeforeRemove - maxCount;
+				if(countToRemove < 0) countToRemove = 0;
+			}
+		};
+
+		std::vector<FilesGroup> groups {
+			{ 0,         int(remainCount * 0.5) },  // today
+			{ 1,         int(remainCount * 0.2) },  // yesterday
+			{ 7,         int(remainCount * 0.1) },  // week
+			{ 30,        int(remainCount * 0.05) }, // month
+			{ 61,        int(remainCount * 0.05) },
+			{ 92,		 int(remainCount * 0.05) },
+			{ 183,		 int(remainCount * 0.01) },
+			{ 365,       int(remainCount * 0.01) },
+			{ 365*2,     int(remainCount * 0.01) },
+			{ 365*3,     int(remainCount * 0.01) },
+			{ INT64_MAX, int(0) }
+		};
+
+		QDate now = QDate::currentDate();
+		auto GetDate = removeWay == RemoveWay::smartModified ?
+					  [](const QFileInfo &file){ return file.lastModified().date(); }
+					: [](const QFileInfo &file){ return file.lastRead().date(); } ;
+
+		size_t groupIdx = 0;
+		for(int i=0; i<files.size(); i++)
+		{
+			const auto &file = files[i];
+			qint64 days = GetDate(file).daysTo(now);
+			if(days < 0) days = 0;
+
+			// Move index to it's group
+			while(days > groups[groupIdx].maxDays) {
+				groupIdx++;
+				if(groupIdx >= groups.size())
+				{
+					ret += "invalid patternIdx = "+QSn(groupIdx);
+					return ret;
+				}
+			}
+
+			auto &currentGroup = groups[groupIdx];
+			if(currentGroup.from == -1) currentGroup.from = i;
+			currentGroup.to = i;
+		}
+
+		// can add logic for transferring empty values ​​from one group to another
+
+		for(auto &group:groups)
+		{
+			group.CalcCount();
+			if (group.countToRemove <= 0) continue;
+
+			// If remove all
+			if (group.countToRemove >= group.countBeforeRemove) {
+				for (int i = group.from; i <= group.to; ++i) {
+					if(!QFile::remove(files[i].filePath())) {
+						ret += "can't remove file [" + files[i].filePath() + "]\n";
+					}
+				}
+				continue;
+			}
+
+			int countToRemain = group.countBeforeRemove - group.countToRemove;
+			int accumulator = 0;
+
+			//  Bresenham's line algorithm
+			for (int i = group.from; i <= group.to; ++i) {
+				accumulator += countToRemain;
+
+				if (accumulator >= group.countBeforeRemove) {
+					accumulator -= group.countBeforeRemove;
+					continue; // file remains
+				}
+
+				// file removes
+				if(!QFile::remove(files[i].filePath())) {
+					ret += "can't remove file [" + files[i].filePath() + "]\n";
+				}
+			}
+		}
+
+		return ret;
+	}
+	else ret += "unrealesed sort flag ("+QString::number(removeWay)+")";
+
+	// Remove last
+	while (files.size() > remainCount) {
+		if(!QFile(files.back().filePath()).remove())
+			ret += "can't remove file ["+files.back().filePath()+"]\n";
+		files.removeLast();
 	}
 	return ret;
 }
