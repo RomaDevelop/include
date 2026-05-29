@@ -173,7 +173,7 @@ public:
 		QString errorInit;
 	};
 
-	inline static void MakeBackupBase(bool logSuccess);
+	inline static void MakeBackupBase(bool logSuccess, int maxBackupFilesCount);
 
 	inline static void Log(const QString &str) { if(logWorker) logWorker(str); else qdbg << str; }
 	inline static void Error(const QString &str) { if(errorWorker) errorWorker(str); else qdbg << str; }
@@ -607,7 +607,7 @@ void MyQSqlDatabase::ShowErrorForQuery(QString error, const QString &strQuery, c
 	ShowErrorForQuery(error);
 }
 
-void MyQSqlDatabase::MakeBackupBase(bool logSuccess)
+void MyQSqlDatabase::MakeBackupBase(bool logSuccess, int maxBackupFilesCount)
 {
 	if(!QDir().mkpath(baseDataMain.pathBackup))
 	{
@@ -615,7 +615,7 @@ void MyQSqlDatabase::MakeBackupBase(bool logSuccess)
 		return;
 	}
 
-	MyQFileDir::RemoveOldFiles(baseDataMain.pathBackup,99);
+	MyQFileDir::RemoveFiles(baseDataMain.pathBackup, maxBackupFilesCount, MyQFileDir::smartModified);
 	QString backupFile = baseDataMain.pathBackup + "/"
 	        + QDateTime::currentDateTime().toString("yyyy.MM.dd hh-mm-ss-zzz") + " "
 	        + QFileInfo(baseDataMain.baseFilePathName).fileName();
@@ -623,6 +623,8 @@ void MyQSqlDatabase::MakeBackupBase(bool logSuccess)
 	if(QFile::copy(baseDataMain.baseFilePathName, backupFile))
 	{
 		if(logSuccess) Log("резервная копия создана\n\n" + backupFile);
+		auto res = MyQFileDir::SetModifiedNow(backupFile);
+		if(not res) Error("MakeBackubBase Can't set modified now to " + backupFile);
 	}
 	else
 	{
