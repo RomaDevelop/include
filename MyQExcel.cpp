@@ -1,15 +1,18 @@
+#include "MyQExcel.h"
+
 #include <QCryptographicHash>
 #include <QFile>
 #include <QDir>
+#include <QMessageBox>
 
+#include "MyQShortings.h"
 #include "MyQByteArray.h"
 
-#include "MyQExcel.h"
 
 void ExcelSheet::AllRows(std::vector<QStringList> &rows) const
 {
-	int countRows = sh->querySubObject("UsedRange")->querySubObject("Rows")->property("Count").toInt();
-	int countCols = sh->querySubObject("UsedRange")->querySubObject("Columns")->property("Count").toInt();
+	int countRows = sheet->querySubObject("UsedRange")->querySubObject("Rows")->property("Count").toInt();
+	int countCols = sheet->querySubObject("UsedRange")->querySubObject("Columns")->property("Count").toInt();
 
 	rows.resize(countRows);
 
@@ -25,8 +28,8 @@ void ExcelSheet::AllRows(std::vector<QStringList> &rows) const
 
 QString ExcelSheet::AllRows() const
 {
-	int countRows = sh->querySubObject("UsedRange")->querySubObject("Rows")->property("Count").toInt();
-	int countCols = sh->querySubObject("UsedRange")->querySubObject("Columns")->property("Count").toInt();
+	int countRows = sheet->querySubObject("UsedRange")->querySubObject("Rows")->property("Count").toInt();
+	int countCols = sheet->querySubObject("UsedRange")->querySubObject("Columns")->property("Count").toInt();
 
 	QString ret;
 
@@ -40,6 +43,34 @@ QString ExcelSheet::AllRows() const
 	}
 
 	return ret;
+}
+
+void ExcelSheet::ClearContentsSheet()
+{
+	if (sheet && !sheet->isNull()) {
+		QAxObject* cells = sheet->querySubObject("Cells");
+		if (cells && !cells->isNull()) {
+			cells->dynamicCall("ClearContents()");
+				// для полной очистки (данные + форматирование) dynamicCall("Clear()");
+			delete cells;
+		}
+		else QMbError("ExcelSheet::ClearContentsSheet invalid cells");
+	}
+}
+
+ExcelWorkbook::ExcelWorkbook() {
+	qdbg << "ExcelWorkbook: ужасное говнище с утечками памяти, нужно переделать и убрать утечки памяти";
+}
+
+ExcelWorkbook::ExcelWorkbook(QString file) {
+	Open(file);
+	qdbg << "ExcelWorkbook: ужасное говнище с утечками памяти, нужно переделать и убрать утечки памяти";
+}
+
+ExcelWorkbook::~ExcelWorkbook() {
+	if(opened)
+		CloseNoSave();
+	qdbg << "ExcelWorkbook: ужасное говнище с утечками памяти, нужно переделать и убрать утечки памяти";
 }
 
 bool ExcelWorkbook::Open(QString file)
@@ -66,23 +97,38 @@ bool ExcelWorkbook::Open(QString file)
 		opened = true;
 		return true;
 	}
-	else Error("Open: file "+file+" not exists!");
+	else QMbError("Open: file "+file+" not exists!");
 	return false;
+}
+
+void ExcelWorkbook::Save()
+{
+	if(opened)
+	{
+		wb->dynamicCall("Save()");
+	}
 }
 
 void ExcelWorkbook::CloseNoSave()
 {
 	if(opened)
 	{
-		wb->dynamicCall("Close()");
+		wb->dynamicCall("Close(bool)", false);
 		excel->dynamicCall("Quit()");
 		delete excel;
 		excel = nullptr;
 		workbooks = nullptr;
 		wb = nullptr;
-		delete excel;
 		opened = false;
 	}
+}
+
+IExcelSheet * ExcelWorkbook::Sheet(int index) const {
+	if(index >= 0 and index < (int)sheets.size())
+		return sheets[index];
+
+	QMbError("Invalid sheet index "+QSn(index));
+	return nullptr;
 }
 
 QString ExcelWorkbook::ToStr() const
@@ -116,7 +162,8 @@ void ExcelQStringSheet::Init(const QString &sheet)
 
 QString ExcelQStringSheet::Cell(int col, int row) const
 {
-	if(row > (int)rows.size() || col > rows[row-1].size()) Logs::ErrorSt("QString Cell(col=" + QSn(col) + ", row=" + QSn(row) + ")  out of boud");
+	if(row > (int)rows.size() || col > rows[row-1].size())
+		QMbError("QString Cell(col=" + QSn(col) + ", row=" + QSn(row) + ")  out of boud");
 	return rows[row-1][col-1];
 }
 
@@ -143,7 +190,8 @@ QString ExcelQStringSheet::AllRows() const
 
 IExcelSheet* ExcelQStringWorkbook::Sheet(int number) const
 {
-	if(number > (int)sheetsPt.size()) Logs::ErrorSt("IExcelSheet* Sheet(number=" + QSn(number) + ") out of boud");
+	if(number > (int)sheetsPt.size())
+		QMbError("IExcelSheet* Sheet(number=" + QSn(number) + ") out of boud");
 	return sheetsPt[number-1];
 }
 
@@ -157,14 +205,15 @@ QString ExcelQStringWorkbook::ToStr() const
 	}
 	return ret;
 }
-void ExcelQStringWorkbook::FromStr(const QString &workBookAsStr)
+void ExcelQStringWorkbook::FromStr(const QString &/*workBookAsStr*/)
 {
-	QStringList sheets_ { workBookAsStr.split(IExcelSheet::EndSheet()) };
-	for(int i=0; i<sheets_.size(); i++)
-		sheets.push_back(sheets_[i]);
+	QMbError("ExcelQStringWorkbook::FromStr отключено, нужно реализовать вирт функцию");
+//	QStringList sheets_ { workBookAsStr.split(IExcelSheet::EndSheet()) };
+//	for(int i=0; i<sheets_.size(); i++)
+//		sheets.push_back(sheets_[i]);
 
-	for(uint i=0; i<sheets.size(); i++)
-		sheetsPt.push_back(&sheets[i]);
+//	for(uint i=0; i<sheets.size(); i++)
+//		sheetsPt.push_back(&sheets[i]);
 }
 
 QString MyQExcelHasher::ErrCodeToStr(int errCode)

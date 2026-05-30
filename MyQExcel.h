@@ -3,12 +3,11 @@
 
 #include <vector>
 
+#include <QDebug>
 #include <QAxObject>
 #include <QTextBrowser>
 
 #include "MyQShortings.h"
-
-#include "logs.h"
 
 class IExcelSheet
 {
@@ -16,10 +15,14 @@ public:
 	virtual ~IExcelSheet() = default;
 
 	virtual QString Name() const = 0;
+	/// col, row нумерация с 1
 	virtual QString Cell(int col, int row) const = 0;
+	/// col, row нумерация с 1
 	virtual void SetCell(int col, int row, const QString &value) = 0;
 	virtual void AllRows(std::vector<QStringList> &rows) const = 0;
 	virtual QString AllRows() const = 0;
+
+	virtual void ClearContentsSheet() = 0;
 
 	static QString EndCell() { return "[endCell]"; }
 	static QString EndRow()	{ return "[endRow]"; }
@@ -29,19 +32,23 @@ public:
 
 class ExcelSheet: public IExcelSheet
 {
-	QAxObject* sh;
+	QAxObject* sheet;
 
 public:
-	ExcelSheet(QAxObject* sheet): sh{sheet} {}
-	void Init(QAxObject* sheet) { sh = sheet; }
+	ExcelSheet(QAxObject* sheet): sheet{sheet} {}
+	void Init(QAxObject* sheet) { this->sheet = sheet; }
 
 	virtual ~ExcelSheet() override = default;
 
-	QString Name() const override { return sh->property("Name").toString(); }
-	QString Cell(int col, int row) const override { return sh->querySubObject("Cells(int,int)", row, col)->property("Value").toString(); }
-	void SetCell(int col, int row, const QString &value) override { sh->querySubObject("Cells(int,int)", col, row)->setProperty("Value",value); }
-	void AllRows(std::vector<QStringList> &rows) const override;
-	QString AllRows() const override;
+	virtual QString Name() const override { return sheet->property("Name").toString(); }
+	/// col, row нумерация с 1
+	virtual QString Cell(int col, int row) const override { return sheet->querySubObject("Cells(int,int)", row, col)->property("Value").toString(); }
+	/// col, row нумерация с 1
+	virtual void SetCell(int col, int row, const QString &value) override { sheet->querySubObject("Cells(int,int)", row, col)->setProperty("Value",value); }
+	virtual void AllRows(std::vector<QStringList> &rows) const override;
+	virtual QString AllRows() const override;
+
+	void ClearContentsSheet() override;
 };
 
 class ExcelQStringSheet: public IExcelSheet
@@ -56,18 +63,20 @@ public:
 	virtual ~ExcelQStringSheet() override { };
 
 	QString Name() const override { return name; }
+	/// col, row нумерация с 1
 	QString Cell(int col, int row) const override;
+	/// col, row нумерация с 1
 	void SetCell(int col, int row, const QString &value) override { rows[row-1][col-1] = value; }
 	void AllRows(std::vector<QStringList> &rows_) const override { rows_ = rows; }
 	QString AllRows() const override;
 };
 
-class IExcelWorkbook: public LogedClass
+class IExcelWorkbook
 {
 public:
 	virtual ~IExcelWorkbook() = default;
 
-	virtual IExcelSheet* Sheet(int number) const = 0;
+	virtual IExcelSheet* Sheet(int index) const = 0;
 	virtual int SheetCount() const = 0;
 	virtual QString ToStr() const = 0;
 };
@@ -82,12 +91,13 @@ class ExcelWorkbook: public IExcelWorkbook
 	std::vector<IExcelSheet*> sheets;
 
 public:
-	ExcelWorkbook() = default;
-	ExcelWorkbook(QString file) { Open(file); }
-	~ExcelWorkbook() override { if(opened) CloseNoSave(); }
+	ExcelWorkbook();
+	ExcelWorkbook(QString file);
+	~ExcelWorkbook() override;
 	bool Open(QString file);
+	void Save();
 	void CloseNoSave();
-	IExcelSheet* Sheet(int number) const override { return sheets[number-1]; }
+	IExcelSheet* Sheet(int index) const override;
 	int SheetCount() const override { return wb->querySubObject("Worksheets")->property("Count").toInt(); }
 	QString ToStr() const override ;
 };
