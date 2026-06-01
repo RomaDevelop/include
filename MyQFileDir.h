@@ -22,6 +22,7 @@ struct MyQFileDir
 	inline static QString GetCurrentFileNameFromRenameError(QString errorStr);
 
 	inline static QFileInfo FindNewest(const QFileInfoList &files);
+	inline static bool SetModifiedNow(const QString &filePath);
 
 	enum RemoveWay {
 		byNativeOrder,		// Native order file system
@@ -31,7 +32,7 @@ struct MyQFileDir
 		smartModified,		// Maintains a remainCount of which 50% are today's, 20% are yesterday's, 10% are weekly, etc.
 		smartRead			// Same, but sort by last read. For details see std::vector<FilesGroup> groups
 	};
-	inline static QString RemoveFiles(QString directory, int remainCount, RemoveWay removeWay = MyQFileDir::byModified);
+	inline static QString RemoveFiles(QString directory, int remainCount, RemoveWay removeWay);
 
 	///\brief removes in all subcategories
 	enum SortFlags { noSort, name, modified, read };
@@ -150,6 +151,22 @@ QFileInfo MyQFileDir::FindNewest(const QFileInfoList & files)
 	return newestModifFI;
 }
 
+bool MyQFileDir::SetModifiedNow(const QString & filePath)
+{
+	QFile file(filePath);
+
+	if (!file.open(QIODevice::ReadWrite)) {
+		qCritical() << "Не удалось открыть файл "+filePath+":" << file.errorString();
+		return false;
+	}
+
+	bool success = file.setFileTime(QDateTime::currentDateTime(), QFileDevice::FileModificationTime);
+
+	file.close();
+
+	return success;
+}
+
 QString MyQFileDir::RemoveFiles(QString directory, int remainCount, RemoveWay removeWay)
 {
 	QString ret;
@@ -259,16 +276,45 @@ QString MyQFileDir::RemoveFiles(QString directory, int remainCount, RemoveWay re
 		// can add logic for transferring empty values ​​from one group to another
 
 		for(auto &group:groups)
-		{
 			group.CalcCount();
+
+		for(auto &group:groups)
+		{
+			if(group.countBeforeRemove > 0)
+			{
+				qdbg << "----------------------------------------------------------------------------------";
+				qdbg << "all groups:" << group.maxDays <<  group.maxCount << group.countBeforeRemove << group.countToRemove;
+				for (int i = group.from; i <= group.to; ++i)
+				{
+					qdbg << "file "+files[i].filePath()+" "+files[i].lastModified().toString(DateTimeFormat);
+				}
+			}
+		}
+
+		auto Print = [&files](FilesGroup &group, int i, bool &groupInfoPrinted){
+			if(not groupInfoPrinted)
+			{
+				qdbg << "----------------------------------------------------------------------------------";
+				qdbg << "remove from group:" << group.maxDays <<  group.maxCount << group.countBeforeRemove << group.countToRemove;
+				groupInfoPrinted = true;
+			}
+			qdbg << "remove "+files[i].filePath()+" "+files[i].lastModified().toString(DateTimeFormat);
+		};
+
+		for(auto &group:groups)
+		{
 			if (group.countToRemove <= 0) continue;
+
+			bool groupInfoPrinted = false;
 
 			// If remove all
 			if (group.countToRemove >= group.countBeforeRemove) {
+
 				for (int i = group.from; i <= group.to; ++i) {
 					if(!QFile::remove(files[i].filePath())) {
 						ret += "can't remove file [" + files[i].filePath() + "]\n";
 					}
+					Print(group, i, groupInfoPrinted);
 				}
 				continue;
 			}
@@ -289,12 +335,13 @@ QString MyQFileDir::RemoveFiles(QString directory, int remainCount, RemoveWay re
 				if(!QFile::remove(files[i].filePath())) {
 					ret += "can't remove file [" + files[i].filePath() + "]\n";
 				}
+				Print(group, i, groupInfoPrinted);
 			}
 		}
 
 		return ret;
 	}
-	else ret += "unrealesed sort flag ("+QString::number(removeWay)+")";
+	else ret += "unreleased sort flag ("+QString::number(removeWay)+")";
 
 	// Remove last
 	while (files.size() > remainCount) {
