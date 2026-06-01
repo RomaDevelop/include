@@ -163,6 +163,8 @@ QString MyQFileDir::RemoveFiles(QString directory, int remainCount, RemoveWay re
 	for(int i=static_cast<int>(files.size())-1; i>=0; i--)
 		if(!files[i].isFile()) files.removeAt(i);
 
+	if(files.size() < remainCount) return "";
+
 	// All sorts descending, from new to old, to remove from the end
 	static auto cmpName = [](const QFileInfo &a, const QFileInfo &b){
 		return a.fileName() > b.fileName(); // sort by name (descending, i.e. Z Y X 5 4 3)
