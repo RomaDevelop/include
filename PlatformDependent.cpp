@@ -163,6 +163,30 @@ PlatformDependent::CopyMoveFileRes PlatformDependent::CopyMoveFile(QString Sourc
 	return res;
 }
 
+bool PlatformDependent::IsPathOnFixedDrive(QString path)
+{
+	// 1. Проверка UNC-пути напрямую (например, \\server\share)
+	path = QDir::toNativeSeparators(path);
+	if (path.startsWith("\\\\")) return false;
+
+	// 2. Проверка буквы дисков, запрашивая тип у ОС Windows
+	if (path.length() >= 2 && path[1] == ':') {
+		if(path.size() == 2) path += "\\";
+
+		// Извлечение "C:\" или "Z:\"
+		std::wstring root = path.left(3).toStdWString();
+
+		// Получение типа диска
+		UINT driveType = GetDriveTypeW(reinterpret_cast<LPCWSTR>(root.c_str()));
+
+		// DRIVE_FIXED — константа Windows, указывающая на локальный диск
+		return (driveType == DRIVE_FIXED);
+	}
+
+	qCritical() << "PlatformDependent::IsPathLocal invalid path:" << path;
+	return false;
+}
+
 void PlatformDependent::SetTopMost(QWidget * w, bool topMost)
 {
 	HWND hwnd = reinterpret_cast<HWND>(w->winId());
