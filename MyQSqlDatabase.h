@@ -35,11 +35,11 @@ struct BaseData
 	QString storagePath;
 
 	BaseData() = default;
-	BaseData(QString baseName, QString baseFilePathName, QString storagePath):
+	BaseData(QString baseName, QString baseFilePathName, QString storagePath, QString backupDirName):
 	    baseName{baseName},
 	    baseFilePathName{baseFilePathName},
 	    pathDataBase{ QFileInfo(baseFilePathName).path() },
-	    pathBackup{ QFileInfo(baseFilePathName).path() + "/backup" },
+		pathBackup{ QFileInfo(baseFilePathName).path() + "/" + backupDirName },
 	    storagePath{storagePath}
 	{
 		this->baseFilePathName = QDir::toNativeSeparators(this->baseFilePathName);
