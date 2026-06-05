@@ -17,8 +17,10 @@ namespace AppDataWorkNames {
 
 	inline const char* Windeploy = "Windeploy";
 	inline const char* Catalog = "Catalog";
+	inline const char* AdditionalTray = "AdditionalTray";
 
 	inline const char* linkFileName = "exe_path_name.txt";
+	inline const char* linkFileNameDebug = "exe_path_name_debug.txt";
 }
 namespace ADWN = AppDataWorkNames;
 #define ADWN_RomaDevelop_Catalog ADWN::RomaDevelop, ADWN::Catalog
@@ -26,11 +28,16 @@ namespace ADWN = AppDataWorkNames;
 
 struct AppDataWork
 {
-	inline static bool MakeFolderInAppData(const QString &appDataSubdir, const QString &programmName);
+	///\brief returns path to created folder or empty string
+	inline static QString MakeFolderInAppData(const QString &appDataSubdir, const QString &programmName);
 	inline static void MakeFolderAndLinkInAppData(const QString &appDataSubdir, const QString &programmName);
 
+	inline static QString BuildPathFolderInAppData(const QString &appDataSubdir, const QString &programmName);
+
 	inline static QString GetLinkFromAppData(const QString &appDataSubdir, const QString &programmName);
-	inline static QString GetFolderInAppData(const QString &appDataSubdir, const QString &programmName);
+
+	inline static void WriteFileInAppData(const QString &appDataSubdir, const QString &programmName,
+										  const QString &file, const QString &content);
 
 	inline static void WriteMessageFileInAppData(const QString &appDataSubdir, const QString &programmName, const QString &message);
 	inline static void RemoveOldMessageFiles(const QString &folder);
@@ -38,22 +45,23 @@ struct AppDataWork
 	                                    std::function<void (QString messageContent, bool &removeFile)> messageFunction);
 };
 
-bool AppDataWork::MakeFolderInAppData(const QString &appDataSubdir, const QString &programmName)
+QString AppDataWork::MakeFolderInAppData(const QString &appDataSubdir, const QString &programmName)
 {
-	auto thisDirInAppData = GetFolderInAppData(appDataSubdir, programmName);
-	if(!QDir().mkpath(thisDirInAppData)) { QMbError("error mkpath " + thisDirInAppData); return false; }
-	return true;
+	auto thisDirInAppData = BuildPathFolderInAppData(appDataSubdir, programmName);
+	if(!QDir().mkpath(thisDirInAppData)) { QMbError("error mkpath " + thisDirInAppData); return ""; }
+	return thisDirInAppData;
 }
 
 void AppDataWork::MakeFolderAndLinkInAppData(const QString &appDataSubdir, const QString &programmName)
 {
-	if(!MakeFolderInAppData(appDataSubdir, programmName)) return;
+	QString path = MakeFolderInAppData(appDataSubdir, programmName);
+	if(path.isEmpty()) return;
 
 #ifdef QT_NO_DEBUG
-	QString fileExePath = GetFolderInAppData(appDataSubdir, programmName).append(QString("/")+ADWN::linkFileName);
+	QString fileExePath = path+QString("/")+ADWN::linkFileName;
 #endif
 #ifdef QT_DEBUG
-	QString fileExePath = GetFolderInAppData(appDataSubdir, programmName).append("/exe_path_name_debug.txt");
+	QString fileExePath = path+QString("/")+ADWN::linkFileNameDebug;
 #endif
 	bool linkExistsAndOk = false;
 	if(QFileInfo(fileExePath).isFile())
@@ -81,9 +89,15 @@ void AppDataWork::MakeFolderAndLinkInAppData(const QString &appDataSubdir, const
 	}
 }
 
+QString AppDataWork::BuildPathFolderInAppData(const QString &appDataSubdir, const QString &programmName)
+{
+	auto appDataPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+	return appDataPath.append("/").append(appDataSubdir).append("/").append(programmName);
+}
+
 QString AppDataWork::GetLinkFromAppData(const QString &appDataSubdir, const QString &programmName)
 {
-	QString fileExePath = GetFolderInAppData(appDataSubdir, programmName).append("/exe_path_name.txt");
+	QString fileExePath = BuildPathFolderInAppData(appDataSubdir, programmName).append("/exe_path_name.txt");
 	if(!QFileInfo(fileExePath).isFile()) { QMbError("file "+fileExePath+" doesn't exist"); return ""; }
 
 	auto readRes = MyQFileDir::ReadFile2(fileExePath);
@@ -92,21 +106,26 @@ QString AppDataWork::GetLinkFromAppData(const QString &appDataSubdir, const QStr
 	return readRes.content;
 }
 
-QString AppDataWork::GetFolderInAppData(const QString &appDataSubdir, const QString &programmName)
+
+
+void AppDataWork::WriteFileInAppData(const QString &appDataSubdir, const QString &programmName,
+									 const QString &file, const QString &content)
 {
-	auto appDataPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
-	return appDataPath.append("/").append(appDataSubdir).append("/").append(programmName);
+	auto folder = BuildPathFolderInAppData(appDataSubdir, programmName);
+
+	if(!MyQFileDir::WriteFile(folder+"/"+file, content))
+		QMbError("error writing " + folder+"/"+file);
 }
 
 void AppDataWork::WriteMessageFileInAppData(const QString &appDataSubdir, const QString &programmName, const QString &message)
 {
-	auto folder = GetFolderInAppData(appDataSubdir, programmName);
+	auto folder = BuildPathFolderInAppData(appDataSubdir, programmName);
 
 	RemoveOldMessageFiles(folder);
 
 	if(!QFileInfo(folder).isDir()) { QMbError("WriteMessageFileInAppData: Destination folder "+folder+" doesn't exist"); return; }
 
-	static QString preparing_ = "preparing_";
+	QString preparing_ = "preparing_";
 
 	QString filePreparing = folder;
 	filePreparing.append("/").append(preparing_).append("MessageFileInAppData_")
@@ -145,7 +164,7 @@ void AppDataWork::InitTimerMessagesReader(const QString &appDataSubdir, const QS
 	if(timerReader) timerReader->deleteLater();
 	timerReader = new QTimer(parent);
 
-	auto folder = GetFolderInAppData(appDataSubdir, programmName);
+	auto folder = BuildPathFolderInAppData(appDataSubdir, programmName);
 
 	RemoveOldMessageFiles(folder);
 
