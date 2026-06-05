@@ -27,16 +27,18 @@ class AdditionalTrayIcon : public ClickableQWidget
 
 public:
 	explicit AdditionalTrayIcon(const QIcon &icon);
-	AdditionalTrayIcon(const AdditionalTrayIcon &) = delete;
-	AdditionalTrayIcon(AdditionalTrayIcon &&) = delete;
-	AdditionalTrayIcon& operator= (const AdditionalTrayIcon &) = delete;
-	AdditionalTrayIcon& operator= (AdditionalTrayIcon &&) = delete;
 	virtual ~AdditionalTrayIcon();
 
 	///\brief Sets the specified menu to be the context menu for the AdditionalTrayIcon.
 	///
 	/// AdditionalTrayIcon does not take ownership of the menu.
-	inline void setContextMenu(QMenu *menu) { this->menu = menu; }
+	void setContextMenu(QMenu *menu) { this->menu = menu; }
+
+	/// can take nullptr additionalTrayIcon, creates disabled combo
+	static void CreateSettingsCombo(QGridLayout *glo, int row, int col, AdditionalTrayIcon *additionalTrayIcon);
+
+	void setMonitor(int monitor);
+	int currentMonitor();
 
 	void CreateMousePosShower(bool moveWithMouse, QWidget *parent);
 	void CreateLogsWidget(bool show);

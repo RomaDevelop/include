@@ -43,6 +43,8 @@ struct MyQLocalServer
 		if(logWorker) logWorker(log);
 		else qDebug() << log;
 	}
+
+	inline static const char *error_connection_starting = "MyQLocalServer::InitSocket error connection to server ";
 };
 
 //--------------------------------------------------------------------------------------------------------------------------
@@ -141,7 +143,7 @@ std::shared_ptr<QLocalSocket> MyQLocalServer::InitSocket(QString serverName, int
 	socket->connectToServer(serverName);  // Имя канала
 
 	if (!socket->waitForConnected(waitForConnected)) {
-		Log(logWorker, "MyQLocalServer::InitSocket error connection to server "+serverName+": " + socket->errorString());
+		Log(logWorker, error_connection_starting+serverName+": " + socket->errorString());
 		return nullptr;
 	}
 
