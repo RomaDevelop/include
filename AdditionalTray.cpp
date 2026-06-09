@@ -22,7 +22,7 @@ const char * set_monitor = "set_monitor:";
 
 QByteArray answ_suffix = "_answ:";
 
-QEventLoop request_for_monitor_loop;
+QEventLoop& request_for_monitor_loop() { static QEventLoop loop; return loop; }
 QString request_for_monitor_answValue;
 
 QString monitorFileName = "monitor.txt";
@@ -63,7 +63,7 @@ bool InitClient(bool firstTry)
 			arrCopy.remove(0, answ_suffix.size());
 
 			request_for_monitor_answValue = arrCopy;
-			request_for_monitor_loop.quit();
+			request_for_monitor_loop().quit();
 		}
 		else QMbError("Invalid data from server "+netName+"\ndata:"+arr);
 	};
@@ -335,11 +335,11 @@ int AdditionalTrayIcon::currentMonitor()
 	{
 		QObject singleShotAborter;
 		QTimer::singleShot(300, &singleShotAborter, [](){
-			request_for_monitor_loop.quit();
+			request_for_monitor_loop().quit();
 			QMbError("Can't get currentMonitor, timeout");
 			request_for_monitor_answValue = "0";
 		});
-		request_for_monitor_loop.exec();
+		request_for_monitor_loop().exec();
 	}
 
 	bool ok;
