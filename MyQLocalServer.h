@@ -44,7 +44,8 @@ struct MyQLocalServer
 		else qDebug() << log;
 	}
 
-	inline static const char *error_connection_starting = "MyQLocalServer::InitSocket error connection to server ";
+	inline static const char *error_connection_starting = "MyQLocalServer::InitSocket error: connection to server ";
+	inline static const char *log_client_disconnected = "MyQLocalServer::InitSocket log: client disconnected from ";
 };
 
 //--------------------------------------------------------------------------------------------------------------------------
@@ -158,7 +159,7 @@ std::shared_ptr<QLocalSocket> MyQLocalServer::InitSocket(QString serverName, int
 	}
 
 	QObject::connect(socket.get(), &QLocalSocket::disconnected, [logWorker, serverName](){
-		Log(logWorker, "client disconnected from " + serverName);
+		Log(logWorker, log_client_disconnected + serverName);
 	});
 
 	return socket;
