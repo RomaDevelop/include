@@ -27,6 +27,10 @@ QString request_for_monitor_answValue;
 
 QString monitorFileName = "monitor.txt";
 
+std::vector<const char*> expectedLogs {
+	MyQLocalServer::error_connection_starting
+};
+
 bool InitClient(bool firstTry)
 {
 	auto incommingWorker = [](QByteArray arr){
@@ -70,7 +74,8 @@ bool InitClient(bool firstTry)
 
 	auto logCopy = logWorkerSock;
 	if(firstTry) logCopy = [](QString log){
-		if(log.startsWith(MyQLocalServer::error_connection_starting)) return;
+		for(auto &expectedLog:expectedLogs)
+			if(log.startsWith(expectedLog)) return;
 		qdbg << "UNEXPECTED MyQLocalServer log: "+log;
 	};
 
@@ -288,6 +293,7 @@ AdditionalTrayIcon::~AdditionalTrayIcon()
 	if(erased == 0) qdbg << "existingIcons didnt contained this";
 	if(existingIcons.empty())
 	{
+		expectedLogs.push_back(MyQLocalServer::log_client_disconnected);
 		localServer = {};
 		localClient = {};
 	}
