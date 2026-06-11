@@ -31,19 +31,38 @@ struct BaseData
 	QString baseFilePathName;
 	QString baseFileNoPath;
 	QString pathDataBase;
+
+	QString backupDirName;
 	QString pathBackup;
+
 	QString storagePath;
 
 	BaseData() = default;
 	BaseData(QString baseName, QString baseFilePathName, QString storagePath, QString backupDirName):
 	    baseName{baseName},
-	    baseFilePathName{baseFilePathName},
-	    pathDataBase{ QFileInfo(baseFilePathName).path() },
-		pathBackup{ QFileInfo(baseFilePathName).path() + "/" + backupDirName },
-	    storagePath{storagePath}
+		backupDirName{ QDir::toNativeSeparators(backupDirName) },
+		storagePath{ QDir::toNativeSeparators(storagePath) }
 	{
-		this->baseFilePathName = QDir::toNativeSeparators(this->baseFilePathName);
-		this->baseFileNoPath = QFileInfo(baseFilePathName).fileName();
+		InitFieldsByBaseFilePathName(baseFilePathName);
+	}
+
+	void InitFieldsByBaseFilePathName(QString baseFilePathName)
+	{
+		auto baseFilePathNameFI = QFileInfo(baseFilePathName);
+		this->baseFilePathName = QDir::toNativeSeparators(baseFilePathName);
+		this->baseFileNoPath = baseFilePathNameFI.fileName();
+		pathDataBase = baseFilePathNameFI.path();
+		pathBackup = baseFilePathNameFI.path() + "/" + backupDirName;
+	}
+
+	void SetBasePath(const QString &newPathNoFileName)
+	{
+		QString newBaseFilePathName = newPathNoFileName + "/" + baseFileNoPath;
+		InitFieldsByBaseFilePathName(newBaseFilePathName);
+	}
+	void SetStoragePath(const QString &newPath)
+	{
+		storagePath = QDir::toNativeSeparators(newPath);
 	}
 };
 
