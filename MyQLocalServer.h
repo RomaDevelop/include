@@ -19,11 +19,14 @@ struct MyQLocalServer
 
 	inline static std::shared_ptr<QLocalSocket> InitSocket(QString serverName, int waitForConnected,
 	                                                       std::function<void(QByteArray data)> incommingWorker,
+	                                                       std::function<void()> disconnectWorker,
 	                                                       std::function<void(QString)> logWorker);
 
 	std::shared_ptr<QLocalServer> qserver;	// shared_ptr потому что конструктор перемещения не доступен
 	std::map<QLocalSocket*, QDateTime> activeClients; // second = connected_time
 	std::map<QDateTime, QLocalSocket*> activeClientsByConnectedTime;
+
+	std::function<void(QLocalSocket *client)> cbClientConnected;
 
 	std::function<void(QLocalSocket *client)> cbClientAboutToDisconnect;
 	std::function<void(QLocalSocket *client)> cbClientDisconnectFinished;
@@ -83,13 +86,13 @@ std::shared_ptr<MyQLocalServer> MyQLocalServer::InitServer(QString name,
 
 		Log(logWorker, "client connected to " + name);
 
-		// Чтение данных от клиента
+		// Подключение обработчика чтения данных от клиента
 		QObject::connect(client, &QLocalSocket::readyRead, qserverPtr, [client, incommingWorker]() {
 			QByteArray data = client->readAll();
 			if(incommingWorker) incommingWorker(std::move(data), client);
 		});
 
-		// Обработка отключения клиента
+		// Подключение обработчика отключения клиента
 		QObject::connect(client, &QLocalSocket::disconnected, qserverPtr, [serverPtr, client, logWorker, name]() {
 
 			if(serverPtr->cbClientAboutToDisconnect) serverPtr->cbClientAboutToDisconnect(client);
@@ -121,19 +124,20 @@ std::shared_ptr<MyQLocalServer> MyQLocalServer::InitServer(QString name,
 
 			if(serverPtr->cbClientDisconnectFinished) serverPtr->cbClientDisconnectFinished(client);
 		});
+
+		if(serverPtr->cbClientConnected) serverPtr->cbClientConnected(client);
 	});
 
 	QObject::connect(qserverPtr, &QObject::destroyed, qserverPtr, [name, logWorker]() {
-		//qdbg << "before error (because QLocalServer is global, but logWorker works with destroyed widgets)";
-		Log(logWorker, "QLocalServer " + name + "destroyed");
-		//qdbg << "after error";
+		Log(logWorker, "QLocalServer " + name + " destroyed");
 	});
 
 	return server;
 }
 
 std::shared_ptr<QLocalSocket> MyQLocalServer::InitSocket(QString serverName, int waitForConnected,
-                                                         std::function<void (QByteArray)> incommingWorker,
+                                                         std::function<void(QByteArray)> incommingWorker,
+                                                         std::function<void()> disconnectWorker,
                                                          std::function<void(QString)> logWorker)
 {
 	if(!incommingWorker) {
@@ -158,8 +162,9 @@ std::shared_ptr<QLocalSocket> MyQLocalServer::InitSocket(QString serverName, int
 		});
 	}
 
-	QObject::connect(socket.get(), &QLocalSocket::disconnected, [logWorker, serverName](){
+	QObject::connect(socket.get(), &QLocalSocket::disconnected, [logWorker, serverName, disconnectWorker](){
 		Log(logWorker, log_client_disconnected + serverName);
+		if(disconnectWorker) disconnectWorker();
 	});
 
 	return socket;
