@@ -14,6 +14,27 @@
 
 #include "MyQShortings.h"
 
+/*
+
+Usage example:
+
+// Declaration in global scope or namespace:
+DECLARE_RESOURCES(Resources)
+	SET_ERROR_WORKER([](QString str){ QMbError(str); })
+	DECLARE_RESOURCE(name1, "name1.ico")
+	DECLARE_RESOURCE(name2, "name2.ico")
+END_DECLARE_RESOURCES;
+
+// Initialisation (should be called before the first usage):
+Resources::Init(CurrentSourcesPath()+"/resources", MyQDifferent::PathToExe()+"/files/resources", ReleaseBuildsNow());
+// declared resources will be copied from sources path to release path if the result ReleaseBuildsNow() is true,
+// otherwise (in case of launch from copied release) source files will not be copied, resourses files are already in the release
+
+// Using resource
+icon->setIcon(Resources::name1().Icon());
+
+*/
+
 struct Resource
 {
 	QString PathName() const { return pathNameInDistib; }
