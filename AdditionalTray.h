@@ -50,6 +50,17 @@ public:
 	inline static std::function<void(QPoint pos)> fnClientGetCommandSetPos;
 	inline static void CallFnClientGetCommandSetPos(QPoint pos);
 
+protected:
+
+	/// standard tooltip is disabled (duration set 0), because with this widget it doesn't works correctly
+	/// (sometimes shows, but usually - not)
+	/// this is redefined logic tooltip showing, uses text from standard tooltip
+	virtual void enterEvent(QEvent  *event) override;
+	virtual void leaveEvent(QEvent *event) override;
+	virtual void mouseMoveEvent(QMouseEvent *event) override;
+	void startTooltipTimer();
+	QTimer timerToolTip;
+
 private:
 	QMenu *menu = nullptr;
 	void SlotShowContextMenu(const QPoint& pos) {

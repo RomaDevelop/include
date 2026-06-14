@@ -1,6 +1,7 @@
 #include "AdditionalTray.h"
 
 #include <QComboBox>
+#include <QToolTip>
 
 #include "MyQString.h"
 #include "MyQTextEdit.h"
@@ -52,7 +53,7 @@ struct LocalNet
 bool LocalNet::InitClient(bool firstTry)
 {
 	auto incommingWorker = [](QByteArray arr){
-		qdbg << arr;
+		//qdbg << arr;
 		clientBuffer += arr;
 
 		if(not clientBuffer.endsWith(endCommandChar))
@@ -125,11 +126,17 @@ bool LocalNet::InitClient(bool firstTry)
 		if(localClientIsNextServer)
 		{
 			localClientIsNextServer = false;
-			QTimer::singleShot(0, [](){ InitLocalNet(); });
+			QTimer::singleShot(0, [](){
+				qdbg << "this application will became new "+netName+" server";
+				InitLocalNet();
+			});
 		}
 		else
 		{
-			QTimer::singleShot(100, [](){ InitLocalNet(); });
+			QTimer::singleShot(100, [](){
+				qdbg << "this application will try connect to new "+netName+" server";
+				InitLocalNet();
+			});
 		}
 	};
 
@@ -365,8 +372,6 @@ void LocalNet::InitLocalNet()
 AdditionalTrayIcon::AdditionalTrayIcon(const QIcon &icon)
 	: ClickableQWidget({}, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint)
 {
-	CreateLogsWidget(false);
-
 	setAttribute(Qt::WA_TranslucentBackground);
 	setAttribute(Qt::WA_ShowWithoutActivating);
 	setWindowFlag(Qt::WindowDoesNotAcceptFocus);
@@ -391,9 +396,10 @@ AdditionalTrayIcon::AdditionalTrayIcon(const QIcon &icon)
 	connect(this, &ClickableQWidget::clicked, [this](){ QTimer::singleShot(0,[this](){
 			PlatformDependent::SetTopMost(this,true); }); });
 
-	//QTimer *timerTopmoster = new QTimer(this);
-	//connect(timerTopmoster, &QTimer::timeout, [this](){ PlatformDependent::SetTopMost(this,true); });
-	//timerTopmoster->start(1000);
+	setToolTipDuration(0);
+	setMouseTracking(true);
+	timerToolTip.setSingleShot(true);
+	connect(&timerToolTip, &QTimer::timeout, this, [this](){ QToolTip::showText(QCursor::pos(), toolTip(), this); });
 
 	existingIcons.insert(this);
 
@@ -554,4 +560,28 @@ void AdditionalTrayIcon::CallFnClientGetCommandSetPos(QPoint pos)
 {
 	if(not fnClientGetCommandSetPos) { QMbError("AdditionalTrayIcon: null fnClientGetCommandSetPos"); return; }
 	fnClientGetCommandSetPos(pos);
+}
+
+void AdditionalTrayIcon::enterEvent(QEvent * event)
+{
+	startTooltipTimer();
+	QWidget::enterEvent(event);
+}
+
+void AdditionalTrayIcon::leaveEvent(QEvent * event)
+{
+	timerToolTip.stop();
+	QWidget::leaveEvent(event);
+}
+
+void AdditionalTrayIcon::mouseMoveEvent(QMouseEvent * event)
+{
+	startTooltipTimer(); // restart tooltip wait when mouse moved
+	QWidget::mouseMoveEvent(event);
+}
+
+void AdditionalTrayIcon::startTooltipTimer()
+{
+	int delay = style()->styleHint(QStyle::SH_ToolTip_WakeUpDelay, nullptr, this);
+	timerToolTip.start(delay);
 }
