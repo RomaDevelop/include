@@ -24,6 +24,8 @@ struct MyQFileDir
 	inline static QFileInfo FindNewest(const QFileInfoList &files);
 	inline static bool SetModifiedNow(const QString &filePath);
 
+	inline static void BackupText(const QString &text, const QString &path, const QString &fileprefix = "", int maxbackupsCount = 100);
+
 	enum RemoveWay {
 		byNativeOrder,		// Native order file system
 		byName,				// By name (1, 2, 3, A, B, C...)
@@ -165,6 +167,17 @@ bool MyQFileDir::SetModifiedNow(const QString & filePath)
 	file.close();
 
 	return success;
+}
+
+void MyQFileDir::BackupText(const QString & text, const QString & path, const QString & fileprefix, int maxbackupsCount)
+{
+	if(!QDir().mkpath(path)) { QMbError("Error make path "+path); return; }
+	QString curDtStr = QDateTime::currentDateTime().toString(DateTimeFormatForFileName);
+	QString backupFile = path+"/"+fileprefix+curDtStr+".txt";
+	bool writeRes = MyQFileDir::WriteFile(backupFile, text);
+	if(!writeRes) { QMbError("Error write file "+backupFile); return; }
+
+	MyQFileDir::RemoveFiles(path, maxbackupsCount, MyQFileDir::byNativeOrder);
 }
 
 QString MyQFileDir::RemoveFiles(QString directory, int remainCount, RemoveWay removeWay)
