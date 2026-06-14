@@ -41,7 +41,6 @@ public:
 	int currentMonitor();
 
 	void CreateMousePosShower(bool moveWithMouse, QWidget *parent);
-	void CreateLogsWidget(bool show);
 	std::unique_ptr<QWidget> widgetLogs;
 	QTextEdit *textEditLogs;
 	void Log(const QString &str);

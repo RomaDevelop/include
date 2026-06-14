@@ -8,11 +8,21 @@
 #include "AppDataWork.h"
 
 std::shared_ptr<MyQLocalServer> localServer;
+QByteArray serverBuffer;
 std::shared_ptr<QLocalSocket> localClient;
+QByteArray clientBuffer;
+bool localClientIsNextServer = false;
 
 QString netName = "AdditionalTrayIcon";
 std::function<void(QString log)> logWorkerSock = [](QString log){ qdbg << "sock: "+log; };
 std::function<void(QString log)> logWorkerServ = [](QString log){ qdbg << "serv: "+log; };
+
+const char * you_are_next_server = "__yans__";
+const char * you_are_NOT_next_server = "__yaNOTns__";
+
+
+const char endCommandChar = ';';
+const char *endCommandStr = ";";
 
 const char * request_for_pos = "request_for_pos";
 QByteArray request_for_monitor = "request_for_monitor";
@@ -22,54 +32,86 @@ const char * set_monitor = "set_monitor:";
 
 QByteArray answ_suffix = "_answ:";
 
-QEventLoop& request_for_monitor_loop() { static QEventLoop loop; return loop; }
+QEventLoop& monitor_loop() { static QEventLoop loop; return loop; }
 QString request_for_monitor_answValue;
 
 QString monitorFileName = "monitor.txt";
 
 std::vector<const char*> expectedLogs {
-	MyQLocalServer::error_connection_starting
+	MyQLocalServer::error_connection_starting,
+	MyQLocalServer::log_client_disconnected,
 };
 
-bool InitClient(bool firstTry)
+struct LocalNet
+{
+	static void InitLocalNet();
+	static bool InitClient(bool firstTry);
+	static bool InitServer();
+};
+
+bool LocalNet::InitClient(bool firstTry)
 {
 	auto incommingWorker = [](QByteArray arr){
-		if(arr == not_need_add_tray)
+		qdbg << arr;
+		clientBuffer += arr;
+
+		if(not clientBuffer.endsWith(endCommandChar))
 		{
-			AdditionalTrayIcon::CallFnClientGetCommandSetPos({});
+			if(clientBuffer.size() > 10000) { QMbError("clientBuffer overflow"); clientBuffer.clear(); }
+			return;
 		}
-		else if(arr.startsWith(command_set_pos.toUtf8()))
+
+		clientBuffer.chop(1);
+		auto arrs = clientBuffer.split(endCommandChar);
+		clientBuffer.clear();
+
+		for(auto &arr:arrs)
 		{
-			if(not arr.endsWith(";")) { QMbError("Not finished data: "+arr); return; }
+			if(0) {}
+			else if(arr == you_are_next_server)
+			{
+				localClientIsNextServer = true;
+				qdbg << "localClientIsNextServer = true";
+			}
+			else if(arr == you_are_NOT_next_server)
+			{
+				localClientIsNextServer = false;
+				qdbg << "localClientIsNextServer = false";
+			}
+			else if(arr == not_need_add_tray)
+			{
+				AdditionalTrayIcon::CallFnClientGetCommandSetPos({});
+			}
+			else if(arr.startsWith(command_set_pos.toUtf8()))
+			{
+				QString answ_pos_str = arr;
+				answ_pos_str.remove(0, command_set_pos.size());
 
-			QString answ_pos_str = arr;
-			answ_pos_str.remove(0, command_set_pos.size());
-			answ_pos_str.chop(1);
+				auto xy = answ_pos_str.split(":");
+				if(xy.size() != 2) { QMbError("Invalind data (count): "+arr); return; }
 
-			auto xy = answ_pos_str.split(":");
-			if(xy.size() != 2) { QMbError("Invalind data (count): "+arr); return; }
+				bool ok1, ok2;
+				int x = xy[0].toInt(&ok1);
+				int y = xy[1].toInt(&ok2);
+				if(not ok1 or not ok2)  { QMbError("Invalind data (value): "+arr); return; }
+				QPoint posFromServer(x,y);
 
-			bool ok1, ok2;
-			int x = xy[0].toInt(&ok1);
-			int y = xy[1].toInt(&ok2);
-			if(not ok1 or not ok2)  { QMbError("Invalind data (value): "+arr); return; }
-			QPoint posFromServer(x,y);
+				AdditionalTrayIcon::CallFnClientGetCommandSetPos(posFromServer);
+				//qdbg << "correct get" << posFromServer;
+			}
+			else if(arr.startsWith(request_for_monitor))
+			{
+				auto arrCopy = arr;
+				arrCopy.remove(0, request_for_monitor.size());
+				if(not arrCopy.startsWith(answ_suffix)) { QMbError("missing answ suffix "+netName+"\ndata:"+arr); }
 
-			AdditionalTrayIcon::CallFnClientGetCommandSetPos(posFromServer);
-			//qdbg << "correct get" << posFromServer;
+				arrCopy.remove(0, answ_suffix.size());
+
+				request_for_monitor_answValue = arrCopy;
+				monitor_loop().quit();
+			}
+			else QMbError("Invalid data from server "+netName+"\ndata:"+arr);
 		}
-		else if(arr.startsWith(request_for_monitor))
-		{
-			auto arrCopy = arr;
-			arrCopy.remove(0, request_for_monitor.size());
-			if(not arrCopy.startsWith(answ_suffix)) { QMbError("missing answ suffix "+netName+"\ndata:"+arr); }
-
-			arrCopy.remove(0, answ_suffix.size());
-
-			request_for_monitor_answValue = arrCopy;
-			request_for_monitor_loop().quit();
-		}
-		else QMbError("Invalid data from server "+netName+"\ndata:"+arr);
 	};
 
 	auto logCopy = logWorkerSock;
@@ -79,7 +121,19 @@ bool InitClient(bool firstTry)
 		qdbg << "UNEXPECTED MyQLocalServer log: "+log;
 	};
 
-	localClient = MyQLocalServer::InitSocket(netName, 300, incommingWorker, logCopy);
+	auto disconnectWorker = [](){
+		if(localClientIsNextServer)
+		{
+			localClientIsNextServer = false;
+			QTimer::singleShot(0, [](){ InitLocalNet(); });
+		}
+		else
+		{
+			QTimer::singleShot(100, [](){ InitLocalNet(); });
+		}
+	};
+
+	localClient = MyQLocalServer::InitSocket(netName, 300, incommingWorker, disconnectWorker, logCopy);
 
 	if(localClient)
 	{
@@ -97,45 +151,60 @@ const char * abort_send = "abort_send";
 
 int monitorForPlacing = 0;
 
-QString GetPosForClient(QLocalSocket *client, bool forceResetAll = false)
+void SendCmdSetPos(QLocalSocket *client);
+
+void SendCmdSetPosToAll()
 {
-	if(not localServer){
+	distributedPoses.clear();
+	for(auto &node:localServer->activeClientsByConnectedTime)
+	{
+		auto clientToReset = node.second;
+		SendCmdSetPos(clientToReset);
+	}
+}
+
+void SendCmdSetPos(QLocalSocket *client)
+{
+	if(not localServer) {
 		qdbg << "GetPosForClient called, but localServer is null";
-		return "";
+		return;
 	}
 
-	bool wereErased = false;
+	if(monitorForPlacing == -1)
+	{
+		client->write(not_need_add_tray);
+		client->write(endCommandStr);
+		return;
+	}
 
 	auto screensList = QGuiApplication::screens();
 
-	if(monitorForPlacing >= screensList.size()) {
+	if(monitorForPlacing < 0 or monitorForPlacing >= screensList.size()) {
 		QMbError("Invalid monitorForPlacing = "+QSn(monitorForPlacing)+", monitors count is "+QSn(screensList.size()));
-		return not_need_add_tray;
+		client->write(not_need_add_tray);
+		client->write(endCommandStr);
+		return;
 	}
 
 	auto &screen = screensList[monitorForPlacing];
 
-	QPoint globalPosForIcon;
+	bool wereErased = false;
 	for(auto &node:distributedPoses)
 		if(localServer->activeClients.count(node.first) < 1)
 		{
 			//distributedPoses.erase(node.first); // удаление неактуальных
+				// почему закомментировано?
 			wereErased = true;
 			break;
 		}
 
-	if(wereErased or forceResetAll)
+	if(wereErased)
 	{
-		distributedPoses.clear();
-		for(auto &node:localServer->activeClientsByConnectedTime)
-		{
-			auto clientToReset = node.second;
-			auto posMsg = GetPosForClient(clientToReset);
-			clientToReset->write(posMsg.toUtf8());
-		}
-		return abort_send;
+		SendCmdSetPosToAll();
+		return;
 	}
 
+	QPoint globalPosForIcon;
 	if(distributedPoses.empty()) // нет существующих
 	{
 		const int fixed_y = 1001;
@@ -157,51 +226,128 @@ QString GetPosForClient(QLocalSocket *client, bool forceResetAll = false)
 
 	//qdbg << "GetPosForClient" << globalPosForIcon;
 	distributedPoses.insert({client, globalPosForIcon});
-	return command_set_pos+QSn(globalPosForIcon.x())+":"+QSn(globalPosForIcon.y())+";";
+	client->write((command_set_pos+QSn(globalPosForIcon.x())+":"+QSn(globalPosForIcon.y())).toUtf8());
+	client->write(endCommandStr);
 }
 
-bool InitServer()
+void SendClientHeIsNotNextServer(QLocalSocket &client)
+{
+	client.write(you_are_NOT_next_server);
+	client.write(endCommandStr);
+}
+
+void SendClientsWhoIsNextServer(QLocalSocket &next_server_client)
+{
+	next_server_client.write(you_are_next_server);
+	next_server_client.write(endCommandStr);
+	for(auto &node:localServer->activeClients)
+	{
+		if(node.first != &next_server_client)
+		{
+			SendClientHeIsNotNextServer(*node.first);
+		}
+	}
+}
+
+bool LocalNet::InitServer()
 {
 	auto incommingWorker = [](QByteArray data, QLocalSocket *fromClient)
 	{
-		if(data == request_for_pos)
-		{
-			auto msg = GetPosForClient(fromClient).toUtf8();
-			if(msg != abort_send) fromClient->write(msg);
-		}
-		else if(data == request_for_monitor)
-		{
-			fromClient->write((request_for_monitor+answ_suffix+QSn(monitorForPlacing)).toUtf8());
-		}
-		else if(data.startsWith(set_monitor))
-		{
-			data.remove(0, QByteArray(set_monitor).length());
-			bool ok;
-			int monitor = data.toInt(&ok);
-			if(not ok) { QMbError(QString("Invalid ")+set_monitor+" value: "+data); return; }
+		serverBuffer += data;
 
-			monitorForPlacing = monitor;
-			GetPosForClient(fromClient, true);
-
-			auto forlder = AppDataWork::MakeFolderInAppData(AppDataWorkNames::RomaDevelop, AppDataWorkNames::AdditionalTray);
-			auto writeRes = MyQFileDir::WriteFile(forlder+"/"+monitorFileName, QSn(monitorForPlacing));
-			if(not writeRes) QMbError("Can't write file "+forlder+"/"+monitorFileName);
+		if(not data.endsWith(endCommandChar))
+		{
+			if(serverBuffer.size() > 10000) { QMbError("serverBuffer overflow"); serverBuffer.clear(); }
+			return;
 		}
-		else QMbError("Invalid data from client\ndata:"+data);
+		serverBuffer.chop(1);
+		auto arrs = serverBuffer.split(endCommandChar);
+		serverBuffer.clear();
+
+		for(auto &data:arrs)
+		{
+			if(data == request_for_pos)
+			{
+				SendCmdSetPos(fromClient);
+			}
+			else if(data == request_for_monitor)
+			{
+				fromClient->write((request_for_monitor+answ_suffix+QSn(monitorForPlacing)).toUtf8());
+				fromClient->write(endCommandStr);
+			}
+			else if(data.startsWith(set_monitor))
+			{
+				data.remove(0, QByteArray(set_monitor).length());
+				bool ok;
+				int monitor = data.toInt(&ok);
+				if(not ok) { QMbError(QString("Invalid ")+set_monitor+" value: "+data); return; }
+
+				monitorForPlacing = monitor;
+				SendCmdSetPosToAll();
+
+				auto forlder = AppDataWork::MakeFolderInAppData(AppDataWorkNames::RomaDevelop, AppDataWorkNames::AdditionalTray);
+				auto writeRes = MyQFileDir::WriteFile(forlder+"/"+monitorFileName, QSn(monitorForPlacing));
+				if(not writeRes) QMbError("Can't write file "+forlder+"/"+monitorFileName);
+			}
+			else QMbError("Invalid data from client\ndata:"+data);
+		}
 
 		//qdbg << "get from client: " << data;
 	};
 
 	localServer = MyQLocalServer::InitServer(netName, incommingWorker, logWorkerServ);
-	if(localServer) localServer->cbClientDisconnectFinished = [](QLocalSocket *client){
-		GetPosForClient(client, true);
+	if(not localServer) return false;
+
+	static QLocalSocket *clientToBecomeServer {};
+	static QLocalSocket *currentProgrammClient {};
+	localServer->cbClientConnected = [](QLocalSocket *client){
+		if(not currentProgrammClient) currentProgrammClient = client;
+		if(currentProgrammClient == client) return;
+		/// если это первый клиент, т.е. мы сами - ничего не делаем
+
+		// если следующий сервер не знадан - выставляем
+		if(not clientToBecomeServer)
+		{
+			clientToBecomeServer = client;
+			SendClientsWhoIsNextServer(*client);
+		}
+		else SendClientHeIsNotNextServer(*client);
+	};
+
+	// При отключении клиента
+	localServer->cbClientDisconnectFinished = [](QLocalSocket *client) {
+		// если отключился следующий сервер - обнуляем
+		if(client == clientToBecomeServer)
+		{
+			clientToBecomeServer = {};
+			for(auto &node:localServer->activeClientsByConnectedTime)
+			{
+				if(node.second != currentProgrammClient)
+				{
+					clientToBecomeServer = node.second;
+					SendClientsWhoIsNextServer(*node.second);
+					break;
+				}
+			}
+		}
+
+		// всем высылаются обновлённые позиции
+		SendCmdSetPosToAll();
 	};
 
 	return localServer->IsUp();
 }
 
-void InitLocalNet()
+void LocalNet::InitLocalNet()
 {
+	if(localServer)
+	{
+		QMbError("Unexpected case, InitLocalNet called, but localServer is not null");
+		return;
+	}
+
+	localServer = {};
+	localClient = {};
 	auto initClientRes = InitClient(true);
 	if(not initClientRes)
 	{
@@ -213,6 +359,7 @@ void InitLocalNet()
 	}
 
 	localClient->write(request_for_pos);
+	localClient->write(endCommandStr);
 }
 
 AdditionalTrayIcon::AdditionalTrayIcon(const QIcon &icon)
@@ -270,7 +417,7 @@ AdditionalTrayIcon::AdditionalTrayIcon(const QIcon &icon)
 			monitorForPlacing = 1;
 	}
 
-	InitLocalNet();
+	LocalNet::InitLocalNet();
 
 	AdditionalTrayIcon::fnClientGetCommandSetPos = [this](QPoint pos){
 		if(pos.isNull()) {
@@ -299,10 +446,13 @@ AdditionalTrayIcon::~AdditionalTrayIcon()
 	}
 }
 
+const char *no_add_icon = "Без доп. иконки";
+
 void AdditionalTrayIcon::CreateSettingsCombo(QGridLayout *glo, int row, int col, AdditionalTrayIcon *additionalTrayIcon)
 {
 	auto comboMonitor = new QComboBox();
 	int monitorsCnt = QGuiApplication::screens().size();
+	comboMonitor->addItem(no_add_icon);
 	for(int i=0; i<monitorsCnt; i++) comboMonitor->addItem(QSn(i));
 	int currentAddTrayMonitor = additionalTrayIcon->currentMonitor();
 	comboMonitor->setCurrentText(QSn(currentAddTrayMonitor));
@@ -314,7 +464,9 @@ void AdditionalTrayIcon::CreateSettingsCombo(QGridLayout *glo, int row, int col,
 	{
 		connect(comboMonitor, &QComboBox::currentTextChanged, additionalTrayIcon, [additionalTrayIcon, comboMonitor]()
 		{
-			additionalTrayIcon->setMonitor(comboMonitor->currentText().toInt());
+			int monitorVal = comboMonitor->currentText().toInt();
+			if(comboMonitor->currentText() == no_add_icon) monitorVal = -1;
+			additionalTrayIcon->setMonitor(monitorVal);
 		});
 	}
 	else
@@ -327,6 +479,7 @@ void AdditionalTrayIcon::setMonitor(int monitor)
 {
 	if(not localClient) { QMbError("Icons client is null"); return;  }
 	localClient->write(QString(set_monitor+QSn(monitor)).toUtf8());
+	localClient->write(endCommandStr);
 }
 
 int AdditionalTrayIcon::currentMonitor()
@@ -337,15 +490,16 @@ int AdditionalTrayIcon::currentMonitor()
 
 	request_for_monitor_answValue.clear();
 	localClient->write(request_for_monitor);
+	localClient->write(endCommandStr);
 
 	{
 		QObject singleShotAborter;
 		QTimer::singleShot(300, &singleShotAborter, [](){
-			request_for_monitor_loop().quit();
+			monitor_loop().quit();
 			QMbError("Can't get currentMonitor, timeout");
 			request_for_monitor_answValue = "0";
 		});
-		request_for_monitor_loop().exec();
+		monitor_loop().exec();
 	}
 
 	bool ok;
@@ -377,38 +531,6 @@ void AdditionalTrayIcon::CreateMousePosShower(bool moveWithMouse, QWidget *paren
 		timer->start(10);
 		connect(timer, &QTimer::timeout, [this](){ this->move(QCursor::pos()); });
 	}
-}
-
-#include <QPushButton>
-void AdditionalTrayIcon::CreateLogsWidget(bool show)
-{
-	widgetLogs = std::make_unique<QWidget>();
-
-	QVBoxLayout *vlo_main = new QVBoxLayout(widgetLogs.get());
-	QHBoxLayout *hlo1 = new QHBoxLayout;
-	QHBoxLayout *hlo2 = new QHBoxLayout;
-	vlo_main->addLayout(hlo1);
-	vlo_main->addLayout(hlo2);
-
-	QPushButton *btnTestSend = new QPushButton("test write");
-	hlo1->addWidget(btnTestSend);
-	connect(btnTestSend,&QPushButton::clicked,[](){
-		localClient->write("thing");
-	});
-
-	QPushButton *btnTestRequest = new QPushButton("test 2");
-	hlo1->addWidget(btnTestRequest);
-	connect(btnTestRequest,&QPushButton::clicked,[](){ });
-
-	hlo1->addStretch();
-
-	textEditLogs = new QTextEdit;
-	hlo2->addWidget(textEditLogs);
-
-	if(show) widgetLogs->show();
-
-	widgetLogs->resize(800,600);
-	QTimer::singleShot(100,[this](){ widgetLogs->activateWindow(); });
 }
 
 void AdditionalTrayIcon::Log(const QString &str)
