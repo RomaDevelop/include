@@ -65,14 +65,27 @@ public:
 	std::vector<ItemState> itemStatesBeforeCut;
 	inline QString RestoreState(const std::vector<ItemState> &states);
 
-private slots:
-	inline void Cut();
-	inline void Copy();
-	inline void Paste();
-	inline void PasteFromOsClip();
+	struct PastePolicy {
+		bool pasteNullItemDeletesDstItem = false; // false - item text will be just cleared
+		bool allowCreateRows = true;
+		bool allowCreateCols = true;
+		bool allowCreateItems = true;
+		bool showMessageIfTryedNotAllowed = true;
+	};
+	PastePolicy pastePolicy;
 private:
+	inline void Copy(bool cut);
+	inline void Paste();
+	inline void ReplaceForCopyPaste(QString &text, bool copy);
+	inline static const char *nullItemMarker = "null_item";
+	const std::vector<std::pair<QString, QString>> replaces {
+		{"\"", "_mqtw_q_"},
+		{"\t", "_mqtw_t_"},
+		{"\r", "_mqtw_r_"},
+		{"\n", "_mqtw_n_"},
+	};
+
 	QMenu* menu = nullptr;
-	inline static std::vector<QStringList> innerClipboard {};
 
 protected:
 	inline void keyboardSearch(const QString &search) override;
@@ -229,19 +242,18 @@ void MyQTableWidget::CreateContextMenu()
 	QAction *cutAction = menu->addAction("Cut");
 	QAction *copyAction = menu->addAction("Copy");
 	QAction *pasteAction = menu->addAction("Paste");
-	QAction *pasteActionFromOsClip = menu->addAction("Paste from OS clipboard");
 
-	connect(cutAction, &QAction::triggered, this, &MyQTableWidget::Cut);
-	connect(copyAction, &QAction::triggered, this, &MyQTableWidget::Copy);
+	connect(cutAction, &QAction::triggered, this, [this](){ Copy(true); });
+	connect(copyAction, &QAction::triggered, this, [this](){ Copy(false); });
 	connect(pasteAction, &QAction::triggered, this, &MyQTableWidget::Paste);
-	connect(pasteActionFromOsClip, &QAction::triggered, this, &MyQTableWidget::PasteFromOsClip);
 
 	cutAction->setShortcut(QKeySequence::Cut);
 	copyAction->setShortcut(QKeySequence::Copy);
 	pasteAction->setShortcut(QKeySequence::Paste);
 
 	cutAction->setShortcutContext(Qt::WidgetShortcut);
-	copyAction->setShortcutContext(Qt::WidgetShortcut);		// пришлось добавить чтобы не перехватывал Ctrl+C из ReadOnly QTextEdit-а
+	copyAction->setShortcutContext(Qt::WidgetShortcut);
+		// пришлось добавить чтобы не перехватывал Ctrl+C из ReadOnly QTextEdit-а
 	pasteAction->setShortcutContext(Qt::WidgetShortcut);
 
 	addAction(cutAction);
@@ -268,116 +280,143 @@ QString MyQTableWidget::RestoreState(const std::vector<MyQTableWidget::ItemState
 	return errors;
 }
 
-void MyQTableWidget::Cut()
-{
-	Copy();
-	itemStatesBeforeCut.clear();
-	QList<QTableWidgetSelectionRange> ranges = selectedRanges();
-	for (const auto &range : ranges) {
-		for (int row = range.topRow(); row <= range.bottomRow(); ++row) {
-			for (int col = range.leftColumn(); col <= range.rightColumn(); ++col) {
-
-				auto itemToChange = item(row, col);
-				if (itemToChange) {
-					itemStatesBeforeCut.emplace_back(row, col, itemToChange->text());
-					itemToChange->setText("");
-				}
-			}
-		}
-	}
-	emit SignalAfterCut();
-}
-
-void MyQTableWidget::Copy()
+void MyQTableWidget::Copy(bool cut)
 {
 	QItemSelectionModel *selection = selectionModel();
 	if (!selection->hasSelection()) return;
-	innerClipboard.clear();
-	innerClipboard.emplace_back();
 
 	QString copiedData;
 	QList<QTableWidgetSelectionRange> ranges = selectedRanges();
-	for (const auto &range : ranges)
+	if(ranges.size() > 1) { QMbInfo("More one selection, can't copy."); return; }
+
+	if(cut) itemStatesBeforeCut.clear();
+
+	auto &range = ranges[0];
+	for (int row = range.topRow(); row <= range.bottomRow(); ++row)
 	{
-		for (int row = range.topRow(); row <= range.bottomRow(); ++row)
+		for (int col = range.leftColumn(); col <= range.rightColumn(); ++col)
 		{
-			for (int col = range.leftColumn(); col <= range.rightColumn(); ++col)
+			auto itemToCopy = item(row, col);
+			if(itemToCopy)
 			{
-				if (item(row, col))
+				QString itemText = itemToCopy->text();
+				ReplaceForCopyPaste(itemText, true);
+				copiedData += "\"" + itemText + "\"";
+				if(cut)
 				{
-					innerClipboard.back().push_back(item(row, col)->text());
-					copiedData += "\"" + item(row, col)->text() + "\"";
+					itemStatesBeforeCut.emplace_back(row, col, itemToCopy->text());
+					itemToCopy->setText("");
 				}
-				if (col != range.rightColumn()) copiedData += '\t';
 			}
-			innerClipboard.emplace_back();
-			copiedData += '\n';
+			else
+			{
+				copiedData += nullItemMarker;
+			}
+			if (col != range.rightColumn()) copiedData += '\t';
 		}
+		copiedData += '\n';
 	}
+
 	QClipboard *clipboard = QApplication::clipboard();
 	clipboard->setText(copiedData);
+
+	if(cut) emit SignalAfterCut();
 }
 
 void MyQTableWidget::Paste()
 {
+	const QClipboard *clipboard = QApplication::clipboard();
+	if (!clipboard) return;
+
+	QString pastedData = clipboard->text();
+	if (pastedData.isEmpty()) return;
+
 	itemStatesBeforePaste.clear();
 	int startRow = currentRow();
 	int startCol = currentColumn();
-	for (uint i = 0; i < innerClipboard.size(); ++i)
-	{
-		QStringList &columns = innerClipboard[i];
-		for (int j = 0; j < columns.size(); ++j)
-		{
-			int row = startRow + i;
-			int col = startCol + j;
-			// Автоматическое добавление строк и столбцов
-			if (row >= rowCount()) insertRow(rowCount());
-			if (col >= columnCount()) insertColumn(columnCount());
 
-			auto itemToChange = item(row, col);
-			if (!itemToChange)
-			{
-				itemToChange = new QTableWidgetItem();
-				setItem(row, col, itemToChange);
-				itemStatesBeforePaste.emplace_back(row, col, ItemState::ItemWasNullptr());
-			}
-			else itemStatesBeforePaste.emplace_back(row, col, itemToChange->text());
-			itemToChange->setText(columns[j]);
-		}
-	}
-	emit SignalAfterPaste();
-}
+	if (startRow < 0  or startCol < 0) return;
 
-void MyQTableWidget::PasteFromOsClip()
-{
-	itemStatesBeforePaste.clear();
-	QClipboard *clipboard = QApplication::clipboard();
-	QString clipboardData = clipboard->text();
-	QStringList rows = clipboardData.split('\n', QString::SkipEmptyParts);
-	int startRow = currentRow();
-	int startCol = currentColumn();
+	while (pastedData.endsWith('\n') or pastedData.endsWith('\r')) pastedData.chop(1);
+
+	QStringList rows = pastedData.split('\n');
+
+	QString message;
+
 	for (int i = 0; i < rows.size(); ++i)
 	{
-		QStringList columns = rows[i].split('\t');
-		for (int j = 0; j < columns.size(); ++j)
+		int currentRowIdx = startRow + i;
+
+		if (currentRowIdx >= rowCount())
 		{
-			int row = startRow + i;
-			int col = startCol + j;
-			// Автоматическое добавление строк и столбцов
-			if (row >= rowCount()) insertRow(rowCount());
-			if (col >= columnCount()) insertColumn(columnCount());
-
-
-			auto itemToChange = item(row, col);
-			if (!itemToChange)
-			{
-				itemToChange = new QTableWidgetItem();
-				setItem(row, col, itemToChange);
-				itemStatesBeforePaste.emplace_back(row, col, ItemState::ItemWasNullptr());
-			}
-			else itemStatesBeforePaste.emplace_back(row, col, itemToChange->text());
-			itemToChange->setText(columns[j]);
+			if(not pastePolicy.allowCreateRows) { message += "- creating new rows is disabled\n"; break; }
+			setRowCount(currentRowIdx + 1);
 		}
+
+		QStringList cols = rows[i].split('\t');
+
+		for (int j = 0; j < cols.size(); ++j)
+		{
+			int currentColIdx = startCol + j;
+
+			if (currentColIdx >= columnCount()) {
+				if(not pastePolicy.allowCreateCols) { message += "- creating new columns is disabled\n"; break; }
+				setColumnCount(currentColIdx + 1);
+			}
+
+			QString cellText = cols[j];
+			QTableWidgetItem *currentItem = item(currentRowIdx, currentColIdx);
+
+			QString textBeforePaste = currentItem ? currentItem->text() : ItemState::ItemWasNullptr();
+			itemStatesBeforePaste.emplace_back(currentRowIdx, currentColIdx, textBeforePaste);
+
+			if(cellText == nullItemMarker)
+			{
+				if(currentItem) currentItem->setText("");
+				if(pastePolicy.pasteNullItemDeletesDstItem) delete takeItem(currentRowIdx, currentColIdx);
+			}
+			else
+			{
+				if(cellText.startsWith('"') && cellText.endsWith('"'))
+				{
+					cellText.remove(0,1);
+					cellText.chop(1);
+				}
+
+				ReplaceForCopyPaste(cellText, false);
+
+				if (!currentItem)
+				{
+					if(not pastePolicy.allowCreateItems)
+					{
+						message += "- creating new items (row="+QSn(currentRowIdx)+", column="+QSn(currentColIdx)+") "
+								   "is disabled\n";
+						continue;
+					}
+					currentItem = new QTableWidgetItem();
+					setItem(currentRowIdx, currentColIdx, currentItem);
+				}
+
+				currentItem->setText(cellText);
+			}
+		}
+	}
+
+	emit SignalAfterPaste();
+
+	if(pastePolicy.showMessageIfTryedNotAllowed and !message.isEmpty())
+		QMbInfo("Some data could not be pasted due to table settings:\n\n"+message);
+}
+
+void MyQTableWidget::ReplaceForCopyPaste(QString &text, bool copy)
+{
+	if(copy)
+	{
+		for(auto &[from, to]:replaces) text.replace(from, to);
+	}
+	else
+	{
+		for(auto &[to, from]:replaces) text.replace(from, to);
 	}
 }
 
