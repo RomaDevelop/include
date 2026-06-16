@@ -1,68 +1,46 @@
 #ifndef MyQTimer_H
 #define MyQTimer_H
 
+#include <set>
 #include <queue>
 #include <memory>
 #include <functional>
 
+#include <QDebug>
 #include <QTimer>
 
-class MyQTimerPool
+//--------------------------------------------------------------------------------------------------------------------------
+
+///\brief MyQTimerPool is intended for use in one thread.
+struct MyQTimerPool
 {
-public:
+	MyQTimerPool() { }
+	~MyQTimerPool() { ClearTimers(); }
+
+	inline static void SingleShotSt(QObject *parent, int msec, std::function<void()> task);
+
 	using Tasks = std::vector<std::pair<int, std::function<void()>>>;
+	inline static void SingleShotsSt(QObject *parent, Tasks tasks);
 
-	static void SingleShotSt(int msec, std::function<void()> task) { staticPool().SingleShot(msec, std::move(task)); }
-	static void SingleShotsSt(Tasks tasks) { staticPool().SingleShots(std::move(tasks)); }
-
-	void SingleShot(int msec, std::function<void()> function)
-	{
-		QTimer *timer;
-		if(freeTimers.empty())
-		{
-			timer = new QTimer;
-			timer->setSingleShot(true);
-			count++;
-		}
-		else
-		{
-			timer = freeTimers.front();
-			freeTimers.pop();
-		}
-		QObject::connect(timer, &QTimer::timeout, [this, timer, function = std::move(function)](){
-			function();
-			QObject::disconnect(timer, &QTimer::timeout, nullptr, nullptr);
-			freeTimers.push(timer);
-		});
-		timer->start(msec);
-	}
-	void SingleShots(Tasks tasks)
-	{
-		for(auto &[msec, function]:tasks)
-		{
-			SingleShot(msec, std::move(function));
-		}
-	}
-	void ClearFreeTimers()
-	{
-		while(!freeTimers.empty())
-		{
-			freeTimers.front()->deleteLater();
-			freeTimers.pop();
-		}
-	}
-
-	~MyQTimerPool()
-	{
-		ClearFreeTimers();
-	}
-
-	int count = 0;
+	inline void SingleShot(QObject *parent, int msec, std::function<void()> function);
+	inline void SingleShots(QObject *parent, Tasks tasks);
+	inline void ClearTimers();
 
 private:
-	std::queue<QTimer*> freeTimers;
+	std::set<QTimer*> allTimers;
+	std::set<QTimer*> freeTimers;
+
 	static MyQTimerPool& staticPool() { static MyQTimerPool pool; return pool; }
 };
+
+struct MyQTimerPoolSt
+{
+	inline void SingleShot(QObject *parent, int msec, std::function<void()> function) { MyQTimerPool::SingleShotSt(parent, msec, std::move(function)); }
+	using Tasks = MyQTimerPool::Tasks;
+	inline void SingleShots(QObject *parent, Tasks tasks){ MyQTimerPool::SingleShotsSt(parent, std::move(tasks)); }
+};
+
+//--------------------------------------------------------------------------------------------------------------------------
 
 class MyQTimer : public QTimer {
     Q_OBJECT
@@ -110,5 +88,60 @@ void MyQTimer::For(int i_start, int i_less_than, int interval, QObject *parent,
 	timer->start(interval);
 }
 
+void MyQTimerPool::SingleShotSt(QObject *parent, int msec, std::function<void ()> task)
+{
+	staticPool().SingleShot(parent, msec, std::move(task));
+}
 
+void MyQTimerPool::SingleShotsSt(QObject *parent, MyQTimerPool::Tasks tasks)
+{
+	staticPool().SingleShots(parent, std::move(tasks));
+}
+
+void MyQTimerPool::SingleShot(QObject *parent, int msec, std::function<void ()> function)
+{
+	QTimer *timer;
+	if(freeTimers.empty())
+	{
+		timer = new QTimer(parent);
+		timer->setSingleShot(true);
+		allTimers.insert(timer);
+		QObject::connect(timer, &QObject::destroyed, [this, timer](){ freeTimers.erase(timer); allTimers.erase(timer); });
+	}
+	else
+	{
+		timer = *freeTimers.begin();
+		freeTimers.erase(freeTimers.begin());
+		timer->setParent(parent);
+	}
+	QObject::connect(timer, &QTimer::timeout, [this, timer, function = std::move(function)](){
+		function();
+		timer->setParent(nullptr);
+		QObject::disconnect(timer, &QTimer::timeout, nullptr, nullptr);
+		freeTimers.insert(timer);
+	});
+	timer->start(msec);
+}
+
+void MyQTimerPool::SingleShots(QObject *parent, MyQTimerPool::Tasks tasks)
+{
+	for(auto &[msec, function]:tasks)
+	{
+		SingleShot(parent, msec, std::move(function));
+	}
+}
+
+void MyQTimerPool::ClearTimers()
+{
+	std::vector<QTimer*> timers { allTimers.begin(), allTimers.end() };
+	// should work with copy of list, because original list changes when timer destroys
+
+	for(auto &timer:timers)
+	{
+		timer->deleteLater();
+	}
+}
+
+//--------------------------------------------------------------------------------------------------------------------------
 #endif
+//--------------------------------------------------------------------------------------------------------------------------
