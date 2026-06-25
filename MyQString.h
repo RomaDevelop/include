@@ -168,25 +168,15 @@ private:
 	template<class S>
 	static constexpr int get_length_universal(const S &s) { return int(s.size()); }
 
-//	template<typename T>
-//    inline void SmartAppend(QString& s, const T& arg) {
-//        s.append(arg);
-//    }
-
-//    // Специализированная вспомогательная функция для числовых типов
-//    template<typename T>
-//    inline typename std::enable_if<std::is_arithmetic<T>::value>::type
-//    SmartAppend(QString& s, const T& arg) {
-//        s.append(QString::number(arg));
-//    }
 	template<typename T>
 	inline static void SmartAppend(QString& s, const T& arg) {
-		if constexpr (std::is_arithmetic_v<T> and not std::is_same_v<T, char>) {
-			// Эта ветка компилируется только для чисел, кроме char
-			s.append(QString::number(arg));
-		} else {
-			// Эта ветка компилируется только для остальных типов
-			s.append(arg);
+		if constexpr (std::is_arithmetic_v<T> and not std::is_same_v<T, char>)
+		{
+			s.append(QString::number(arg)); // компилируется только для чисел, кроме char
+		}
+		else
+		{
+			s.append(arg); // для остальных типов
 		}
 	}
 };
