@@ -8,37 +8,37 @@
 #include "MyQLocalServer.h"
 #include "AppDataWork.h"
 
-std::shared_ptr<MyQLocalServer> localServer;
-QByteArray serverBuffer;
-std::shared_ptr<QLocalSocket> localClient;
-QByteArray clientBuffer;
-bool localClientIsNextServer = false;
+static std::shared_ptr<MyQLocalServer> localServer;
+static QByteArray serverBuffer;
+static std::shared_ptr<QLocalSocket> localClient;
+static QByteArray clientBuffer;
+static bool localClientIsNextServer = false;
 
-QString netName = "AdditionalTrayIcon";
-std::function<void(QString log)> logWorkerSock = [](QString log){ qdbg << "sock: "+log; };
-std::function<void(QString log)> logWorkerServ = [](QString log){ qdbg << "serv: "+log; };
+static QString netName = "AdditionalTrayIcon";
+static std::function<void(QString log)> logWorkerSocket = [](QString log){ qdbg << "sock: "+log; };
+static std::function<void(QString log)> logWorkerServer = [](QString log){ qdbg << "serv: "+log; };
 
-const char * you_are_next_server = "__yans__";
-const char * you_are_NOT_next_server = "__yaNOTns__";
+static const char * you_are_next_server = "__yans__";
+static const char * you_are_NOT_next_server = "__yaNOTns__";
 
 
-const char endCommandChar = ';';
-const char *endCommandStr = ";";
+static const char endCommandChar = ';';
+static const char *endCommandStr = ";";
 
-const char * request_for_pos = "request_for_pos";
-QByteArray request_for_monitor = "request_for_monitor";
-QString command_set_pos = "command_set_pos:";
-const char * not_need_add_tray = "not_need_add_tray";
-const char * set_monitor = "set_monitor:";
+static const char * request_for_pos = "request_for_pos";
+static QByteArray request_for_monitor = "request_for_monitor";
+static QString command_set_pos = "command_set_pos:";
+static const char * not_need_add_tray = "not_need_add_tray";
+static const char * set_monitor = "set_monitor:";
 
-QByteArray answ_suffix = "_answ:";
+static QByteArray answ_suffix = "_answ:";
 
-QEventLoop& monitor_loop() { static QEventLoop loop; return loop; }
-QString request_for_monitor_answValue;
+static QEventLoop& monitor_loop() { static QEventLoop loop; return loop; }
+static QString request_for_monitor_answValue;
 
-QString monitorFileName = "monitor.txt";
+static QString monitorFileName = "monitor.txt";
 
-std::vector<const char*> expectedLogs {
+static std::vector<const char*> expectedLogs {
 	MyQLocalServer::error_connection_starting,
 	MyQLocalServer::log_client_disconnected,
 };
@@ -115,7 +115,7 @@ bool LocalNet::InitClient(bool firstTry)
 		}
 	};
 
-	auto logCopy = logWorkerSock;
+	auto logCopy = logWorkerSocket;
 	if(firstTry) logCopy = [](QString log){
 		for(auto &expectedLog:expectedLogs)
 			if(log.startsWith(expectedLog)) return;
@@ -152,15 +152,15 @@ bool LocalNet::InitClient(bool firstTry)
 	return connected;
 }
 
-std::map<QLocalSocket *, QPoint> distributedPoses;
+static std::map<QLocalSocket *, QPoint> distributedPoses;
 
-const char * abort_send = "abort_send";
+static const char * abort_send = "abort_send";
 
-int monitorForPlacing = 0;
+static int monitorForPlacing = 0;
 
-void SendCmdSetPos(QLocalSocket *client);
+static void SendCmdSetPos(QLocalSocket *client);
 
-void SendCmdSetPosToAll()
+static void SendCmdSetPosToAll()
 {
 	distributedPoses.clear();
 	for(auto &node:localServer->activeClientsByConnectedTime)
@@ -170,7 +170,7 @@ void SendCmdSetPosToAll()
 	}
 }
 
-void SendCmdSetPos(QLocalSocket *client)
+static void SendCmdSetPos(QLocalSocket *client)
 {
 	if(not localServer) {
 		qdbg << "GetPosForClient called, but localServer is null";
@@ -237,13 +237,13 @@ void SendCmdSetPos(QLocalSocket *client)
 	client->write(endCommandStr);
 }
 
-void SendClientHeIsNotNextServer(QLocalSocket &client)
+static void SendClientHeIsNotNextServer(QLocalSocket &client)
 {
 	client.write(you_are_NOT_next_server);
 	client.write(endCommandStr);
 }
 
-void SendClientsWhoIsNextServer(QLocalSocket &next_server_client)
+static void SendClientsWhoIsNextServer(QLocalSocket &next_server_client)
 {
 	next_server_client.write(you_are_next_server);
 	next_server_client.write(endCommandStr);
@@ -302,7 +302,7 @@ bool LocalNet::InitServer()
 		//qdbg << "get from client: " << data;
 	};
 
-	localServer = MyQLocalServer::InitServer(netName, incommingWorker, logWorkerServ);
+	localServer = MyQLocalServer::InitServer(netName, incommingWorker, logWorkerServer);
 	if(not localServer) return false;
 
 	static QLocalSocket *clientToBecomeServer {};
@@ -452,7 +452,7 @@ AdditionalTrayIcon::~AdditionalTrayIcon()
 	}
 }
 
-const char *no_add_icon = "Без доп. иконки";
+static const char *no_add_icon = "Без доп. иконки";
 
 void AdditionalTrayIcon::CreateSettingsCombo(QGridLayout *glo, int row, int col, AdditionalTrayIcon *additionalTrayIcon)
 {

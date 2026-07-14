@@ -35,7 +35,7 @@ struct MyQLocalServer
 
 	bool IsUp() const { return (bool)qserver; }
 
-	MyQLocalServer();
+	inline MyQLocalServer();
 	MyQLocalServer(const MyQLocalServer&) = delete;
 	MyQLocalServer& operator=(const MyQLocalServer&) = delete;
 	MyQLocalServer(MyQLocalServer&&) = delete;
