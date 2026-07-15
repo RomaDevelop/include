@@ -384,35 +384,34 @@ QString MyQDialogs::CustomDialogWithTimer(QString caption, QString text, QString
 
 void MyQDialogs::MenuUnderWidget(QWidget *w, std::vector<mqdMenuItem> &&items)
 {
-	QMenu *menu = new QMenu(w); // будет удалено поле того как скроется
-	QObject::connect(menu, &QMenu::aboutToHide, [menu](){ menu->deleteLater(); });
+	QMenu menu(w);
 	auto separator = SeparatorMenuItem();
 	for(auto &item:items)
 	{
 		if(item.text == separator.text)
 		{
-			menu->addSeparator();
+			menu.addSeparator();
 		}
 		else if(item.text.contains(DisableMarker))
 		{
 			item.text.remove(DisableMarker);
-			QAction *action = new QAction(item.text, menu);
+			QAction *action = new QAction(item.text, &menu);
 			action->setEnabled(false);
-			menu->addAction(action);
+			menu.addAction(action);
 		}
 		else
 		{
 			if(!item.worker) { QMbError("nullptr worker in action " + item.text); continue; }
 
-			QAction *action = new QAction(item.text, menu);
-			menu->addAction(action);
+			QAction *action = new QAction(item.text, &menu);
+			menu.addAction(action);
 			QObject::connect(action, &QAction::triggered, [item = std::move(item)](){
 				if(item.worker) item.worker();
 				else QMbError("nullptr worker executed");
 			});
 		}
 	}
-	menu->exec(w->mapToGlobal(QPoint(0, w->height())));
+	menu.exec(w->mapToGlobal(QPoint(0, w->height())));
 }
 
 void MyQDialogs::MenuUnderWidget(QWidget *w, QStringList texts, std::vector<std::function<void()>> workers)

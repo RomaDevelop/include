@@ -154,8 +154,6 @@ bool LocalNet::InitClient(bool firstTry)
 
 static std::map<QLocalSocket *, QPoint> distributedPoses;
 
-static const char * abort_send = "abort_send";
-
 static int monitorForPlacing = 0;
 
 static void SendCmdSetPos(QLocalSocket *client);
