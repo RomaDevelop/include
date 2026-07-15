@@ -300,7 +300,7 @@ bool LocalNet::InitServer()
 		//qdbg << "get from client: " << data;
 	};
 
-	localServer = MyQLocalServer::InitServer(netName, incommingWorker, logWorkerServer);
+	localServer = MyQLocalServer::InitServer(netName, 300, incommingWorker, logWorkerServer);
 	if(not localServer) return false;
 
 	static QLocalSocket *clientToBecomeServer {};

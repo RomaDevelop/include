@@ -13,7 +13,7 @@
 
 struct MyQLocalServer
 {
-	inline static std::shared_ptr<MyQLocalServer> InitServer(QString name,
+	inline static std::shared_ptr<MyQLocalServer> InitServer(QString name, int waitForCheck,
 											std::function<void(QByteArray data, QLocalSocket *fromClient)> incommingWorker,
 											std::function<void(QString)> logWorker);
 
@@ -59,12 +59,23 @@ MyQLocalServer::MyQLocalServer():
 
 }
 
-std::shared_ptr<MyQLocalServer> MyQLocalServer::InitServer(QString name,
+std::shared_ptr<MyQLocalServer> MyQLocalServer::InitServer(QString name, int waitForCheck,
 									std::function<void(QByteArray data, QLocalSocket *fromClient)> incommingWorker,
 									std::function<void(QString)> logWorker)
 {
 	if(!incommingWorker) {
 		Log(logWorker, "QLocalServer::InitServer invalid incommingWorker");
+	}
+
+	/// Check for existance of server with specified name.
+	/// Tryes to init socket, if success - server already exists, return null.
+	/// This check is necessary, because QLocalServer::listen(name) returnes true always (Windows 10 checked),
+	/// and QLocalServer::removeServer "On Windows, this function does nothing".
+	auto clientCheck = InitSocket(name, waitForCheck, [](QByteArray){}, [](){}, [](QString){});
+	if(clientCheck)
+	{
+		Log(logWorker, "QLocalServer::InitServer error: server "+name+" already exists");
+		return {};
 	}
 
 	std::shared_ptr<MyQLocalServer> server (new MyQLocalServer);
