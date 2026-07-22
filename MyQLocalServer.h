@@ -88,7 +88,9 @@ std::shared_ptr<MyQLocalServer> MyQLocalServer::InitServer(QString name, int wai
 	}
 
 	// Обработка нового подключения
-	QObject::connect(qserverPtr, &QLocalServer::newConnection, qserverPtr, [serverPtr, qserverPtr, incommingWorker, logWorker, name]() {
+	QObject::connect(qserverPtr, &QLocalServer::newConnection, qserverPtr,
+			[serverPtr, qserverPtr, incommingWorker, logWorker, name]()
+	{
 		QLocalSocket *client = qserverPtr->nextPendingConnection();
 
 		auto dt = QDateTime::currentDateTime();
@@ -168,7 +170,7 @@ std::shared_ptr<QLocalSocket> MyQLocalServer::InitSocket(QString serverName, int
 			// Читаем все доступные данные из сокета
 			QByteArray data = socket->readAll();
 			if (!data.isEmpty()) {
-				incommingWorker(data);
+				incommingWorker(std::move(data));
 			}
 		});
 	}
