@@ -63,55 +63,55 @@ bool LocalNet::InitClient(bool firstTry)
 		}
 
 		clientBuffer.chop(1);
-		auto arrs = clientBuffer.split(endCommandChar);
+		QStringList msgs = QString::fromUtf8(clientBuffer).split(endCommandChar);
 		clientBuffer.clear();
 
-		for(auto &arr:arrs)
+		for(auto &msg:msgs)
 		{
 			if(0) {}
-			else if(arr == you_are_next_server)
+			else if(msg == you_are_next_server)
 			{
 				localClientIsNextServer = true;
 				qdbg << "localClientIsNextServer = true";
 			}
-			else if(arr == you_are_NOT_next_server)
+			else if(msg == you_are_NOT_next_server)
 			{
 				localClientIsNextServer = false;
 				qdbg << "localClientIsNextServer = false";
 			}
-			else if(arr == not_need_add_tray)
+			else if(msg == not_need_add_tray)
 			{
 				AdditionalTrayIcon::CallFnClientGetCommandSetPos({});
 			}
-			else if(arr.startsWith(command_set_pos.toUtf8()))
+			else if(msg.startsWith(command_set_pos.toUtf8()))
 			{
-				QString answ_pos_str = arr;
+				QString answ_pos_str = msg;
 				answ_pos_str.remove(0, command_set_pos.size());
 
 				auto xy = answ_pos_str.split(":");
-				if(xy.size() != 2) { QMbError("Invalind data (count): "+arr); return; }
+				if(xy.size() != 2) { QMbError("Invalind data (count): "+msg); return; }
 
 				bool ok1, ok2;
 				int x = xy[0].toInt(&ok1);
 				int y = xy[1].toInt(&ok2);
-				if(not ok1 or not ok2)  { QMbError("Invalind data (value): "+arr); return; }
+				if(not ok1 or not ok2)  { QMbError("Invalind data (value): "+msg); return; }
 				QPoint posFromServer(x,y);
 
 				AdditionalTrayIcon::CallFnClientGetCommandSetPos(posFromServer);
 				//qdbg << "correct get" << posFromServer;
 			}
-			else if(arr.startsWith(request_for_monitor))
+			else if(msg.startsWith(request_for_monitor))
 			{
-				auto arrCopy = arr;
+				auto arrCopy = msg;
 				arrCopy.remove(0, request_for_monitor.size());
-				if(not arrCopy.startsWith(answ_suffix)) { QMbError("missing answ suffix "+netName+"\ndata:"+arr); }
+				if(not arrCopy.startsWith(answ_suffix)) { QMbError("missing answ suffix "+netName+"\ndata:"+msg); }
 
 				arrCopy.remove(0, answ_suffix.size());
 
 				request_for_monitor_answValue = arrCopy;
 				monitor_loop().quit();
 			}
-			else QMbError("Invalid data from server "+netName+"\ndata:"+arr);
+			else QMbError("Invalid data from server "+netName+"\ndata:"+msg);
 		}
 	};
 
