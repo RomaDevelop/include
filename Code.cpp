@@ -234,6 +234,7 @@ Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int
 	Statement* currentStatement = &statement;
 	bool quats = false;
 	bool commented = false;
+	int bracketsDepth = 0;
 	QChar currQuats = CodeKeyWords::quatsSymbol1;
 	QString current;
 	int size = text.size();
@@ -254,6 +255,13 @@ Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int
 			continue;
 		}
 		// конец логики игнорирования комментария
+
+		// подсчёт круглых скобок
+		if (!quats)
+		{
+			if (text[i] == '(') bracketsDepth++;
+			else if (text[i] == ')') bracketsDepth--;
+		}
 
 		// начало блока
 		if(!quats && text[i] == CodeKeyWords::blockOpener)
@@ -276,6 +284,13 @@ Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int
 		// завершение одиночной команды
 		if(!quats && text[i] == CodeKeyWords::commandSplitter)
 		{
+			// игнорирование commandSplitter внутри круглых скобок для корректной обработки for(int i=0; i<n; i++) и др.
+			if (bracketsDepth > 0)
+			{
+				current += text[i];
+				continue;
+			}
+
 			Normalize(current);
 			if(!current.isEmpty())
 			{
