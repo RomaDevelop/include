@@ -41,7 +41,8 @@ struct MyQString
 	inline static int IndexOfNumbered(const QString &str, const T_substr &subStr, int n, int from = 0, bool subIntersections = false);
 
 	struct FoundSubstr { QString substr; std::vector<int> positions; };
-	static std::vector<FoundSubstr> FindSubstrings(const QString &text, const QStringList &keywords) {
+	template<class T_QString> // 100% works with QString, QStringRef
+	static std::vector<FoundSubstr> FindSubstrings(const T_QString &text, const QStringList &keywords) {
 		std::vector<FoundSubstr> result;
 
 		for (const QString &word : keywords) {
