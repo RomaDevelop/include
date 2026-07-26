@@ -44,7 +44,7 @@ struct MyQWidget
 	// когда перейдем на Qt 6 можно будет удалить, там есть готовая
 
 	/// params can be empty
-	inline static LineEdit_w_Clear LineEdit_w_Clear_create(QBoxLayout *hloCreateIn, std::function<void(const QString &text)> textChanged);
+	inline static LineEdit_w_Clear LineEdit_w_Clear_create(std::function<void(const QString &text)> textChanged);
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -55,13 +55,14 @@ struct LineEdit_w_Clear
 	QLineEdit	*lineEdit;
 	QToolButton *button;
 
-	/// params can be empty
-	LineEdit_w_Clear(QBoxLayout *loCreateIn, std::function<void(const QString &text)> textChanged)
+	///\brief Creates QHBoxLayout with lineEdit and button;
+	/// if textChanged is valid, connects textChanged as lineEdit textChanged slot;
+	/// button clears text in lineEdit
+	LineEdit_w_Clear(std::function<void(const QString &text)> textChanged)
 	{
 		hlo = new QHBoxLayout;
 		hlo->setContentsMargins(0,0,0,0);
 		hlo->setSpacing(0);
-		if(loCreateIn) loCreateIn->addLayout(hlo);
 
 		// Search
 		lineEdit = new QLineEdit;
@@ -191,9 +192,9 @@ QScreen *MyQWidget::WidgetScreen(QWidget *widget)
 	return widgetScreen;
 }
 
-LineEdit_w_Clear MyQWidget::LineEdit_w_Clear_create(QBoxLayout * hloCreateIn, std::function<void (const QString &)> textChanged)
+LineEdit_w_Clear MyQWidget::LineEdit_w_Clear_create(std::function<void (const QString &)> textChanged)
 {
-	return LineEdit_w_Clear(hloCreateIn, textChanged);
+	return LineEdit_w_Clear(textChanged);
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
