@@ -5,6 +5,8 @@
 #include <QTextEdit>
 #include <QTextBlock>
 #include <QMimeData>
+#include <QApplication>
+#include <QStyle>
 
 #include "MyQShortings.h"
 
@@ -45,6 +47,9 @@ public:
 
 	inline void SelectText(int row, int indexInRow, int length) { SelectText(this, row, indexInRow, length); }
 	inline void SelectText(int index, int length) { SelectText(this, index, length); }
+
+	inline void EnableHighlightSelectionMatches();
+	inline void HighlightSelectionMatches();
 
 protected:
 	/// переопределение вставки текста из буффера обмена для richTextPaste
@@ -200,6 +205,69 @@ void MyQTextEdit::SelectText(QTextEdit *textEdit, int index, int length)
 	textEdit->setTextCursor(cursor);
 }
 
+void MyQTextEdit::EnableHighlightSelectionMatches()
+{
+	QObject::connect(this, &QTextEdit::selectionChanged, this, &MyQTextEdit::HighlightSelectionMatches);
+}
+
+void MyQTextEdit::HighlightSelectionMatches()
+{
+	QTextEdit* edit = this;
+
+	QTextCursor currentCursor = edit->textCursor();
+	QString selectedText = currentCursor.selectedText().trimmed();
+
+	// Если выделение пустое или слишком короткое (отключено), очищаем подсветку
+	if (selectedText.isEmpty()/* or selectedText.size() < 2*/) {
+		edit->setExtraSelections({}); // Очищение подсветки
+		return;
+	}
+
+	QList<QTextEdit::ExtraSelection> extraSelections;
+	// Необходимо подсвечивать через ExtraSelection чтобы не засорялась история изменений
+
+	QPalette appPalette = QApplication::style()->standardPalette();
+	QColor highlightColor = appPalette.color(QPalette::Highlight); // Системный цвет выделения
+	if(appPalette.color(QPalette::Base).value() < 128) // Если сейчас темная тема
+		highlightColor.setAlpha(80); // Установка полупрозрачным (альфа = 80 из 255), чтобы текст под ним читался
+	else highlightColor.setAlpha(60); // В светлой ещё чуть больше прозрачным
+
+	QTextCharFormat highlightFormat;
+	highlightFormat.setBackground(highlightColor);
+
+	// Поиск совпадений
+	QString text = edit->toPlainText();
+	int pos = text.indexOf(selectedText, 0);
+
+	while (pos != -1) {
+		// Проверка границ слова (чтобы не подсвечивать части других слов) (отключено)
+		//			bool isWordStart = (pos == 0 || !text.at(pos - 1).isLetterOrNumber());
+		//			bool isWordEnd = ((pos + selectedText.length()) >= text.length() ||
+		//							  !text.at(pos + selectedText.length()).isLetterOrNumber());
+
+		bool isWordStart = true;
+		bool isWordEnd = true;
+
+		if (isWordStart && isWordEnd) {
+			QTextCursor searchCursor(edit->document());
+			searchCursor.setPosition(pos);
+			searchCursor.setPosition(pos + selectedText.length(), QTextCursor::KeepAnchor);
+
+			if (searchCursor != currentCursor) // игнорирование текущего курсора
+			{
+				QTextEdit::ExtraSelection selection;
+				selection.cursor = searchCursor;
+				selection.format = highlightFormat;
+				extraSelections.append(selection);
+			}
+		}
+		pos = text.indexOf(selectedText, pos + 1);
+	}
+
+	// Применение подсветки
+	edit->setExtraSelections(extraSelections);
+}
+
 void MyQTextEdit::insertFromMimeData(const QMimeData * source)
 {
 	if(richTextPasteEnabled) QTextEdit::insertFromMimeData(source);
@@ -269,8 +337,8 @@ bool MyQTextEdit::IndentingOnEnterMechanic(QKeyEvent *event)
 bool MyQTextEdit::IndentingMultirowMechanic(QKeyEvent *event)
 {
 	const bool removeIndent =
-		event->key() == Qt::Key_Backtab ||
-		(event->key() == Qt::Key_Tab && event->modifiers().testFlag(Qt::ShiftModifier));
+			event->key() == Qt::Key_Backtab ||
+			(event->key() == Qt::Key_Tab && event->modifiers().testFlag(Qt::ShiftModifier));
 	const bool addIndent = event->key() == Qt::Key_Tab && !removeIndent;
 	if (!addIndent && !removeIndent) return false;
 
