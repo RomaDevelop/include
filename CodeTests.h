@@ -321,7 +321,6 @@ QStringList CodeTests::TestTextToStatements()
 			(int i, QString &text, Statement &resultMustBe, int countErrorsMustBe, int countWarningsMustBe,
 			bool resultShouldBe = true)
 	{
-
 		QStringList errorsThisTest;
 		any_guard::functions_caller guarg(
 					[](){CodeLogs::ActivateTestMode(true);},
@@ -341,7 +340,7 @@ QStringList CodeTests::TestTextToStatements()
 				errorsThisTest += "Errors: " + CodeLogs::error.GetTexts(eggorsGetedCountFromTest);
 
 			if(wrnGetedCountFromTest != 0)
-				errorsThisTest += "Warnings: " + CodeLogs::warning.GetTexts(eggorsGetedCountFromTest);
+				errorsThisTest += "Warnings: " + CodeLogs::warning.GetTexts(wrnGetedCountFromTest);
 		}
 
 		QString resultCmpDetails;
@@ -368,15 +367,21 @@ QStringList CodeTests::TestTextToStatements()
 		errorsAllTests += errorsThisTest;
 	};
 
-	// 0 простой тест 1
-	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;   command3");
+	// 101 простой тест 1.1
+	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;   command3; \n");
 	resultsMustBe.emplace_back("", Statement::VectorStatementOrQString{"command1", "c2w1 c2w2 c2w3", "command3"});
-	test(0, inputsTexts.back(), resultsMustBe.back(), 0, 0);
+	test(101, inputsTexts.back(), resultsMustBe.back(), 0, 0);
 
-	// 1 простой тест 2
+
+	// 102 простой тест 1.2
+	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;   command3");
+	resultsMustBe.emplace_back("", Statement::VectorStatementOrQString{"command1", "c2w1 c2w2 c2w3"});
+	test(102, inputsTexts.back(), resultsMustBe.back(), 1, 0);
+
+	// 103 простой тест 2
 	inputsTexts.push_back("if(a==5) FIVE(); next   command;");
 	resultsMustBe.emplace_back("", Statement::VectorStatementOrQString{"if ( a == 5 ) FIVE ( )", "next command"});
-	test(1, inputsTexts.back(), resultsMustBe.back(), 0, 0);
+	test(103, inputsTexts.back(), resultsMustBe.back(), 0, 0);
 
 	// 11 простой тест 2 - проверка ложно-положительного
 	inputsTexts.push_back("if(a==5) FIVE(); next   command;");
@@ -394,7 +399,7 @@ QStringList CodeTests::TestTextToStatements()
 	test(13, inputsTexts.back(), resultsMustBe.back(), 0, 2, true);
 
 	// 2 простой тест + тест игнорирования комментария
-	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;  //  command3;other;\"sdvsdv\";//;\nrow2 /");
+	inputsTexts.push_back("command1;c2w1 c2w2    c2w3     ;  //  command3;other;\"sdvsdv\";//;\nrow2 /;");
 	resultsMustBe.emplace_back("", Statement::VectorStatementOrQString{"command1", "c2w1 c2w2 c2w3", "row2 /"});
 	test(2, inputsTexts.back(), resultsMustBe.back(), 0, 0);
 

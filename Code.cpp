@@ -228,6 +228,15 @@ QStringList Code::CommandToWordsNorm(QString command, bool canContainCommandSpli
 	return Code::CommandToWords(command, canContainCommandSplitter);
 }
 
+std::optional<Statement> ForStatementParsing(QString &statement)
+{
+	if(not statement.startsWith("for (")) return {};
+
+	qdbg << "for single command found:" << statement;
+
+	return {};
+}
+
 Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int *nestedBlockCloser)
 {
 	Statement statement;
@@ -235,8 +244,8 @@ Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int
 	bool quats = false;
 	bool commented = false;
 	int bracketsDepth = 0;
-	QChar currQuats = CodeKeyWords::quatsSymbol1;
-	QString current;
+	QChar currQuats;
+	QString currentTextFragment;
 	int size = text.size();
 	for(int i = nestedBlockOpener == -1 ? 0 : nestedBlockOpener+1; i<size; i++)
 	{
@@ -266,18 +275,18 @@ Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int
 		// начало блока
 		if(!quats && text[i] == CodeKeyWords::blockOpener)
 		{
-			Normalize(current);
+			Normalize(currentTextFragment);
 
 			auto &nestedStatementVar = currentStatement->nestedStatements.emplace_back(Statement());
 			auto &nestedStatement = *std::get_if<Statement>(&nestedStatementVar);
 
-			nestedStatement.header = std::move(current);
+			nestedStatement.header = std::move(currentTextFragment);
 
 			auto tmpNestedStatements = TextToStatements(text, i, &i);
 			for(auto &tns:tmpNestedStatements.nestedStatements)
 					nestedStatement.nestedStatements.emplace_back(std::move(tns));
 
-			current.clear();
+			currentTextFragment.clear();
 			continue;
 		}
 
@@ -287,15 +296,20 @@ Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int
 			// игнорирование commandSplitter внутри круглых скобок для корректной обработки for(int i=0; i<n; i++) и др.
 			if (bracketsDepth > 0)
 			{
-				current += text[i];
+				currentTextFragment += text[i];
 				continue;
 			}
 
-			Normalize(current);
-			if(!current.isEmpty())
+			Normalize(currentTextFragment);
+			if(!currentTextFragment.isEmpty())
 			{
-				currentStatement->nestedStatements.emplace_back(std::move(current));
-				current.clear();
+				auto forParsingRes = ForStatementParsing(currentTextFragment);
+
+				if(forParsingRes.has_value())
+					currentStatement->nestedStatements.emplace_back(std::move(*forParsingRes));
+				else currentStatement->nestedStatements.emplace_back(std::move(currentTextFragment));
+
+				currentTextFragment.clear();
 			}
 			else
 			{
@@ -307,12 +321,12 @@ Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int
 		// завершение блока
 		if(!quats && text[i] == CodeKeyWords::blockCloser)
 		{
-			Normalize(current);
+			Normalize(currentTextFragment);
 
-			if(!current.isEmpty())
+			if(!currentTextFragment.isEmpty())
 			{
-				CodeLogs::Error("Not finished text ("+current+") found! text: " + text);
-				current.clear();
+				CodeLogs::Error("Not closed statement found:\n"+currentTextFragment+"\nFull text:\n" + text);
+				currentTextFragment.clear();
 			}
 
 			if(nestedBlockCloser) *nestedBlockCloser = i;
@@ -321,26 +335,28 @@ Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int
 			return statement;
 		}
 
-		current += text[i];
+		currentTextFragment += text[i];
 
 		if(!quats && TextConstant::IsItQuateSybol(text[i])) { quats = true; currQuats = text[i]; continue; }
-		if(text[i] == currQuats && quats) { quats = false; continue; }
+		if(quats && text[i] == currQuats) { quats = false; continue; }
 	}
 
-	if(current.size())
+	if(not currentTextFragment.isEmpty())
 	{
-		if(0/*block*/) CodeLogs::Error("missing ending symbol! text: " + text);
-		else
-		{
-			Normalize(current);
-			if(!current.isEmpty())
-			{
-				auto &newStatementVar = statement.nestedStatements.emplace_back(QString());
-				auto &newStatement = *std::get_if<QString>(&newStatementVar);
-				newStatement = std::move(current);
-				current.clear();
-			}
-		}
+		Normalize(currentTextFragment);
+		if(not currentTextFragment.isEmpty())
+			CodeLogs::Error("Not closed statement found:\n"+currentTextFragment+"\nFull text:\n" + text);
+
+		/// Ранее незакрытый последний фрагмент просто добавлялся в выражение.
+		/// Вывод ошибки добавлен 30.07.2027
+//		Normalize(currentTextFragment);
+//		if(!currentTextFragment.isEmpty())
+//		{
+//			auto &newStatementVar = statement.nestedStatements.emplace_back(QString());
+//			auto &newStatement = *std::get_if<QString>(&newStatementVar);
+//			newStatement = std::move(currentTextFragment);
+//			currentTextFragment.clear();
+//		}
 	}
 
 	return statement;
@@ -978,7 +994,7 @@ void LogFunction::ClearCountAndTexts()
 QString LogFunction::GetTexts(int count)
 {
 	QString text;
-	auto it = CodeLogs::error.textsInTestMode.end();
+	auto it = textsInTestMode.end();
 	for(int i=0; i<count; i++) --it;
 	for (int i = 0; i < count; ++i) {
 		text += *it;
