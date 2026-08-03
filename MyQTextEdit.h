@@ -48,8 +48,20 @@ public:
 	inline void SelectText(int row, int indexInRow, int length) { SelectText(this, row, indexInRow, length); }
 	inline void SelectText(int index, int length) { SelectText(this, index, length); }
 
+	///\brief Connects HighlightSelectionMatches to signal selectionChanged
+	/// This feature has a limitation on the amount of text in the editor. If the text is large, will cause freezes.
+	/// The functions below have a similar limitation.
 	inline void EnableHighlightSelectionMatches();
+	///\brief Connects lambda slots to signals selectionChanged for edit1 and edit2
+	/// slot gets cursor, selected text (trimmed), and calls HighlightText for edit1 and edit2
+	inline static void EnableHighlightSelectionMatchesInLinkedEditors(QTextEdit *edit1, QTextEdit *edit2);
+	///\brief Gets cursor, selected text (trimmed), and calls HighlightText
 	inline void HighlightSelectionMatches();
+	///\brief Calls static HighlightText for this
+	inline void HighlightText(const QString &textToHighlight, const QTextCursor &exceptCursor);
+	///\brief Highlights all occurrences of textToHighlight within edit, except the one matching exceptCursor.
+	/// Uses QPalette::Highlight from the standard palette with an alpha value 60 (or 80 for a dark theme).
+	inline static void HighlightText(QTextEdit *edit, const QString &textToHighlight, const QTextCursor &exceptCursor);
 
 protected:
 	/// переопределение вставки текста из буффера обмена для richTextPaste
@@ -210,15 +222,46 @@ void MyQTextEdit::EnableHighlightSelectionMatches()
 	QObject::connect(this, &QTextEdit::selectionChanged, this, &MyQTextEdit::HighlightSelectionMatches);
 }
 
+void MyQTextEdit::EnableHighlightSelectionMatchesInLinkedEditors(QTextEdit *edit1, QTextEdit *edit2)
+{
+	connect(edit1, &QTextEdit::selectionChanged, edit2, [edit1, edit2](){
+		QTextCursor currentCursor = edit1->textCursor();
+		QString selectedText = currentCursor.selectedText().trimmed();
+
+		HighlightText(edit1, selectedText, currentCursor);
+		HighlightText(edit2, selectedText, currentCursor);
+	});
+
+	connect(edit2, &QTextEdit::selectionChanged, edit1, [edit1, edit2](){
+		QTextCursor currentCursor = edit2->textCursor();
+		QString selectedText = currentCursor.selectedText().trimmed();
+
+		HighlightText(edit1, selectedText, currentCursor);
+		HighlightText(edit2, selectedText, currentCursor);
+	});
+}
+
 void MyQTextEdit::HighlightSelectionMatches()
 {
-	QTextEdit* edit = this;
-
-	QTextCursor currentCursor = edit->textCursor();
+	QTextCursor currentCursor = textCursor();
 	QString selectedText = currentCursor.selectedText().trimmed();
 
-	// Если выделение пустое или слишком короткое (отключено), очищаем подсветку
-	if (selectedText.isEmpty()/* or selectedText.size() < 2*/) {
+	HighlightText(selectedText, currentCursor);
+}
+
+void MyQTextEdit::HighlightText(const QString &textToHighlight, const QTextCursor &exceptCursor)
+{
+	HighlightText(this, textToHighlight, exceptCursor);
+}
+
+void MyQTextEdit::HighlightText(QTextEdit *edit, const QString &textToHighlight, const QTextCursor &exceptCursor)
+{
+	// Если выделение пустое, очищаем подсветку
+	if (textToHighlight.isEmpty())
+	{
+		/// можно проверять, что выделение не короче 2-3 знаков, чтобы не выделять одну букву, но пока оставил так
+		/// 03.08.2026
+
 		edit->setExtraSelections({}); // Очищение подсветки
 		return;
 	}
@@ -235,25 +278,33 @@ void MyQTextEdit::HighlightSelectionMatches()
 	QTextCharFormat highlightFormat;
 	highlightFormat.setBackground(highlightColor);
 
-	// Поиск совпадений
+	// Цикл поиска совпадений
 	QString text = edit->toPlainText();
-	int pos = text.indexOf(selectedText, 0);
-
-	while (pos != -1) {
-		// Проверка границ слова (чтобы не подсвечивать части других слов) (отключено)
+	int pos = text.indexOf(textToHighlight, 0);
+	while (pos != -1)
+	{
+		// Проверка границ слова (чтобы не подсвечивать части других слов)
 		//			bool isWordStart = (pos == 0 || !text.at(pos - 1).isLetterOrNumber());
 		//			bool isWordEnd = ((pos + selectedText.length()) >= text.length() ||
 		//							  !text.at(pos + selectedText.length()).isLetterOrNumber());
+		// пока отключено 03.08.2026
 
 		bool isWordStart = true;
 		bool isWordEnd = true;
 
-		if (isWordStart && isWordEnd) {
+		if (isWordStart && isWordEnd)
+		{
 			QTextCursor searchCursor(edit->document());
 			searchCursor.setPosition(pos);
-			searchCursor.setPosition(pos + selectedText.length(), QTextCursor::KeepAnchor);
+			searchCursor.setPosition(pos + textToHighlight.length(), QTextCursor::KeepAnchor);
 
-			if (searchCursor != currentCursor) // игнорирование текущего курсора
+			bool sameCursor = searchCursor.document() == exceptCursor.document()
+					and searchCursor.selectionStart() == exceptCursor.selectionStart()
+					and searchCursor.selectionEnd() == exceptCursor.selectionEnd();
+			/// обязательна такая проверка, searchCursor == exceptCursor не достаточно,
+			/// иногда не срабатывает, например если выделение справа на лево
+
+			if (not sameCursor) // игнорирование курсора
 			{
 				QTextEdit::ExtraSelection selection;
 				selection.cursor = searchCursor;
@@ -261,7 +312,7 @@ void MyQTextEdit::HighlightSelectionMatches()
 				extraSelections.append(selection);
 			}
 		}
-		pos = text.indexOf(selectedText, pos + 1);
+		pos = text.indexOf(textToHighlight, pos + 1);
 	}
 
 	// Применение подсветки
