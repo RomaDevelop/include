@@ -89,7 +89,7 @@ void MyQWidget::ShowExtended(QWidget *widget, bool setActive)
 	if(setActive) state.setFlag(Qt::WindowActive, true);	// для активации
 	widget->setWindowState(state);
 
-	if(setActive) widget->activateWindow(); // для активации, той не достаточно
+	if(setActive) widget->activateWindow(); // для активации, setFlag Qt::WindowActive выше не достаточно
 }
 
 void MyQWidget::SetFontFamily(QWidget *obj, const QString &fontName)
