@@ -12,8 +12,6 @@
 #include "MyQShortings.h"
 #include "declare_struct.h"
 
-//#include "logs.h"
-
 namespace CodeKeyWords
 {
 	const char commandSplitter = ';';
