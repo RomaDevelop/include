@@ -228,13 +228,43 @@ QStringList Code::CommandToWordsNorm(QString command, bool canContainCommandSpli
 	return Code::CommandToWords(command, canContainCommandSplitter);
 }
 
-std::optional<Statement> ForStatementParsing(QString &statement)
+std::optional<Statement> ForStatementParsing(const QStringRef &statementStr)
 {
-	if(not statement.startsWith("for (")) return {};
+	if (!MyQString::StartsWith(statementStr, CodeKeyWords::for_starter)) return std::nullopt;
 
-	qdbg << "for single command found:" << statement;
+	// Подчсёт скобок чтобы найти конец "for (...)"
+	int brackets = 0;
+	int closingIndex = -1;
 
-	return {};
+	for (int i = 0; i < statementStr.length(); ++i) {
+		if (statementStr.at(i) == '(') brackets++;
+		if (statementStr.at(i) == ')') {
+			brackets--;
+			if (brackets == 0) {
+				closingIndex = i;
+				break;
+			}
+		}
+	}
+
+	if (closingIndex == -1)
+	{
+		CodeLogs::Error("Not closed brackets in for statement: "+statementStr);
+		return std::nullopt;
+	}
+
+	Statement statementRet;
+	// Установка заголовка
+	statementRet.header = statementStr.left(closingIndex + 1).toString();
+
+	// Остаток выражения - всё, что после for(...)
+	QStringRef body = statementStr.mid(closingIndex + 1).trimmed();
+
+	auto nested = ForStatementParsing(body);
+	if (nested) statementRet.nestedStatements.push_back(*nested);
+	else statementRet.nestedStatements.push_back(body.toString());
+
+	return statementRet;
 }
 
 Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int *nestedBlockCloser)
@@ -303,7 +333,9 @@ Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int
 			Normalize(currentTextFragment);
 			if(!currentTextFragment.isEmpty())
 			{
-				auto forParsingRes = ForStatementParsing(currentTextFragment);
+				/// эсли это цикл for - парсит его в выражение
+				/// это для того чтобы цикл всегда состоял из headera-а и выражения
+				auto forParsingRes = ForStatementParsing(QStringRef(&currentTextFragment));
 
 				if(forParsingRes.has_value())
 					currentStatement->nestedStatements.emplace_back(std::move(*forParsingRes));

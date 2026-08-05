@@ -40,6 +40,8 @@ namespace CodeKeyWords
 
 	const QChar diapasonSplitter = '-';
 
+	constexpr std::string_view for_starter = "for (";
+
 	constexpr std::string_view binCodePrefix = "0b";
 	constexpr std::string_view hexCodePrefix = "0x";
 	const int encodingPrefixSize = binCodePrefix.size();
