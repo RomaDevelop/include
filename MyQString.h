@@ -65,7 +65,10 @@ struct MyQString
 		return result;
 	}
 
-	inline static bool StartsWith(const QString &str, const std::string_view &str_view);
+	template<class T_QString>
+	inline static bool StartsWith(const T_QString &str, const std::string_view &str_view);
+	template<class T_QString>
+	inline static bool StartsWith(const T_QString &str, const char *c_string);
 
 	template<typename... Args>
 	inline static void Append(QString& s, const Args&... args) { (SmartAppend(s, args), ...); }
@@ -363,7 +366,8 @@ int MyQString::IndexOfNumbered(const QString &str, const T_substr &subStr, int n
 	return pos;
 }
 
-bool MyQString::StartsWith(const QString &str, const std::string_view &str_view)
+template<class T_QString>
+bool MyQString::StartsWith(const T_QString &str, const std::string_view &str_view)
 {
 	if((size_t)str.length() < str_view.length()) return false;
 
@@ -374,6 +378,22 @@ bool MyQString::StartsWith(const QString &str, const std::string_view &str_view)
 		index++;
 	}
 
+	return true;
+}
+
+template<class T_QString>
+bool MyQString::StartsWith(const T_QString &str, const char *c_string)
+{
+	if (c_string == nullptr) return false;
+
+	uint index = 0;
+	uint length = str.length();
+	while (c_string[index] != '\0') {
+		if (index >= length) return false;
+		if (str[index] != c_string[index]) return false;
+
+		index++;
+	}
 	return true;
 }
 
