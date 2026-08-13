@@ -312,7 +312,16 @@ Statement Code::TextToStatements(const QString &text, int nestedBlockOpener, int
 
 			nestedStatement.header = std::move(currentTextFragment);
 
-			auto tmpNestedStatements = TextToStatements(text, i, &i);
+			int i_opener = i;
+			auto tmpNestedStatements = TextToStatements(text, i_opener, &i);
+
+			if(i_opener == i)
+			{
+				CodeLogs::Error("Not closed statement found:\n" + text);
+				currentStatement->nestedStatements.pop_back();
+				break;
+			}
+
 			for(auto &tns:tmpNestedStatements.nestedStatements)
 					nestedStatement.nestedStatements.emplace_back(std::move(tns));
 
