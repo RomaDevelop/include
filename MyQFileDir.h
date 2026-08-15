@@ -227,6 +227,11 @@ QString MyQFileDir::RemoveFiles(QString directory, int remainCount, RemoveWay re
 			FilesGroup(int64_t maxDaysTo, int64_t maxCount): maxDays{maxDaysTo}, maxCount{maxCount} {
 				if(maxCount == 0) maxCount = 1;
 			}
+			QString Print()
+			{
+				return "maxDays="+QSn(maxDays)+" maxCount="+QSn(maxCount)
+				        +" countBeforeRemove="+QSn(countBeforeRemove)+" countToRemove="+QSn(countToRemove);
+			}
 
 			int from = -1;
 			int to = -1;
@@ -291,12 +296,15 @@ QString MyQFileDir::RemoveFiles(QString directory, int remainCount, RemoveWay re
 		for(auto &group:groups)
 			group.CalcCount();
 
+		qdbg << "----------------------------------------------------------------------------------";
+		qdbg << "groups before removing";
+
 		for(auto &group:groups)
 		{
 			if(group.countBeforeRemove > 0)
 			{
 				qdbg << "----------------------------------------------------------------------------------";
-				qdbg << "all groups:" << group.maxDays <<  group.maxCount << group.countBeforeRemove << group.countToRemove;
+				qdbg << "group:" << group.Print();
 				for (int i = group.from; i <= group.to; ++i)
 				{
 					qdbg << "file "+files[i].filePath()+" "+files[i].lastModified().toString(DateTimeFormat);
@@ -304,30 +312,31 @@ QString MyQFileDir::RemoveFiles(QString directory, int remainCount, RemoveWay re
 			}
 		}
 
-		auto Print = [&files](FilesGroup &group, int i, bool &groupInfoPrinted){
-			if(not groupInfoPrinted)
-			{
-				qdbg << "----------------------------------------------------------------------------------";
-				qdbg << "remove from group:" << group.maxDays <<  group.maxCount << group.countBeforeRemove << group.countToRemove;
-				groupInfoPrinted = true;
-			}
-			qdbg << "remove "+files[i].filePath()+" "+files[i].lastModified().toString(DateTimeFormat);
-		};
+
+		qdbg << "----------------------------------------------------------------------------------";
+		qdbg << "removing start";
 
 		for(auto &group:groups)
 		{
-			if (group.countToRemove <= 0) continue;
+			qdbg << "----------------------------------------------------------------------------------";
+			qdbg << "group:" << group.Print();
 
-			bool groupInfoPrinted = false;
+			if (group.countToRemove <= 0)
+			{
+				qdbg << "nothing to remove";
+				continue;
+			}
 
 			// If remove all
 			if (group.countToRemove >= group.countBeforeRemove) {
 
-				for (int i = group.from; i <= group.to; ++i) {
-					if(!QFile::remove(files[i].filePath())) {
+				for (int i = group.from; i <= group.to; ++i)
+				{
+					qdbg << "removing "+files[i].filePath()+" "+files[i].lastModified().toString(DateTimeFormat);
+					if(!QFile::remove(files[i].filePath()))
+					{
 						ret += "can't remove file [" + files[i].filePath() + "]\n";
 					}
-					Print(group, i, groupInfoPrinted);
 				}
 				continue;
 			}
@@ -344,11 +353,12 @@ QString MyQFileDir::RemoveFiles(QString directory, int remainCount, RemoveWay re
 					continue; // file remains
 				}
 
-				// file removes
-				if(!QFile::remove(files[i].filePath())) {
+				// file removing
+				qdbg << "removing "+files[i].filePath()+" "+files[i].lastModified().toString(DateTimeFormat);
+				if(!QFile::remove(files[i].filePath()))
+				{
 					ret += "can't remove file [" + files[i].filePath() + "]\n";
 				}
-				Print(group, i, groupInfoPrinted);
 			}
 		}
 

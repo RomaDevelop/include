@@ -11,6 +11,7 @@ enum class DropedObjectType { file, dir, symLink, unknown };
 struct DropedObject
 {
 	QString error;
+
 	DropedObjectType type = DropedObjectType::unknown;
 	QString initialValue;
 	QString workedValue;
