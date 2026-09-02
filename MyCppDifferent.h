@@ -18,7 +18,7 @@
 class MyCppDifferent
 {
 public:
-	inline static std::string ToDiapasons(std::vector<int> vect);
+	inline static std::string ToDiapasons(const std::vector<int> &vect);
 	inline static std::vector<ushort> Digits(uint number);
 
 	inline static std::string GetPathToExe();	
@@ -122,7 +122,7 @@ namespace any_guard {
 
 //--------------------------------------------------------------------------------------------------------------------------
 
-std::string MyCppDifferent::ToDiapasons(std::vector<int> vect)
+std::string MyCppDifferent::ToDiapasons(const std::vector<int> &vect)
 {
 	std::string resOff;
 	if(vect.size())
