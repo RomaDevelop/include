@@ -154,7 +154,7 @@ public:
 	static QStringList GetTextsInSquareBrackets(const QString &text);
 
 	declare_struct_4_fields_move(InitParsed, QString, error, QStringList, wordsBefore, QStringList, wordsInit, QStringList, wordsAfter);
-	static InitParsed ParseInitialisation(QStringList words);
+	static InitParsed ParseInitialisation(QStringList words, bool initializationMayBeMissing);
 
 	static bool IsInteger(const QString &str);
 	static bool IsUnsigned(const QString &str);

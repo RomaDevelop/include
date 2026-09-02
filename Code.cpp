@@ -592,14 +592,13 @@ QStringList Code::GetTextsInSquareBrackets(const QString &text)
 	return result;
 }
 
-Code::InitParsed Code::ParseInitialisation(QStringList words)
+Code::InitParsed Code::ParseInitialisation(QStringList words, bool initializationMayBeMissing)
 {
 	InitParsed result;
-	QStringList wordsCopy = words;
 	int initOpener = -1;
-	for(int i=0; i<wordsCopy.size(); i++)
+	for(int i=0; i<words.size(); i++)
 	{
-		if(wordsCopy[i] == CodeKeyWords::blockOpener or wordsCopy[i] == CodeKeyWords::assign)
+		if(words[i] == CodeKeyWords::blockOpener or words[i] == CodeKeyWords::assign)
 		{
 			initOpener = i;
 			break;
@@ -607,7 +606,8 @@ Code::InitParsed Code::ParseInitialisation(QStringList words)
 	}
 	if(initOpener == -1)
 	{
-		result.error = "initialisation opener not found in command";
+		if(initializationMayBeMissing) result.wordsBefore = std::move(words);
+		else result.error = "initialisation opener not found in command";
 		return result;
 	}
 	if(initOpener == 0)
@@ -618,19 +618,19 @@ Code::InitParsed Code::ParseInitialisation(QStringList words)
 
 	result.wordsBefore = MyQString::SizedQStringList(initOpener);
 	for(int i=0; i<initOpener; i++)
-		result.wordsBefore[i] = std::move(wordsCopy[i]);
+		result.wordsBefore[i] = std::move(words[i]);
 
-	if(wordsCopy[initOpener] == CodeKeyWords::blockOpener)
+	if(words[initOpener] == CodeKeyWords::blockOpener)
 	{
-		result.wordsInit = Code::TakeBlock(wordsCopy);
-		result.wordsAfter = wordsCopy;
+		result.wordsInit = Code::TakeBlock(words);
+		result.wordsAfter = words;
 	}
-	else if(wordsCopy[initOpener] == CodeKeyWords::assign)
+	else if(words[initOpener] == CodeKeyWords::assign)
 	{
-		result.wordsInit = MyQString::SizedQStringList(wordsCopy.size() - (initOpener + 1));
+		result.wordsInit = MyQString::SizedQStringList(words.size() - (initOpener + 1));
 		int wordsIndex=initOpener+1, wordsInitIndex = 0;
-		for(; wordsIndex<wordsCopy.size(); wordsIndex++, wordsInitIndex++)
-			result.wordsInit[wordsInitIndex] = std::move(wordsCopy[wordsIndex]);
+		for(; wordsIndex<words.size(); wordsIndex++, wordsInitIndex++)
+			result.wordsInit[wordsInitIndex] = std::move(words[wordsIndex]);
 
 		if(result.wordsInit.startsWith(CodeKeyWords::blockOpener)
 				and result.wordsInit.endsWith(CodeKeyWords::blockCloser))
@@ -643,7 +643,7 @@ Code::InitParsed Code::ParseInitialisation(QStringList words)
 	}
 	else
 	{
-		result.error = "programm logic error: unexpected init starter " + wordsCopy[initOpener];
+		result.error = "programm logic error: unexpected init starter " + words[initOpener];
 		return result;
 	}
 
