@@ -49,6 +49,22 @@ public:
 	inline static std::array<unsigned char,4> to_bytes(float value); // return[0] - нулевой байт value
 	inline static float to_float(std::array<unsigned char,4> bytes); // нулевой байт в return = bytes[0]
 	inline static bool test_float_to_bytes_conversion();
+
+	// Нужная функция для set, map до С++ 20, там есть готовая
+	template <typename Container, typename Predicate>
+	inline static auto erase_if_with_cycle(Container& c, Predicate pred) {
+		auto old_size = c.size();
+
+		for (auto it = c.begin(); it != c.end(); ) {
+			if (pred(*it)) {
+				it = c.erase(it);
+			} else {
+				++it;
+			}
+		}
+
+		return old_size - c.size();
+	}
 };
 
 /// namespace any_guard contains universal RAII guards that sets and restores a variable
