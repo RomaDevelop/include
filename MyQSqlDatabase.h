@@ -70,8 +70,10 @@ struct BaseData
 
 struct AccessDB // #include <QAxObject>
 {
-	inline static QString CompactDB(QString fullPath);
-	inline static QString CompactDBWithCheck(QString fullPath);
+	/// backupFolder: null to disable backup
+	inline static QString CompactDB(QString dataBaseFile, std::optional<QString> backupFolder);
+	/// backupFolder: null to disable backup
+	inline static QString CompactDBWithCheck(QString dataBaseFile, std::optional<QString> backupFolder);
 };
 
 //--------------------------------------------------------------------------------------------------------------------------
@@ -192,7 +194,8 @@ public:
 		QString errorInit;
 	};
 
-	inline static void MakeBackupBase(bool logSuccess, int maxBackupFilesCount);
+	inline static void MakeBackupBase(const QString &baseFile, const QString &backupFolder, bool logSuccess, int maxBackupFilesCount);
+	inline static void MakeBackupMainBase(bool logSuccess, int maxBackupFilesCount);
 
 	inline static void Log(const QString &str) { if(logWorker) logWorker(str); else qdbg << str; }
 	inline static void Error(const QString &str) { if(errorWorker) errorWorker(str); else qdbg << str; }
@@ -268,20 +271,51 @@ void MyQSqlDatabase::InitMainDB(BaseData mainBase_, logWorkerFunction logWorker_
 	else Error("Main db init error!!!");
 }
 
+void MyQSqlDatabase::MakeBackupBase(const QString &baseFile, const QString &backupFolder, bool logSuccess, int maxBackupFilesCount)
+{
+	if(!QDir().mkpath(backupFolder))
+	{
+		Error("MakeBackubBase Can't mkpath " + backupFolder);
+		return;
+	}
+
+	MyQFileDir::RemoveFiles(backupFolder, maxBackupFilesCount, MyQFileDir::smartModified);
+	QString backupFile = backupFolder + "/"
+			+ QDateTime::currentDateTime().toString("yyyy.MM.dd hh-mm-ss-zzz") + " "
+			+ QFileInfo(baseFile).fileName();
+
+	if(QFile::copy(baseFile, backupFile))
+	{
+		if(logSuccess) Log("резервная копия создана\n\n" + backupFile);
+		auto res = MyQFileDir::SetModifiedNow(backupFile);
+		if(not res) Error("MakeBackubBase Can't set modified now to " + backupFile);
+	}
+	else
+	{
+		Error("MakeBackubBase Can't copy base to " + backupFolder);
+		return;
+	}
+}
+
+void MyQSqlDatabase::MakeBackupMainBase(bool logSuccess, int maxBackupFilesCount)
+{
+	MakeBackupBase(baseDataMain.baseFilePathName, baseDataMain.pathBackup, logSuccess, maxBackupFilesCount);
+}
+
 QSqlQuery MyQSqlDatabase::DoSqlQuery(const QString &strQuery, const QStringPairVector &binds,
-                                     bool doNextAfterExec, bool showErrorIfNextNotDid)
+									 bool doNextAfterExec, bool showErrorIfNextNotDid)
 {
 	return DoSqlQueryExt(strQuery, binds, doNextAfterExec, showErrorIfNextNotDid).query;
 }
 
 QSqlQuery MyQSqlDatabase::DoSqlQuery2(const QString & strQuery, const QStringList & binds,
-                                      bool doNextAfterExec, bool showErrorIfNextNotDid)
+									  bool doNextAfterExec, bool showErrorIfNextNotDid)
 {
 	return DoSqlQueryExt2(strQuery, binds, doNextAfterExec, showErrorIfNextNotDid).query;
 }
 
 MyQSqlDatabase::DoSqlQueryRes MyQSqlDatabase::DoSqlQueryExt(const QString &strQuery, const QStringPairVector &binds,
-                                                            bool doNextAfterExec, bool showErrorIfNextNotDid)
+															bool doNextAfterExec, bool showErrorIfNextNotDid)
 {
 	QString errors;
 	QSqlQuery query(*currentQSqlDb);
@@ -626,42 +660,18 @@ void MyQSqlDatabase::ShowErrorForQuery(QString error, const QString &strQuery, c
 	ShowErrorForQuery(error);
 }
 
-void MyQSqlDatabase::MakeBackupBase(bool logSuccess, int maxBackupFilesCount)
+QString AccessDB::CompactDB(QString dataBaseFile, std::optional<QString> backupFolder)
 {
-	if(!QDir().mkpath(baseDataMain.pathBackup))
-	{
-		Error("MakeBackubBase Can't mkpath " + baseDataMain.pathBackup);
-		return;
-	}
+	dataBaseFile = QDir::toNativeSeparators(dataBaseFile);
+	QFileInfo dbInfo(dataBaseFile);
+	if (!dbInfo.exists()) return dataBaseFile + " doesn't exists";
 
-	MyQFileDir::RemoveFiles(baseDataMain.pathBackup, maxBackupFilesCount, MyQFileDir::smartModified);
-	QString backupFile = baseDataMain.pathBackup + "/"
-	        + QDateTime::currentDateTime().toString("yyyy.MM.dd hh-mm-ss-zzz") + " "
-	        + QFileInfo(baseDataMain.baseFilePathName).fileName();
+	if(backupFolder) MyQSqlDatabase::MakeBackupBase(dataBaseFile, *backupFolder, false, 20);
 
-	if(QFile::copy(baseDataMain.baseFilePathName, backupFile))
+	QString tempFile = dataBaseFile + ".temp_compact."+dbInfo.suffix();
+	if (QFile::exists(tempFile))
 	{
-		if(logSuccess) Log("резервная копия создана\n\n" + backupFile);
-		auto res = MyQFileDir::SetModifiedNow(backupFile);
-		if(not res) Error("MakeBackubBase Can't set modified now to " + backupFile);
-	}
-	else
-	{
-		Error("MakeBackubBase Can't copy base to " + baseDataMain.pathBackup);
-		return;
-	}
-}
-
-QString AccessDB::CompactDB(QString fullPath)
-{
-	fullPath = QDir::toNativeSeparators(fullPath);
-	QFileInfo dbInfo(fullPath);
-	if (!dbInfo.exists()) return fullPath + " doesn't exists";
-
-	QString tempPath = fullPath + ".temp_compact."+dbInfo.suffix();
-	if (QFile::exists(tempPath))
-	{
-		if(not QFile::remove(tempPath)) return "Can't remove old tmp file";
+		if(not QFile::remove(tempFile)) return "Can't remove old tmp file";
 	}
 
 	// Выбор провайдера (ACE 12.0 — стандарт для большинства систем)
@@ -677,7 +687,7 @@ QString AccessDB::CompactDB(QString fullPath)
 	try
 	{
 		QVariantList params;
-		params << fullPath << tempPath;
+		params << dataBaseFile << tempFile;
 
 		// dynamicCall вернет пустой QVariant при успехе
 		auto callRes = jro->dynamicCall("CompactDatabase(QString, QString)", params);
@@ -687,35 +697,36 @@ QString AccessDB::CompactDB(QString fullPath)
 					+ MyQString::AsDebug(callRes);
 		}
 
-		if (QFile::exists(tempPath))
+		if (QFile::exists(tempFile)) // Файл создан — операция прошла успешно
 		{
-			// Файл создан — значит операция прошла успешно
-			if (QFile::remove(fullPath))
+			if (QFile::remove(dataBaseFile))
 			{
-				if(not QFile::rename(tempPath, fullPath))
+				if(not QFile::rename(tempFile, dataBaseFile))
 				{
-					return "Can't rename file "+tempPath+" to "+fullPath;
+					return "Can't rename tmp file "+tempFile+" to real file "+dataBaseFile;
 				}
 			}
-			else return "Can't remove file "+fullPath+" to replce with "+tempPath;
+			else return "Can't remove file "+dataBaseFile+" to replce with "+tempFile;
 		}
+		else return "Tmp file "+tempFile+" doesn't exists after dynamicCall";
+
 	} catch (...) { return "exception during COM object execution"; }
 
-	if (QFile::exists(tempPath)) {
-		return "Success, but tmp file " + tempPath + " exists at finish function";
+	if (QFile::exists(tempFile)) {
+		return "Success, but tmp file " + tempFile + " exists at finish function";
 	}
 
 	return "";
 }
 
-QString AccessDB::CompactDBWithCheck(QString fullPath)
+QString AccessDB::CompactDBWithCheck(QString dataBaseFile, std::optional<QString> backupFolder)
 {
-	QString compactedFile = fullPath+".compacted.txt";
+	QString compactedFile = dataBaseFile+".compacted.txt";
 	auto chRes = MyQFileDir::FileDateStampCheck(compactedFile, 10);
 	if(chRes.second != "") return chRes.second;
 	if(not chRes.first) { qdbg << "CompactAccessDatabase is not necessary"; return ""; }
 
-	QString compactDbRes = CompactDB(fullPath);
+	QString compactDbRes = CompactDB(dataBaseFile, backupFolder);
 	if(not compactDbRes.isEmpty()) return "CompactAccessDatabase error: "+compactDbRes;
 	else qdbg << "CompactAccessDatabase success";
 
