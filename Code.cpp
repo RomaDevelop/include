@@ -96,7 +96,12 @@ void Code::Normalize(QString &text)
 		if(!quats && text[i] == '.')
 		{
 			auto prevWord = GetPrevWord(text,i), nextWord = GetNextWord(text,i);
-			if(prevWord.isEmpty() || nextWord.isEmpty()) { CodeLogs::Error(". is first or last word in text ["+text+"]"); continue; }
+			if(prevWord.isEmpty() || nextWord.isEmpty())
+			{
+				//CodeLogs::Error(". is first or last word in text ["+text+"]");
+				//continue;
+				// это не может считаться ошибкой на этом уровне, может синтаксис такое позволяет!
+			}
 
 			if(IsNumber(std::move(prevWord)) && IsNumber(std::move(nextWord)))
 			{
