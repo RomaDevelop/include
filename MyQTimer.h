@@ -8,6 +8,7 @@
 
 #include <QDebug>
 #include <QTimer>
+#include <QDateTime>
 
 //--------------------------------------------------------------------------------------------------------------------------
 
@@ -50,10 +51,16 @@ public:
 	/// эквивалент for (int i = i_start; i < i_less_than; i++)
 	/// но выполняется через интервалы interval
 	/// to_do: сейчас таймеру просто ставится интервал, можно сделать версию с паузами между итерациями
-	inline static void For(int i_start, int i_less_than, int interval, QObject *parent,
+	inline static void For(int i_start, int i_less_than, int interval, QObject &parent,
 				  std::function<void(int &i)> iteration,
 				  std::function<void()> finishAction);
 
+	///\brief Отложенный вызов функции по времени или условию
+	/// Создает таймер с интервалом step_ms,
+	/// вызывает call, если checkFn вернуло true или прошло больше deferral_ms
+	inline static void DeferredCall(int deferral_ms, int step_ms, QObject &parent,
+							 std::function<bool()> checkFn,
+							 std::function<void()> call);
 
 	int timerTicks = 0;
 	int counter = 0;
@@ -69,12 +76,12 @@ public:
 	}
 };
 
-void MyQTimer::For(int i_start, int i_less_than, int interval, QObject *parent,
+void MyQTimer::For(int i_start, int i_less_than, int interval, QObject &parent,
 				   std::function<void (int &)> iteration, std::function<void ()> finishAction)
 {
 	auto iShPtr = std::make_shared<int>(i_start);
-	QTimer *timer = new QTimer(parent);
-	connect(timer, &QTimer::timeout, parent, [iShPtr, i_less_than, iteration, finishAction, timer](){
+	QTimer *timer = new QTimer(&parent);
+	connect(timer, &QTimer::timeout, &parent, [iShPtr, i_less_than, iteration, finishAction, timer](){
 		auto &i = *iShPtr.get();
 		iteration(i);
 		i++;
@@ -86,6 +93,22 @@ void MyQTimer::For(int i_start, int i_less_than, int interval, QObject *parent,
 		}
 	});
 	timer->start(interval);
+}
+
+void MyQTimer::DeferredCall(int deferral_ms, int step_ms, QObject &parent,
+					std::function<bool ()> checkFn, std::function<void ()> call)
+{
+	QTimer *timer = new QTimer(&parent);
+	QDateTime start = QDateTime::currentDateTime();
+	connect(timer, &QTimer::timeout, &parent, [checkFn, call, timer, start, deferral_ms](){
+		if(checkFn() or start.msecsTo(QDateTime::currentDateTime()) > deferral_ms)
+		{
+			call();
+			timer->stop();
+			timer->deleteLater();
+		}
+	});
+	timer->start(step_ms);
 }
 
 void MyQTimerPool::SingleShotSt(QObject *parent, int msec, std::function<void ()> task)
