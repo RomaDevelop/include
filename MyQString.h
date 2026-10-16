@@ -83,6 +83,14 @@ struct MyQString
 	template<typename Separator_t, typename Arg1, typename... ArgsTail>
 	inline static QString JoinSep(const Separator_t &sep, const Arg1& arg1, const ArgsTail&... args)
 	{ QString s; AppendSep(s, sep, arg1, args...); return s; }
+	template<typename Container, typename Separator_t>
+	inline static QString JoinContainerSep(const Container& c, const Separator_t &sep)
+	{
+		QString s;
+		for(auto &item:c) Append(s, item, sep);
+		s.chop(get_length_universal(sep));
+		return s;
+	}
 
 	template<class char_type>
 	inline static QString& RightJistifie(QString &str_to_justifie, int width, char_type fill=' ', bool trunc = false);

@@ -3,9 +3,17 @@
 
 #include <array>
 #include <vector>
+#include <algorithm>
 
 namespace stdx
 {
+	template<class T, class M>
+	bool contains(const T& container, const M& member)
+	{
+		for(auto &item:container) if(item == member) return true;
+		return false;
+	}
+
 	enum class insert_result { new_node_inserted, existing_node_was_rewrited, not_enough_space };
 
 	template<class key_t, std::size_t size>
