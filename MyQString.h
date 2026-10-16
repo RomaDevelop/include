@@ -8,6 +8,7 @@
 #include <QFontMetrics>
 #include <QRect>
 
+#include "stdx.h"
 #include "MyQDifferent.h"
 
 //--------------------------------------------------------------------------------------------------------------------------
@@ -20,7 +21,7 @@ struct MyQString
 
 	inline static QStringList ArgsToStrList(int argc, char *argv[]);
 
-	inline static void Append(QStringList &list, QString str) { QString &lastStr = *list.insert(list.end(),""); lastStr=std::move(str); }
+	inline static void Append(QStringList &list, QString str);
 	template<class Splitter>
 	inline static QList<QStringList> Split(const QStringList &list, const Splitter &splitter);
 
@@ -38,7 +39,8 @@ struct MyQString
 
 	/// Finds the index of the n-th occurrence of a substring
 	template<class T_substr>
-	inline static int IndexOfNumbered(const QString &str, const T_substr &subStr, int n, int from = 0, bool subIntersections = false);
+	inline static int IndexOfNumbered(const QString &str, const T_substr &subStr, int n, int from = 0,
+									  bool subIntersections = false);
 
 	struct FoundSubstr { QString substr; std::vector<int> positions; };
 	template<class T_QString> // 100% works with QString, QStringRef
@@ -132,7 +134,7 @@ struct MyQString
 	}
 
 	inline static QString TranslitWrongLanguage(QString str);
-	using mapQCHar = std::map<QChar, QChar>;
+	using mapQCHar = stdx::flat_stack_map<QChar, QChar, 70>;
 	inline static MyQString::mapQCHar* MapForTranslintWrongLanguage(const QString &str);
 	enum class Language { latin, kirillic, undefined };
 	inline static Language DefineLanguage(const QString &str);
@@ -221,7 +223,7 @@ private:
 	const std::string_view _str;
 };
 
-inline bool operator== (const StringLiteral &lhs, const StringLiteral &rhs) { return lhs.GetStringView() == rhs.GetStringView(); }
+inline bool operator== (const StringLiteral &lhs, const StringLiteral &rhs) { return lhs.GetStringView()==rhs.GetStringView(); }
 inline bool operator!= (const StringLiteral &lhs, const StringLiteral &rhs) { return !(lhs == rhs); }
 inline bool operator< (const StringLiteral &lhs, const StringLiteral &rhs) { return lhs.GetStringView() < rhs.GetStringView(); }
 
@@ -260,6 +262,12 @@ void MyQString::EmplaceBack(QStringList &list, QString &&newString)
 QStringList MyQString::ArgsToStrList(int argc, char *argv[])
 {
 	return MyQDifferent::ArgsToStrList(argc, argv);
+}
+
+void MyQString::Append(QStringList &list, QString str)
+{
+	QString &lastStr = *list.insert(list.end(),"");
+	lastStr=std::move(str);
 }
 
 int MyQString::IndexOf(const QStringView &stringView, QChar c, int from)
@@ -404,16 +412,16 @@ QString MyQString::TranslitWrongLanguage(QString str)
 
 	for(auto &c:str)
 	{
-		if(auto it = mapPtr->find(c); it != mapPtr->end())
+		if(auto v = mapPtr->find_value(c))
 		{
-			c = it->second;
+			c = *v;
 		}
 		// else ; // буква остается без изменений
 	}
 	return str;
 }
 
-MyQString::mapQCHar *MyQString::MapForTranslintWrongLanguage(const QString &str)
+MyQString::mapQCHar* MyQString::MapForTranslintWrongLanguage(const QString &str)
 {
 	static mapQCHar toLatin;
 	static mapQCHar toKiril;
@@ -427,8 +435,10 @@ MyQString::mapQCHar *MyQString::MapForTranslintWrongLanguage(const QString &str)
 		const wchar_t *kiril_data = kiril.data();
 		for(size_t i=0; i<len; i++)
 		{
-			toLatin[*kiril_data] = *latin_data;
-			toKiril[*latin_data] = *kiril_data;
+			auto insRes1 = toLatin.insert(QChar(*kiril_data), QChar(*latin_data));
+			auto insRes2 = toKiril.insert(QChar(*latin_data), QChar(*kiril_data));
+			if(insRes1 != stdx::insert_result::new_node_inserted or insRes1 != insRes2)
+				qDebug() << "MyQString::MapForTranslintWrongLanguage init map error";
 			latin_data++;
 			kiril_data++;
 		}
@@ -442,49 +452,55 @@ MyQString::mapQCHar *MyQString::MapForTranslintWrongLanguage(const QString &str)
 
 MyQString::Language MyQString::DefineLanguage(const QString &str)
 {
-	static std::set<QChar> latin = {
-		'q','w','e','r','t','y','u','i','o','p','a','s','d','f','g','h','j','k','l','z','x','c','v','b','n','m',
-		'Q','W','E','R','T','Y','U','I','O','P','A','S','D','F','G','H','J','K','L','Z','X','C','V','B','N','M' };
-	static std::set<QChar> kiril = {
-		L'а', L'б', L'в', L'г', L'д', L'е', L'ё', L'ж', L'з', L'и', L'й', L'к', L'л', L'м', L'н', L'о', L'п', L'р',
-		L'с', L'т', L'у', L'ф', L'х', L'ц', L'ч', L'ш', L'щ', L'ъ', L'ы', L'ь', L'э', L'ю', L'я',
-		L'А', L'Б', L'В', L'Г', L'Д', L'Е', L'Ё', L'Ж', L'З', L'И', L'Й', L'К', L'Л', L'М', L'Н', L'О', L'П', L'Р',
-		L'С', L'Т', L'У', L'Ф', L'Х', L'Ц', L'Ч', L'Ш', L'Щ', L'Ъ', L'Ы', L'Ь', L'Э', L'Ю', L'Я' };
+	static auto latin = stdx::flat_stack_set<QChar, 64>::from_args(
+				'q','w','e','r','t','y','u','i','o','p','a','s','d','f','g','h','j','k','l','z','x','c','v','b','n','m',
+				'Q','W','E','R','T','Y','U','I','O','P','A','S','D','F','G','H','J','K','L','Z','X','C','V','B','N','M'
+				);
+
+	static auto kiril = stdx::flat_stack_set<QChar, 96>::from_args(
+				L'а', L'б', L'в', L'г', L'д', L'е', L'ё', L'ж', L'з', L'и', L'й', L'к', L'л', L'м', L'н', L'о', L'п', L'р',
+				L'с', L'т', L'у', L'ф', L'х', L'ц', L'ч', L'ш', L'щ', L'ъ', L'ы', L'ь', L'э', L'ю', L'я',
+				L'А', L'Б', L'В', L'Г', L'Д', L'Е', L'Ё', L'Ж', L'З', L'И', L'Й', L'К', L'Л', L'М', L'Н', L'О', L'П', L'Р',
+				L'С', L'Т', L'У', L'Ф', L'Х', L'Ц', L'Ч', L'Ш', L'Щ', L'Ъ', L'Ы', L'Ь', L'Э', L'Ю', L'Я'
+				);
+
 	for(auto &c:str)
 	{
-		if(latin.count(c) > 0) return Language::latin;
-		if(kiril.count(c) > 0) return Language::kirillic;
+		if(latin.contains(c)) return Language::latin;
+		if(kiril.contains(c)) return Language::kirillic;
 	}
 	return Language::undefined;
 }
 
 QString MyQString::TranslitToLatin(const QString &str)
 {
-	static std::map<QChar, const char *> translit { {L'а',"a"},   {L'б',"b"},  {L'в',"v"},  {L'г',"g"},  {L'д',"d"},
-													{L'е',"e"},   {L'ё',"yo"}, {L'ж',"zh"}, {L'з',"z"},  {L'и',"i"},
-													{L'й',"j"},
-													{L'к',"k"},   {L'л',"l"},  {L'м',"m"},  {L'н',"n"},  {L'о',"o"},
-													{L'п',"p"},   {L'р',"r"},  {L'с',"s"},  {L'т',"t"},  {L'у',"u"},
-													{L'ф',"f"},   {L'х',"h"},  {L'ц',"ts"}, {L'ч',"ch"}, {L'ш',"sh"},
-													{L'щ',"sch"}, {L'ъ',""},   {L'ы',"y"},  {L'ь',""},   {L'э',"e"},
-													{L'ю',"yu"},  {L'я',"ya"},
+	using T = std::pair<QChar, const char *>;
+	static auto translitMap = stdx::flat_stack_map<QChar, const char *, 96>::from_args(
+				T{L'а',"a"},   T{L'б',"b"},  T{L'в',"v"},  T{L'г',"g"},  T{L'д',"d"},
+				T{L'е',"e"},   T{L'ё',"yo"}, T{L'ж',"zh"}, T{L'з',"z"},  T{L'и',"i"},
+				T{L'й',"j"},
+				T{L'к',"k"},   T{L'л',"l"},  T{L'м',"m"},  T{L'н',"n"},  T{L'о',"o"},
+				T{L'п',"p"},   T{L'р',"r"},  T{L'с',"s"},  T{L'т',"t"},  T{L'у',"u"},
+				T{L'ф',"f"},   T{L'х',"h"},  T{L'ц',"ts"}, T{L'ч',"ch"}, T{L'ш',"sh"},
+				T{L'щ',"sch"}, T{L'ъ',""},   T{L'ы',"y"},  T{L'ь',""},   T{L'э',"e"},
+				T{L'ю',"yu"},  T{L'я',"ya"},
 
-													{L'А',"A"},   {L'Б',"B"},  {L'В',"V"},  {L'Г',"G"},  {L'Д',"D"},
-													{L'Е',"E"},   {L'Ё',"YO"}, {L'Ж',"ZH"}, {L'З',"Z"},  {L'И',"I"},
-													{L'Й',"J"},
-													{L'К',"K"},   {L'Л',"L"},  {L'М',"M"},  {L'Н',"N"},  {L'О',"O"},
-													{L'П',"P"},   {L'Р',"R"},  {L'С',"S"},  {L'Т',"T"},  {L'У',"U"},
-													{L'Ф',"F"},   {L'Х',"H"},  {L'Ц',"TS"}, {L'Ч',"CH"}, {L'Ш',"SH"},
-													{L'Щ',"SCH"}, {L'Ъ',""},   {L'Ы',"Y"},  {L'Ь',""},   {L'Э',"E"},
-													{L'Ю',"YU"},  {L'Я',"YA"},
-											 /* */};
+				T{L'А',"A"},   T{L'Б',"B"},  T{L'В',"V"},  T{L'Г',"G"},  T{L'Д',"D"},
+				T{L'Е',"E"},   T{L'Ё',"YO"}, T{L'Ж',"ZH"}, T{L'З',"Z"},  T{L'И',"I"},
+				T{L'Й',"J"},
+				T{L'К',"K"},   T{L'Л',"L"},  T{L'М',"M"},  T{L'Н',"N"},  T{L'О',"O"},
+				T{L'П',"P"},   T{L'Р',"R"},  T{L'С',"S"},  T{L'Т',"T"},  T{L'У',"U"},
+				T{L'Ф',"F"},   T{L'Х',"H"},  T{L'Ц',"TS"}, T{L'Ч',"CH"}, T{L'Ш',"SH"},
+				T{L'Щ',"SCH"}, T{L'Ъ',""},   T{L'Ы',"Y"},  T{L'Ь',""},   T{L'Э',"E"},
+				T{L'Ю',"YU"},  T{L'Я',"YA"}
+				 /**/);
 
 	QString result;
 	for(auto &c:str)
 	{
-		if(auto it = translit.find(c); it != translit.end())
+		if(auto v = translitMap.find_value(c))
 		{
-			result += it->second;
+			result += *v;
 		}
 		else result += c;
 	}
