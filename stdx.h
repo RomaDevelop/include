@@ -1,17 +1,43 @@
 #ifndef stdx_h
 #define stdx_h
 
+#include <cstring>
 #include <array>
 #include <vector>
 #include <algorithm>
 
+#include "CodeMarkers.h"
+
 namespace stdx
 {
+	// Объявления вспомогательных типов и функций
+	namespace {
+		template <typename C, typename = std::void_t<>>
+		struct has_find : std::false_type {};
+
+		template <typename T>
+		struct has_find<T, std::void_t<decltype(std::declval<T>().find(std::declval<typename T::key_type>()))>>
+			: std::true_type {};
+
+		template<class L, class R>
+		bool smart_compare(const L& lhs, const R& rhs);
+	}
+
 	template<class T, class M>
 	bool contains(const T& container, const M& member)
 	{
-		for(auto &item:container) if(item == member) return true;
-		return false;
+		// Если у контейнера есть метод find, используем его
+		if constexpr (has_find<T>::value)
+		{
+			return container.find(member) != container.end();
+		}
+		else // Иначе - перебор
+		{
+			for(auto &item:container) if(smart_compare(item, member)) return true;
+			return false;
+		}
+
+		CodeMarkers::to_do_with_cpp20("проверку has_find<T, M>::value можно сделать еще проще, через requires");
 	}
 
 	enum class insert_result { new_node_inserted, existing_node_was_rewrited, not_enough_space };
@@ -42,12 +68,12 @@ namespace stdx
 		}
 		key_t* find_key(const key_t& key)
 		{
-			for(std::size_t i=0; i<m_current_size; i++) if(m_data[i] == key) return &m_data[i];
+			for(std::size_t i=0; i<m_current_size; i++) if(smart_compare(m_data[i], key)) return &m_data[i];
 			return nullptr;
 		}
 		const key_t* find_key(const key_t& key) const
 		{
-			for(std::size_t i=0; i<m_current_size; i++) if(m_data[i] == key) return &m_data[i];
+			for(std::size_t i=0; i<m_current_size; i++) if(smart_compare(m_data[i], key)) return &m_data[i];
 			return nullptr;
 		}
 
@@ -99,12 +125,12 @@ namespace stdx
 
 		value_t* find_value(const key_t& key)
 		{
-			for(std::size_t i=0; i<m_current_size; i++) if(m_data[i].first == key) return &m_data[i].second;
+			for(std::size_t i=0; i<m_current_size; i++) if(smart_compare(m_data[i].first, key)) return &m_data[i].second;
 			return nullptr;
 		}
 		const value_t* find_value(const key_t& key) const
 		{
-			for(std::size_t i=0; i<m_current_size; i++) if(m_data[i].first == key) return &m_data[i].second;
+			for(std::size_t i=0; i<m_current_size; i++) if(smart_compare(m_data[i].first, key)) return &m_data[i].second;
 			return nullptr;
 		}
 
@@ -138,7 +164,7 @@ namespace stdx
 	};
 
 
-
+	// класс абсолютно абсурдный, создан для эксперимента, нужно будет удалить
 	template<class key_t, class value_t>
 	class unhashed_map
 	{
@@ -185,6 +211,30 @@ namespace stdx
 	нужно почитать как работает hash map
 	*/
 	};
+
+	namespace {
+		template<class L, class R>
+		bool smart_compare(const L& lhs, const R& rhs)
+		{
+			// std::decay_t превращает массивы char[N] в указатели const char*
+			using DecayedL = std::decay_t<L>;
+			using DecayedR = std::decay_t<R>;
+
+			if constexpr (std::is_convertible_v<DecayedL, const char*> && std::is_convertible_v<DecayedR, const char*>)
+			{
+				if (lhs == nullptr || rhs == nullptr)
+				{
+					return lhs == rhs;
+				}
+
+				return std::strcmp(lhs, rhs) == 0;
+			}
+			else
+			{
+				return lhs == rhs;
+			}
+		}
+	}
 }
 
 /*
