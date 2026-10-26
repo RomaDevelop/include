@@ -35,8 +35,6 @@ struct MyQDifferent
 	inline static std::pair<QString, QString> GetPathName(const QString &file);
 
 	inline static QStringList ArgsToStrList(int argc, char *argv[]);
-
-	inline static void DoOnce(const QString &id, std::function<void()> action);
 	
 	inline static void SetSelectedText(QLineEdit *lineEdit, const QString &newText);
 
@@ -233,16 +231,6 @@ QStringList MyQDifferent::ArgsToStrList(int argc, char *argv[])
 		args += QString::fromLocal8Bit(argv[i]);
 	}
 	return args;
-}
-
-void MyQDifferent::DoOnce(const QString &id, std::function<void ()> action)
-{
-	static std::set<QString> ids;
-	if(ids.count(id) == 0)
-	{
-		action();
-		ids.insert(id);
-	}
 }
 
 void MyQDifferent::SetSelectedText(QLineEdit *lineEdit, const QString &newText)

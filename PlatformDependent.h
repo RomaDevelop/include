@@ -9,8 +9,10 @@
 
 struct PlatformDependent
 {
-	static QDateTime GetProcessStartTime(uint processID);
-	static bool IsProcessRunning(uint processID);
+	static qint64 GetCurrentProcessId();
+	static QString GetParentProcessName(qint64 processID = GetCurrentProcessId());
+	static QDateTime GetProcessStartTime(qint64 processID = GetCurrentProcessId());
+	static bool IsProcessRunning(qint64 processID);
 
 	static bool OpenWithDialog(const QString &filePath);
 

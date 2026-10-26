@@ -1,24 +1,177 @@
 #include "PlatformDependent.h"
 
-//#undef _WIN32
+#ifndef Q_OS_WIN
+#error PlatformDependent is implemented only for Qt on Windows.
 
-#ifndef _WIN32
-#error PlatformDependent is implemented only for Windows.
+	// инклуды предложенные ИИ при добавлении GetParentProcessName
+	#elif defined(Q_OS_LINUX)
+	#include <unistd.h>
+	#include <fstream>
+	#include <string>
+	#elif defined(Q_OS_MAC)
+	#include <unistd.h>
+	#include <libproc.h>
+	//#endif
+
 #endif
 
-#include <windows.h>
+#include <qt_windows.h>
+#include <tlhelp32.h>
 
 #include <QApplication>
 #include <QDebug>
 #include <QDir>
 
+#include "MyCppDifferent.h"
 #include "MyQShortings.h"
 
-QDateTime PlatformDependent::GetProcessStartTime(uint processID) {
-	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, (DWORD)processID);
+qint64 PlatformDependent::GetCurrentProcessId()
+{
+	return QCoreApplication::applicationPid();
+}
+
+QString PlatformDependent::GetParentProcessName(qint64 processID) {
+#if defined(Q_OS_WIN)
+	if (processID < 0 || processID > (std::numeric_limits<DWORD>::max)()) {
+		qDebug() << "GetParentProcessName: Некорректное значение (" << processID << ") для DWORD!";
+		return "";
+	}
+
+	DWORD parentPid = 0;
+	QString parentName = "";
+
+	// 1. Создаем снимок процессов
+	HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (snapshot == INVALID_HANDLE_VALUE) {
+		qDebug() << "getParentProcessName [Win]: Failed to create snapshot. Error:" << GetLastError();
+		return "";
+	}
+
+	any_guard::functions_caller handlerCloser({}, [snapshot](){ CloseHandle(snapshot); });
+
+	PROCESSENTRY32W entry;
+	ZeroMemory(&entry, sizeof(entry));
+	entry.dwSize = sizeof(PROCESSENTRY32W);
+
+	// 2. Ищем PID родителя
+	bool foundParentPid = false;
+	if(!Process32FirstW(snapshot, &entry)) {
+		qDebug() << "getParentProcessName [Win]: Process32FirstW-1 failed. Error:" << GetLastError();
+		return "";
+	}
+
+	do {
+		if (entry.th32ProcessID == processID) {
+			parentPid = entry.th32ParentProcessID;
+			foundParentPid = true;
+			break;
+		}
+	} while (Process32NextW(snapshot, &entry));
+
+	if(!foundParentPid) {
+		qDebug() << "getParentProcessName [Win]: PID (" << processID << ") not found in snapshot";
+		return "";
+	}
+
+	if(parentPid == 0) {
+		qDebug() << "getParentProcessName [Win]: parent PID is 0";
+		return "";
+	}
+
+	/// 3. Ищем процесс родителя вторым проходом по snapshot и извлекаем его имя
+	/// (второй проход нужен, потому что мы первым циклом мы дошли до текущего процесса,
+	/// а процесс родителя будет ДО, вернуться назад нельзя).
+	ZeroMemory(&entry, sizeof(entry));
+	entry.dwSize = sizeof(PROCESSENTRY32W);
+
+	bool foundParentName = false;
+	if (!Process32FirstW(snapshot, &entry)) {
+		qDebug() << "getParentProcessName [Win]: Process32FirstW-2 failed. Error:" << GetLastError();
+		return "";
+	}
+
+	do {
+		if (entry.th32ProcessID == parentPid) {
+			// Используем безопасный конструктор QString для работы с WCharArray
+			parentName = QString::fromWCharArray(entry.szExeFile);
+			foundParentName = true;
+			break;
+		}
+	} while (Process32NextW(snapshot, &entry));
+
+	if (!foundParentName) {
+		qDebug() << "getParentProcessName [Win]: Parent process with PID" << parentPid << "not found (likely terminated).";
+	}
+
+	return parentName.trimmed().toLower();
+
+#elif defined(Q_OS_LINUX)
+	// В Linux getppid() всегда безопасен
+#error Требуется перепроверить
+	pid_t parentPid = getppid();
+	if (parentPid <= 0) {
+		qDebug() << "getParentProcessName [Linux]: Invalid parent PID:" << parentPid;
+		return "";
+	}
+
+	// Читаем /proc/[pid]/comm (содержит только имя, до 16 символов, без аргументов)
+	std::string commPath = "/proc/" + std::to_string(parentPid) + "/comm";
+	std::ifstream file(commPath);
+	if (!file.is_open()) {
+		qDebug() << "getParentProcessName [Linux]: Failed to open" << QString::fromStdString(commPath);
+		return "";
+	}
+
+	std::string name;
+	if (std::getline(file, name)) {
+		return QString::fromStdString(name).trimmed().toLower();
+	}
+
+	qDebug() << "getParentProcessName [Linux]: File" << QString::fromStdString(commPath) << "is empty.";
+	return "";
+
+#elif defined(Q_OS_MAC)
+#error Требуется перепроверить
+	pid_t parentPid = getppid();
+	if (parentPid <= 0) {
+		qDebug() << "getParentProcessName [Mac]: Invalid parent PID:" << parentPid;
+		return "";
+	}
+
+	char pathBuffer[PROC_PIDPATHINFO_MAXSIZE];
+	ZeroMemory(pathBuffer, sizeof(pathBuffer));
+
+	// proc_pidpath возвращает полный путь к бинарнику родителя
+	int ret = proc_pidpath(parentPid, pathBuffer, sizeof(pathBuffer));
+	if (ret <= 0) {
+		qDebug() << "getParentProcessName [Mac]: proc_pidpath failed for PID" << parentPid;
+		return "";
+	}
+
+	// Извлекаем только имя файла из полного пути
+	QString fullPath = QString::fromUtf8(pathBuffer);
+	int lastSlash = fullPath.lastIndexOf('/');
+	if (lastSlash != -1) {
+		return fullPath.mid(lastSlash + 1).trimmed().toLower();
+	}
+	return fullPath.trimmed().toLower();
+
+#else
+	qDebug() << "getParentProcessName: Unsupported Operating System.";
+	return "";
+#endif
+}
+
+QDateTime PlatformDependent::GetProcessStartTime(qint64 processID) {
+	if (processID < 0 || processID > (std::numeric_limits<DWORD>::max)()) {
+		qDebug() << "GetProcessStartTime: Некорректное значение (" << processID << ") для DWORD!";
+		return {};
+	}
+
+	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
 	if (hProcess == NULL) {
 		auto err = GetLastError();
-		qdbg << "PlatformDependent::GetProcessStartTime: Не удалось открыть процесс с PID "
+		qDebug() << "PlatformDependent::GetProcessStartTime: Не удалось открыть процесс с PID "
 				+ QSn(processID) + ". Ошибка: " + QSn(err);
 		return QDateTime(); // Возвращаем пустой QDateTime в случае ошибки
 	}
@@ -40,14 +193,19 @@ QDateTime PlatformDependent::GetProcessStartTime(uint processID) {
 	else
 	{
 		auto err = GetLastError();
-		qdbg << "PlatformDependent::GetProcessStartTime: Не удалось получить время процесса. Ошибка: "
+		qDebug() << "PlatformDependent::GetProcessStartTime: Не удалось получить время процесса. Ошибка: "
 				+ QSn(err);
 		CloseHandle(hProcess);
 		return QDateTime(); // Возвращаем пустой QDateTime в случае ошибки
 	}
 }
 
-bool PlatformDependent::IsProcessRunning(uint processID) {
+bool PlatformDependent::IsProcessRunning(qint64 processID) {
+	if (processID < 0 || processID > (std::numeric_limits<DWORD>::max)()) {
+		qDebug() << "IsProcessRunning: Некорректное значение (" << processID << ") для DWORD!";
+		return {};
+	}
+
 	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
 	if(hProcess != NULL)
 	{
@@ -60,7 +218,7 @@ bool PlatformDependent::IsProcessRunning(uint processID) {
 		else
 		{
 			auto err = GetLastError();
-			qdbg << "IsProcessRunning::GetExitCodeProcess error: " + QSn(err);
+			qDebug() << "IsProcessRunning::GetExitCodeProcess error: " + QSn(err);
 		}
 		CloseHandle(hProcess); // Закрываем дескриптор в случае ошибки
 	}
@@ -68,7 +226,7 @@ bool PlatformDependent::IsProcessRunning(uint processID) {
 	{
 		auto err = GetLastError();
 		if(err == ERROR_INVALID_PARAMETER) ; // ok, means not running
-		else qdbg << "IsProcessRunning::OpenProcess unknown error " + QSn(err);
+		else qDebug() << "IsProcessRunning::OpenProcess unknown error " + QSn(err);
 	}
 	return false; // Процесс не запущен или не может быть открыт
 }
@@ -117,7 +275,7 @@ bool PlatformDependent::IsFileLocked(const QString & file) {
 			return true; // Файл занят
 		}
 		else {
-			qdbg << "PlatformDependent::IsFileLocked: unknown error: " + QSn(err);
+			qDebug() << "PlatformDependent::IsFileLocked: unknown error: " + QSn(err);
 			return true; // Другая ошибка (например, файл не найден)
 		}
 	}
@@ -183,7 +341,7 @@ bool PlatformDependent::IsPathOnFixedDrive(QString path)
 		return (driveType == DRIVE_FIXED);
 	}
 
-	qCritical() << "PlatformDependent::IsPathLocal invalid path:" << path;
+	qDebug() << "PlatformDependent::IsPathLocal invalid path:" << path;
 	return false;
 }
 
