@@ -23,27 +23,39 @@ namespace stdx
 		bool smart_compare(const L& lhs, const R& rhs);
 	}
 
-	template<class T, class M>
-	bool contains(const T& container, const M& member)
+	template<class Range, class Value>
+	bool contains(const Range& range, const Value& value)
 	{
 		// Если у контейнера есть метод find, используем его
-		if constexpr (has_find<T>::value)
+		if constexpr (has_find<Range>::value)
 		{
-			return container.find(member) != container.end();
+			return range.find(value) != range.end();
 		}
 		else // Иначе - перебор
 		{
-			for(auto &item:container) if(smart_compare(item, member)) return true;
+			for(auto &item:range) if(smart_compare(item, value)) return true;
 			return false;
 		}
 
 		CodeMarkers::to_do_with_cpp20("проверку has_find<T, M>::value можно сделать еще проще, через requires");
 	}
 
-	template<class T, class M>
-	void remove_erase(T& container, const M& member)
+	/// idiom remove - erase
+	template<class Container, class Value>
+	void remove_erase(Container& container, const Value& value)
 	{
-		container.erase(std::remove(container.begin(), container.end(), member), container.end());
+		container.erase(std::remove(container.begin(), container.end(), value), container.end());
+	}
+
+	/// idiom remove_if - erase, in remove_if Predicate checks each item from remove_from with stdx::contains
+	template<class Container, class Range>
+	void remove_erase_range(Container& container, const Range& range)
+	{
+		auto remove_res = std::remove_if(container.begin(), container.end(), [&](const auto& item) {
+			return stdx::contains(range, item);
+		});
+
+		container.erase(remove_res, container.end());
 	}
 
 	enum class insert_result { new_node_inserted, existing_node_was_rewrited, not_enough_space };
