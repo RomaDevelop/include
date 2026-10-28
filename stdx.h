@@ -40,6 +40,12 @@ namespace stdx
 		CodeMarkers::to_do_with_cpp20("проверку has_find<T, M>::value можно сделать еще проще, через requires");
 	}
 
+	template<class T, class M>
+	void remove_erase(T& container, const M& member)
+	{
+		container.erase(std::remove(container.begin(), container.end(), member), container.end());
+	}
+
 	enum class insert_result { new_node_inserted, existing_node_was_rewrited, not_enough_space };
 
 	template<class key_t, std::size_t size>
