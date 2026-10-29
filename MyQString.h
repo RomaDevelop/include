@@ -44,19 +44,19 @@ struct MyQString
 
 	struct FoundSubstr { QString substr; std::vector<int> positions; };
 	template<class T_QString> // 100% works with QString, QStringRef
-	static std::vector<FoundSubstr> FindSubstrings(const T_QString &text, const QStringList &keywords) {
+	static std::vector<FoundSubstr> FindSubstrings(const T_QString &text, const QStringList &subStrings) {
 		std::vector<FoundSubstr> result;
 
-		for (const QString &word : keywords) {
-			if (word.isEmpty()) continue;
+		for (const QString &substring : subStrings) {
+			if (substring.isEmpty()) continue;
 
 			FoundSubstr found;
-			found.substr = word;
+			found.substr = substring;
 
-			int pos = text.indexOf(word, 0);
+			int pos = text.indexOf(substring, 0);
 			while (pos != -1) {
 				found.positions.push_back(pos);
-				pos = text.indexOf(word, pos + 1); // Ищем следующее вхождение
+				pos = text.indexOf(substring, pos + 1); // Ищем следующее вхождение
 			}
 
 			if (!found.positions.empty()) {
@@ -65,6 +65,51 @@ struct MyQString
 		}
 
 		return result;
+	}
+
+	static bool QCharCompare(const QChar lhs, const QChar rhs)
+	{
+		return lhs == rhs;
+	}
+
+	static bool QCharCompareInsensetive(const QChar lhs, const QChar rhs)
+	{
+		return lhs.toLower() == rhs.toLower();
+	}
+
+	//template<class T_QString> // 100% works with QString
+	static bool ContainsMass(const /*T_*/QString &text, const QStringList &subStrings, Qt::CaseSensitivity caseSens)
+	{
+		std::vector<std::pair<QChar, const QString*>> map;
+		map.reserve(subStrings.size());
+		for(auto &str:subStrings)
+		{
+			if(str.isEmpty()) continue;
+			map.push_back(std::make_pair(str[0], &str));
+		}
+
+		auto comparator = MyQString::QCharCompare;
+		if(caseSens == Qt::CaseInsensitive) comparator = MyQString::QCharCompareInsensetive;
+
+		for(int i=0; i<text.size(); i++)
+		{
+			for(auto &pair:map)
+			{
+				if(comparator(text[i], pair.first))
+				{
+					for(int j=1; j<pair.second->size(); j++)
+					{
+						if(i+j >= text.size() or !comparator(text[i+j], (*pair.second)[j])) goto next_substr;
+					}
+					return true;
+				}
+
+				next_substr:
+				;
+			}
+		}
+
+		return false;
 	}
 
 	template<class T_QString>
