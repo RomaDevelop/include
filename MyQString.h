@@ -25,6 +25,8 @@ struct MyQString
 	template<class Splitter>
 	inline static QList<QStringList> Split(const QStringList &list, const Splitter &splitter);
 
+	inline static QString& Trim(QString &str);
+
 	inline static int IndexOf(const QStringView &stringView, QChar c, int from = 0);
 
 	inline static QString GetRowOfLetter(const QString& str, int letterIndex);
@@ -321,6 +323,30 @@ void MyQString::Append(QStringList &list, QString str)
 {
 	QString &lastStr = *list.insert(list.end(),"");
 	lastStr=std::move(str);
+}
+
+QString &MyQString::Trim(QString &str) {
+	int size = str.size();
+	if (size == 0) return str;
+
+	int end = size;
+	while (end > 0 && str.at(end - 1).isSpace()) {
+		end--;
+	}
+
+	int start = 0;
+	while (start < end && str.at(start).isSpace()) {
+		start++;
+	}
+
+	if (end < size) {
+		str.truncate(end);
+	}
+	if (start > 0) {
+		str.remove(0, start);
+	}
+
+	return str;
 }
 
 int MyQString::IndexOf(const QStringView &stringView, QChar c, int from)
